@@ -1477,7 +1477,7 @@ function hoverProgress(id, now) {
   if (p >= 1 && a.to === 0) S.hoverAnims.delete(id);
   return v;
 }
-function setHover(id) {
+function setHover(id, viaCanvas) {
   if (id === S.hoverId) return;
   const now = performance.now();
   if (S.hoverId != null) {
@@ -1488,6 +1488,9 @@ function setHover(id) {
   }
   S.hoverId = id;
   canvas.classList.toggle('pointing', id != null || S.famHoverId != null);
+  /* the preview follows only map hover — panel-card hover already tells its story */
+  if (viaCanvas && id != null) queueWatchPreview(id);
+  else hideWatchPreview();
   invalidate();
 }
 
@@ -1722,6 +1725,87 @@ function hideFamPreview() {
   fpHideTimer = setTimeout(() => {
     elFamPreview.hidden = true;
     elFpMedia.innerHTML = '';
+  }, REDUCED ? 90 : 250);
+}
+
+/* ======================================================================
+   10c · WATCH PREVIEW — every star answers hover the same way
+   Same contract as the family card: pointer-events none, aria-hidden.
+   Media rule matches the carousels: catalog render, else editorial,
+   else the drawn glyph — never an empty state.
+   ====================================================================== */
+
+const elWatchPreview = $('watch-preview'), elWpMedia = $('wp-media'),
+      elWpOverline = $('wp-overline'), elWpName = $('wp-name'), elWpMeta = $('wp-meta');
+let wpShowTimer = null, wpHideTimer = null;
+
+function wpGlyphFallback(w) {
+  const cnv = document.createElement('canvas');
+  cnv.setAttribute('aria-hidden', 'true');
+  elWpMedia.appendChild(cnv);
+  requestAnimationFrame(() => {
+    const cw = cnv.clientWidth || 208, ch = cnv.clientHeight || 120;
+    cnv.width = Math.max(1, Math.round(cw * dpr));
+    cnv.height = Math.max(1, Math.round(ch * dpr));
+    const g = cnv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawGlyph(g, w, cw / 2, ch / 2, 72, 0, performance.now());
+  });
+}
+
+function queueWatchPreview(id) {
+  clearTimeout(wpShowTimer);
+  if (S.selection && S.selection.id === id) return;   /* the panel already tells this story */
+  if (S.exportMode || body.classList.contains('observatory')) return;
+  wpShowTimer = setTimeout(() => {
+    if (S.hoverId !== id || S.dragging) return;
+    const w = S.byId.get(id);
+    if (!w) return;
+    clearTimeout(wpHideTimer);
+    elWpMedia.innerHTML = '';
+    const pick = (CATALOG[id] && CATALOG[id].file) ? CATALOG[id]
+      : (IMAGES[id] && IMAGES[id].file) ? IMAGES[id] : null;
+    if (pick) {
+      const img = document.createElement('img');
+      img.src = './data/' + pick.file;
+      img.alt = '';
+      img.addEventListener('error', () => { img.remove(); wpGlyphFallback(w); });
+      elWpMedia.appendChild(img);
+    } else {
+      wpGlyphFallback(w);
+    }
+    elWpOverline.textContent = String(w.brand || '').toUpperCase();
+    elWpName.textContent = w.model || '';
+    const price = Array.isArray(w.priceBandUsd) && w.priceBandUsd.length === 2
+      ? `${fmtShortUsd(w.priceBandUsd[0])}–${fmtShortUsd(w.priceBandUsd[1])}` : '';
+    elWpMeta.textContent = [w.year, isFinite(w.diameterMm) ? `Ø ${w.diameterMm} mm` : null, price]
+      .filter(Boolean).join(' · ');
+    /* above the star, clamped; below when cramped */
+    const [sx, sy] = toScreen(w.x, w.y);
+    elWatchPreview.style.visibility = 'hidden';
+    elWatchPreview.hidden = false;
+    const cw = elWatchPreview.offsetWidth, chh = elWatchPreview.offsetHeight;
+    const r = glyphRadiusFor(w);
+    const px = clamp(sx - cw / 2, 16, W - cw - 16);
+    let py = sy - r - chh - 14;
+    if (py < 16) py = sy + r + 14;
+    py = clamp(py, 16, H - chh - 16);
+    elWatchPreview.style.left = px + 'px';
+    elWatchPreview.style.top = py + 'px';
+    elWatchPreview.style.visibility = '';
+    requestAnimationFrame(() => elWatchPreview.classList.add('on'));
+  }, REDUCED ? 80 : 220);
+}
+
+function hideWatchPreview() {
+  clearTimeout(wpShowTimer);
+  wpShowTimer = null;
+  if (elWatchPreview.hidden) return;
+  elWatchPreview.classList.remove('on');
+  clearTimeout(wpHideTimer);
+  wpHideTimer = setTimeout(() => {
+    elWatchPreview.hidden = true;
+    elWpMedia.innerHTML = '';
   }, REDUCED ? 90 : 250);
 }
 
@@ -3300,6 +3384,7 @@ elLightbox.addEventListener('click', e => { if (e.target === elLightbox) lightbo
 function anyInput() {
   skipReveal();
   hideFamPreview();    /* a preview never outlives the gesture that raised it */
+  hideWatchPreview();
   resetIdleTimer();
 }
 
@@ -3362,7 +3447,7 @@ canvas.addEventListener('pointermove', e => {
   /* hover — a star is smaller and more specific than a label; the specific wins */
   if (!S.dragging && S.loaded) {
     const hit = hitTest(e.clientX, e.clientY);
-    setHover(hit ? hit.id : null);
+    setHover(hit ? hit.id : null, true);
     const famHit = hit ? null : famHitTest(e.clientX, e.clientY);
     setFamHover(famHit ? famHit.id : null);
   }

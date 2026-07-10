@@ -628,6 +628,69 @@ canvas.fi-strip {
   background: var(--surface-2);
 }
 
+/* ---------- WATCH PREVIEW — every star answers hover the same way ----------
+   Same contract as the family card: pointer-events none, aria-hidden;
+   catalog render first, editorial fallback, drawn glyph when neither exists. */
+
+#watch-preview {
+  position: fixed;
+  width: 232px;
+  padding: 12px;
+  background: var(--surface-1);
+  -webkit-backdrop-filter: blur(24px) saturate(1.1);
+  backdrop-filter: blur(24px) saturate(1.1);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  z-index: 6;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+}
+@supports not (backdrop-filter: blur(24px)) {
+  #watch-preview { background: #0D1117; }
+}
+#watch-preview.on { opacity: 1; transform: none; }
+#watch-preview[hidden] { display: none; }
+#wp-media {
+  position: relative;
+  height: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--line-1);
+}
+#wp-media img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+#wp-media canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#wp-overline {
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 9px; font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+#wp-name {
+  margin-top: 3px;
+  font-size: 14px; font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text-1);
+}
+#wp-meta {
+  margin-top: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-3);
+}
+@media (max-width: 760px) {
+  #watch-preview { display: none; }
+}
+
 /* ---------- COUSTEAU — the surfacing, once per session ----------
    Appears only in the idle Observatory drift, when the user has stopped
    doing and is simply beneath the surface. Never during tasks. */
@@ -946,7 +1009,7 @@ footer {
 
 @media (prefers-reduced-motion: reduce) {
   .chrome, #panel, #panel .sec, #search, #status, #panel-content,
-  #fam-preview, #fp-media img.fp-slide, #lightbox, #lb-img, #lens-panel {
+  #fam-preview, #fp-media img.fp-slide, #lightbox, #lb-img, #lens-panel, #watch-preview {
     transition-duration: 80ms !important;
     transition-delay: 0ms !important;
     transition-property: opacity, background, color, border-color !important;

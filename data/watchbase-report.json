@@ -1,0 +1,27 @@
+{
+  "longines-legend-diver-2007": {
+    "url": "https://watchbase.com/longines/legend-diver/l3-674-4-50-0",
+    "diffs": [
+      "year: ours 2007 vs page 2009"
+    ]
+  },
+  "seiko-srp777-2016": {
+    "url": "https://watchbase.com/seiko/prospex-divers/srp777",
+    "diffs": [
+      "year: ours 2016 vs page 2015",
+      "diameter: ours 44 vs page 45.0"
+    ]
+  },
+  "rado-captain-cook-2017": {
+    "url": "https://watchbase.com/rado/captain-cook/r32500315",
+    "diffs": [
+      "year: ours 2017 vs page 2019"
+    ]
+  },
+  "mido-ocean-star-tribute-2020": {
+    "url": "https://watchbase.com/mido/ocean-star/m026-830-11-041-00",
+    "diffs": [
+      "year: ours 2020 vs page 2019"
+    ]
+  }
+}

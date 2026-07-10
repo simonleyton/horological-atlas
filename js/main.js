@@ -30,6 +30,14 @@ const TIER_2 = 2.2;                          /* star → glyph */
 const TIER_3 = 6;                            /* glyph → labeled glyph */
 const XFADE = 0.12;                          /* ±12% crossfade band */
 
+/* magnitude — one curve, shared by initData and the Ephemeris re-derivation:
+   floor 1.6 so the fit view reads as a populated sky; cap 3.8 and slope 0.42
+   keep the hero's dominance. Hierarchy intact, night intact. */
+const magR = d => Math.min(1.6 + 0.42 * Math.sqrt(d), 3.8);
+
+/* ambient thread ink — one cached string, alpha rides globalAlpha */
+const THREAD_INK = 'rgb(233,237,242)';
+
 let REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => { REDUCED = e.matches; invalidate(); });
 
@@ -159,14 +167,12 @@ const elStatus = $('status'), elS1 = $('status-1'), elS2 = $('status-2');
 const elSearch = $('search'), elSearchToggle = $('search-toggle'),
       elSearchInput = $('search-input'), elSearchResults = $('search-results');
 const elPanel = $('panel'), elPanelClose = $('panel-close'), elPanelContent = $('panel-content');
-const elHint = $('hint'), elHHint = $('h-hint'), elFooterLeft = $('footer-left'),
+const elFooterLeft = $('footer-left'),
       elFitChip = $('fit-chip'), elCartouche = $('cartouche'), elCart2 = $('cart-2'), elLive = $('live');
 const elTimeline = $('timeline'), elTlPlay = $('tl-play'), elTlTrack = $('tl-track'),
       elTlRuler = $('tl-ruler'), elTlThumb = $('tl-thumb'), elTlReadout = $('tl-readout'),
       elTlNow = $('tl-now');
 const tlCtx = elTlRuler.getContext('2d');
-const elOverture = $('overture'), elOvPlay = $('ov-play'),
-      elOvVisit = $('ov-visit'), elOvDismiss = $('ov-dismiss');
 const elFamPreview = $('fam-preview'), elFpMedia = $('fp-media'),
       elFpOverline = $('fp-overline'), elFpName = $('fp-name'), elFpLine = $('fp-line');
 const elLightbox = $('lightbox'), elLbImg = $('lb-img'), elLbClose = $('lb-close'),
@@ -215,6 +221,10 @@ const S = {
   reveal: null,                  /* {t0} — ignite choreography */
   revealDone: false,
 
+  threads: null,                 /* struct-of-arrays ambient lineage — §13b */
+  weave: null,                   /* {t0[,reduced]} — thread weave, set by startReveal */
+  weaveDone: false,
+
   drift: { x: 0, y: 0, on: false, angle: Math.random() * Math.PI * 2, release: null },
   observatoryManual: false,
   observatoryIdle: false,
@@ -226,18 +236,17 @@ const S = {
   minuteAnim: null,              /* {from,to,t0} minute-of-day dead-beat */
   dispMinute: null,
 
-  dragging: false,
-  hinted: false
+  dragging: false
 };
 
 /* effective year this frame — Infinity until data arrives, then S.time.max (the present) */
 let curTY = Infinity;
 
-/* photograph manifest — id -> {file, credit, license, source}; empty until it loads */
+/* photograph manifests — id -> {file, credit, license, source}; empty until loaded.
+   IMAGES = editorial photography (atmosphere); CATALOG = WatchBase renders
+   re-plated dark (uniformity). Rows prefer CATALOG; single heroes prefer IMAGES. */
 let IMAGES = {};
-
-try { S.hinted = sessionStorage.getItem('atlas.hinted') === '1'; } catch (e) { /* private mode */ }
-if (S.hinted) { elHint.hidden = true; elHHint.hidden = true; }
+let CATALOG = {};
 
 /* ======================================================================
    4 · SCHEDULING — single rAF loop, idle when settled
@@ -252,6 +261,7 @@ function animating() {
   if (S.flight) return true;
   if (S.drift.on || S.drift.release) return true;
   if (S.reveal && !S.revealDone) return true;
+  if (S.weave && !S.weaveDone) return true;
   if (S.time.anim || S.time.playing) return true;
   if (lensAnim.from !== lensAnim.to && now - lensAnim.t0 < 420) return true;
   if (S.minuteAnim && now - S.minuteAnim.t0 < 140) return true;
@@ -268,6 +278,7 @@ function animating() {
 function driftOnly(now) {
   if (!S.drift.on || S.flight || S.drift.release) return false;
   if (S.reveal && !S.revealDone) return false;
+  if (S.weave && !S.weaveDone) return false;
   if (S.time.anim || S.time.playing) return false;
   if (lensAnim.from !== lensAnim.to && performance.now() - lensAnim.t0 < 420) return false;
   if (S.minuteAnim && now - S.minuteAnim.t0 < 140) return false;
@@ -320,6 +331,10 @@ async function loadData() {
     .then(r => r.ok ? r.json() : null)
     .then(j => { if (j && typeof j === 'object') IMAGES = j; })
     .catch(() => { /* no manifest yet — glyphs carry the panel */ });
+  fetch('./data/catalog.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)
+    .then(j => { if (j && typeof j === 'object') CATALOG = j; })
+    .catch(() => { /* no catalog layer yet */ });
   const t = setTimeout(() => {
     if (!S.loaded && !S.failed) {
       elS1.textContent = 'Charting the atlas…';
@@ -338,6 +353,7 @@ async function loadData() {
   } catch (err) {
     clearTimeout(t);
     S.failed = true;
+    S.weaveDone = true;            /* nothing to weave — never leave the scheduler armed */
     elSearch.hidden = true;        /* search is inert while failed — don't offer a dead control */
     elStatus.classList.add('error');
     elS1.textContent = 'The atlas could not be loaded.';
@@ -385,13 +401,15 @@ function initData(data) {
     w._desc = dset.size;
     /* sorted descendant intro years — magnitude becomes a function of time */
     w._descYears = [...dset].map(i => S.byId.get(i).year || 0).sort((a, b) => a - b);
-    w._r = Math.min(1.25 + 0.45 * Math.sqrt(w._desc), 3.5);
+    w._r = magR(w._desc);
     w._glow = null;
   }
 
+  /* every lineage edge, precomputed once — the ambient structure (§13b) */
+  buildThreads();
+
   /* reveal order: canon first */
   const ranked = [...S.watches].sort((a, b) => b._desc - a._desc);
-  S.heroId = ranked.length ? ranked[0].id : null;   /* the brightest star */
   const n = ranked.length;
   ranked.forEach((w, i) => {
     /* ignite start distributed by rank inside 200–1100ms (each fade is 300ms → ends by 1400ms) */
@@ -468,8 +486,6 @@ function initData(data) {
   startReveal();
   scheduleMinuteTick();
   resetIdleTimer();
-  /* the overture waits for the ignition to finish, then offers first moves */
-  setTimeout(showOverture, S.revealDone ? 400 : (REDUCED ? 700 : 2100));
   invalidate();
 }
 
@@ -718,32 +734,44 @@ function toggleObservatory() {
    ====================================================================== */
 
 function startReveal() {
-  /* runs once per session (§4) — mirror the hint pattern */
+  /* runs once per session (§4) — same sessionStorage pattern as Cousteau */
   let seen = false;
   try { seen = sessionStorage.getItem('atlas.revealed') === '1'; } catch (e) { /* private mode */ }
   try { sessionStorage.setItem('atlas.revealed', '1'); } catch (e) { /* private mode */ }
   if (seen) {
     S.reveal = null; S.revealDone = true;
+    S.weaveDone = true;                     /* returning session — the poster arrives complete */
     body.classList.remove('pre-reveal');
     invalidate();
     return;
   }
   if (REDUCED) {
-    /* reduced motion: a single 400ms opacity fade, no scale, no stagger */
+    /* reduced motion: a single 400ms opacity fade, no scale, no stagger —
+       threads crossfade in with the stars, no dash, no weave */
     S.reveal = { t0: performance.now(), reduced: true };
+    S.weave = { t0: performance.now(), reduced: true };
     body.classList.remove('pre-reveal');
-    setTimeout(() => { S.revealDone = true; invalidate(); }, 400);
+    setTimeout(() => { S.revealDone = true; S.weaveDone = true; invalidate(); }, 400);
     invalidate();
     return;
   }
   S.reveal = { t0: performance.now() };
+  /* after the sky exists, the threads weave in — oldest edges first,
+     1500–3000ms: the century assembling itself (§13b) */
+  S.weave = { t0: S.reveal.t0 };
   body.classList.add('revealing');
   setTimeout(() => body.classList.remove('pre-reveal'), 1500);
   setTimeout(() => { S.revealDone = true; invalidate(); }, 1950);
   setTimeout(() => body.classList.remove('revealing'), 2100);   /* stagger CSS must not outlive the Ignition */
+  setTimeout(() => { S.weaveDone = true; invalidate(); }, 3100);
   invalidate();
 }
 function skipReveal() {
+  /* any input cuts to the finished poster — ignition and weave alike */
+  if (S.weave && !S.weaveDone) {
+    S.weaveDone = true;
+    invalidate();
+  }
   if (S.reveal && !S.revealDone) {
     S.revealDone = true;
     body.classList.remove('pre-reveal');
@@ -893,6 +921,7 @@ const ICON_PAUSE = '<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="t
 function setPlayIcon(playing) {
   elTlPlay.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
   elTlPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play the century');
+  elTlPlay.setAttribute('title', playing ? 'Pause (Space)' : 'Play the century (Space)');
 }
 
 function positionThumb(TY) {
@@ -1011,11 +1040,15 @@ elTlTrack.addEventListener('keydown', e => {
     case 'ArrowRight': case 'ArrowUp': y = cur + (e.shiftKey ? 10 : 1); break;
     case 'Home': y = T.min; break;
     case 'End': y = T.max; break;
-    case ' ': e.preventDefault(); e.stopPropagation(); togglePlay(); return;
+    /* handled keys stop propagation, so the window's idle listeners never
+       see them — anyInput() here, mirroring the pointerdown path, or a user
+       scrubbing by keyboard gets the observatory dropped on their controls */
+    case ' ': e.preventDefault(); e.stopPropagation(); anyInput(); togglePlay(); return;
     default: return;
   }
   e.preventDefault();
   e.stopPropagation();
+  anyInput();
   stopPlay();
   setTimeYear(y, { dur: 140, ease: easeBeat });
 });
@@ -1345,6 +1378,7 @@ function buildLens() {
       else return;
       e.preventDefault();
       e.stopPropagation();
+      anyInput();   /* stopPropagation blinds the window idle listeners */
       const cur = priceToT(side === 'lo' ? lensPrice.lo : lensPrice.hi);
       const v = snapPrice(tToPrice(clamp(cur + dt, 0, 1)));
       if (side === 'lo') setPriceRange(Math.min(v, lensPrice.hi), lensPrice.hi, true);
@@ -1356,8 +1390,11 @@ function buildLens() {
   lpEls.fMax.addEventListener('change', () => parsePriceField(lpEls.fMax, false));
   for (const f of [lpEls.fMin, lpEls.fMax]) {
     f.addEventListener('keydown', e => {
-      if (e.key === 'Enter') { e.preventDefault(); f.blur(); }
-      e.stopPropagation();
+      /* only the handled key stops propagation — typing must still reach the
+         window listeners (⌘K while in a price field, idle-timer resets);
+         the global handler's inInput guard already keeps single-letter
+         shortcuts from firing out of a text field */
+      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); anyInput(); f.blur(); }
     });
   }
   syncPriceUI(false);
@@ -1546,14 +1583,23 @@ function famHitTest(sx, sy) {
 let fpShowTimer = null, fpHideTimer = null, fpCycleTimer = null;
 
 function familyMedia(famId) {
-  const withPhotos = S.watches.filter(w => w.designFamily === famId && IMAGES[w.id] && IMAGES[w.id].file);
-  /* high-confidence photography first, then by influence */
-  withPhotos.sort((a, b) => {
+  /* rows demand uniformity: when the family has ≥2 catalog renders, the row
+     is catalog-only — one visual language per surface, never a mixed shelf */
+  const members = S.watches.filter(w => w.designFamily === famId);
+  const cats = members.filter(w => CATALOG[w.id] && CATALOG[w.id].file)
+    .sort((a, b) => b._desc - a._desc);
+  if (cats.length >= 2) {
+    return cats.slice(0, 5).map(w => ({ w, ...CATALOG[w.id], isCatalog: true }));
+  }
+  const eds = members.filter(w => IMAGES[w.id] && IMAGES[w.id].file);
+  eds.sort((a, b) => {
     const ca = IMAGES[a.id].confidence === 'high' ? 0 : 1;
     const cb = IMAGES[b.id].confidence === 'high' ? 0 : 1;
     return ca - cb || b._desc - a._desc;
   });
-  return withPhotos.slice(0, 5);
+  const out = eds.slice(0, 5).map(w => ({ w, ...IMAGES[w.id], isCatalog: false }));
+  if (!out.length && cats.length) out.push({ w: cats[0], ...CATALOG[cats[0].id], isCatalog: true });
+  return out;
 }
 
 function drawFamilyStrip(cnv, famId) {
@@ -1574,11 +1620,22 @@ function drawFamilyStrip(cnv, famId) {
 
 function fpStopCycle() { clearInterval(fpCycleTimer); fpCycleTimer = null; }
 
+/* the hover carousel is the strictest surface: catalog renders only, or the
+   drawn strip — editorial photography never rides here (mixed slides in
+   sequence is where inconsistency reads worst) */
+function catalogMedia(famId) {
+  return S.watches
+    .filter(w => w.designFamily === famId && CATALOG[w.id] && CATALOG[w.id].file)
+    .sort((a, b) => b._desc - a._desc)
+    .slice(0, 5)
+    .map(w => ({ w, ...CATALOG[w.id], isCatalog: true }));
+}
+
 function fpPopulate(famId) {
   const fam = S.families.find(f => f.id === famId);
   const members = S.watches.filter(w => w.designFamily === famId);
   const years = members.map(w => w.year).filter(y => isFinite(y));
-  const media = familyMedia(famId);
+  const media = catalogMedia(famId);
   elFpOverline.textContent = years.length
     ? `${members.length} WATCHES · ${Math.min(...years)}—${Math.max(...years)}`
     : `${members.length} WATCHES`;
@@ -1594,10 +1651,10 @@ function fpPopulate(famId) {
     requestAnimationFrame(() => drawFamilyStrip(cnv, famId));
     return;
   }
-  media.forEach((w, i) => {
+  media.forEach((m, i) => {
     const img = document.createElement('img');
     img.className = 'fp-slide' + (i === 0 ? ' on' : '');
-    img.src = './data/' + IMAGES[w.id].file;
+    img.src = './data/' + m.file;
     img.alt = '';
     img.addEventListener('error', () => img.remove());
     elFpMedia.appendChild(img);
@@ -1731,13 +1788,17 @@ function selectWatch(id, opts = {}) {
   }
   /* the panel crossfades whether it held a watch or a family index */
   const wasOpen = !!S.selection || (!!S.familyView && !elPanel.hidden);
+  /* the field was possibly already dimmed (family view, prior selection,
+     mid-release) — read the level BEFORE mutating state, and seed the new
+     selection with it so the handoff never flashes the field bright */
+  const dimFrom = currentDimT(performance.now());
   /* the chain holds only while the selection came through the family index */
   if (opts.viaChain && S.familyView) S.familyView.chained = true;
   else { releaseFamActive(); S.familyView = null; }
   const lin = buildLineage(id);
   S.releasing = null;
   S.selection = {
-    id, ...lin,
+    id, ...lin, dimFrom,
     t0: performance.now(),
     /* ring completes (240ms) before curves; stagger capped at 4·80ms per generation */
     animLen: 240 + lin.genSpan * 230 + 320 + 600
@@ -1785,6 +1846,8 @@ function openFamily(id) {
   const members = new Set(memberList.map(w => w.id));
   const years = memberList.map(w => w.year).filter(y => isFinite(y));
   const now = performance.now();
+  /* dim continuity across the handoff — read before releasing the selection */
+  const dimFrom = currentDimT(now);
   /* a selected watch releases its edges; the family dim takes over on the same frame */
   if (S.selection) {
     S.releasing = { edges: S.selection.edges, related: members, t0: now };
@@ -1800,7 +1863,7 @@ function openFamily(id) {
     label: fam.label || familyLabel(id),
     minYear: years.length ? Math.min(...years) : S.yearMin,
     maxYear: years.length ? Math.max(...years) : S.yearMax,
-    t0: now, chained: false
+    t0: now, dimFrom, chained: false
   };
   showFamilyPanel();
   announceFamily();
@@ -1822,6 +1885,8 @@ function closeFamily() {
 function returnToFamily() {
   const fv = S.familyView;
   if (!fv) { deselect(); return; }
+  /* dim continuity — the field is already dimmed under the watch selection */
+  const dimFrom = currentDimT(performance.now());
   let returnId = null;
   if (S.selection) {
     returnId = S.selection.id;
@@ -1831,6 +1896,7 @@ function returnToFamily() {
     S.panelHoverAnims.clear();
   }
   fv.chained = false;
+  fv.dimFrom = dimFrom;
   fv.t0 = performance.now();
   showFamilyPanel(returnId);
   announceFamily();
@@ -1928,8 +1994,9 @@ function panelHtml(w, lin) {
     }
   }
 
-  /* the specimen plate — only when a photograph exists; the glyph is never apologised for */
-  const ph = IMAGES[w.id];
+  /* editorial hero when it exists; the catalog specimen stands in when not.
+     The glyph is never apologised for. */
+  const ph = (IMAGES[w.id] && IMAGES[w.id].file) ? IMAGES[w.id] : CATALOG[w.id];
   const photo = ph && ph.file ? `
     <div class="sec p-photo">
       <img src="./data/${escapeHtml(ph.file)}" alt="${escapeHtml(w.brand + ' ' + w.model)}"
@@ -2000,12 +2067,22 @@ function showPanel(w, lin, crossfade) {
     if (crumb) crumb.addEventListener('click', returnToFamily);
     const photo = elPanelContent.querySelector('.p-photo img');
     if (photo) {
-      const ph = IMAGES[w.id];
-      photo.addEventListener('click', () => lightboxOpen([{
-        src: photo.src,
-        title: `${w.brand} ${w.model} · ${w.year}`,
-        credit: ph ? photoCredit(ph) : ''
-      }], 0));
+      photo.addEventListener('click', () => {
+        /* the life shot first, the specimen second */
+        const items = [];
+        const ed = IMAGES[w.id], cat = CATALOG[w.id];
+        if (ed && ed.file) items.push({
+          src: './data/' + ed.file,
+          title: `${w.brand} ${w.model} · ${w.year}`,
+          credit: photoCredit(ed)
+        });
+        if (cat && cat.file) items.push({
+          src: './data/' + cat.file,
+          title: `${w.brand} ${w.model} · ${w.year} — specimen`,
+          credit: 'WatchBase catalog render'
+        });
+        if (items.length) lightboxOpen(items, 0);
+      });
     }
   }, crossfade);
 }
@@ -2028,8 +2105,9 @@ function familyHtml(fv) {
   const overline = engaged ? `FAMILY · ${born} OF ${total}` : `FAMILY · ${total} WATCHES`;
   const cards = fv.memberList.map(w => {
     const meta = familyMetaLine(w);
+    /* both bounds signed — one convention with the detail panel's Price today */
     const price = Array.isArray(w.priceBandUsd) && w.priceBandUsd.length === 2
-      ? `$${fmtNum(w.priceBandUsd[0])} – ${fmtNum(w.priceBandUsd[1])}` : '';
+      ? `$${fmtNum(w.priceBandUsd[0])} – $${fmtNum(w.priceBandUsd[1])}` : '';
     const unborn = engaged && (w.year || 0) > yr;
     return `<li><button type="button" class="fi-card${unborn ? ' fi-unborn' : ''}" data-id="${escapeHtml(String(w.id))}">` +
       `<canvas class="fi-glyph" aria-hidden="true"></canvas>` +
@@ -2047,11 +2125,14 @@ function familyHtml(fv) {
   const media = familyMedia(fv.id);
   let hero;
   if (media.length) {
-    const hw = media[0], ph = IMAGES[hw.id];
+    const m = media[0];
+    const creditLine = m.isCatalog
+      ? `${m.w.brand} ${m.w.model} · WatchBase catalog render`
+      : `${m.w.brand} ${m.w.model} · Photo ${m.credit || 'Wikimedia Commons'}${m.license ? ' · ' + m.license : ''}`;
     hero = `<div class="sec fi-hero">` +
-      `<img src="./data/${escapeHtml(ph.file)}" alt="${escapeHtml(hw.brand + ' ' + hw.model)}"` +
+      `<img src="./data/${escapeHtml(m.file)}" alt="${escapeHtml(m.w.brand + ' ' + m.w.model)}"` +
       ` loading="lazy" onerror="this.parentElement.style.display='none'">` +
-      `<p class="p-credit">${escapeHtml(hw.brand + ' ' + hw.model)} · Photo ${escapeHtml(ph.credit || 'Wikimedia Commons')}${ph.license ? ' · ' + escapeHtml(ph.license) : ''}</p>` +
+      `<p class="p-credit">${escapeHtml(creditLine)}</p>` +
       `</div>`;
   } else {
     hero = `<div class="sec fi-hero"><canvas class="fi-strip" data-fam="${escapeHtml(fv.id)}" aria-hidden="true"></canvas></div>`;
@@ -2104,10 +2185,10 @@ function showFamilyPanel(focusId) {
     const hero = elPanelContent.querySelector('.fi-hero img');
     if (hero) {
       hero.addEventListener('click', () => {
-        const gallery = familyMedia(fv.id).map(w => ({
-          src: './data/' + IMAGES[w.id].file,
-          title: `${w.brand} ${w.model} · ${w.year}`,
-          credit: photoCredit(IMAGES[w.id])
+        const gallery = familyMedia(fv.id).map(m => ({
+          src: './data/' + m.file,
+          title: `${m.w.brand} ${m.w.model} · ${m.w.year}`,
+          credit: m.isCatalog ? 'WatchBase catalog render' : photoCredit(m)
         }));
         lightboxOpen(gallery, 0);
       });
@@ -2176,7 +2257,6 @@ function animateSearchWidth(targetPx) {
 function openSearch() {
   if (searchOpen || S.failed) return;
   skipReveal();
-  dismissOverture();
   searchOpen = true;
   if (searchRestW == null) searchRestW = elSearch.offsetWidth;
   const target = window.innerWidth <= 760 ? (window.innerWidth - 48) + 'px' : '320px';
@@ -2303,6 +2383,168 @@ elSearchInput.addEventListener('keydown', e => {
 elSearchInput.addEventListener('blur', () => setTimeout(() => { if (searchOpen && !elSearch.contains(document.activeElement)) closeSearch(); }, 120));
 
 /* ======================================================================
+   13b · THE THREADS — ambient lineage
+   Every parent→child edge drawn as a faint curved thread across the sky,
+   always present at far zoom. Not decoration: real lineage, the same data
+   drawLineage brightens for a selection — here at whisper alpha, so the
+   unprompted first frame states the thesis. A century of design as one
+   connected structure. Precomputed once; zero per-frame allocation.
+   ====================================================================== */
+
+function buildThreads() {
+  /* one edge per (parent, child) pair where both ids resolve — multi-parent
+     children enumerate per pair. S.children is already year-sorted, so the
+     child's index is its fan position (same centered fan as drawLineage). */
+  const list = [];
+  for (const [pid, kids] of S.children) {
+    const wp = S.byId.get(pid);
+    for (let i = 0; i < kids.length; i++) {
+      list.push({ wp, wc: S.byId.get(kids[i]), fan: i - (kids.length - 1) / 2 });
+    }
+  }
+  /* weave order = array order: oldest child first — Radiomir outward */
+  list.sort((a, b) =>
+    (a.wc.year || 0) - (b.wc.year || 0) ||
+    (a.wp.year || 0) - (b.wp.year || 0) ||
+    String(a.wc.id).localeCompare(String(b.wc.id)));
+
+  const n = list.length;
+  const idx = new Map(S.watches.map((w, i) => [w.id, i]));
+  let descMax = 1;
+  for (const w of S.watches) if (w._desc > descMax) descMax = w._desc;
+
+  const T = {
+    n,
+    pts: new Float32Array(n * 8),    /* WORLD-space cubic: x0,y0,c1x,c1y,c2x,c2y,x1,y1 */
+    base: new Float32Array(n),       /* influence-weighted ink alpha, 0.04–0.10 */
+    ia: new Uint16Array(n),          /* index into S.watches — parent */
+    ib: new Uint16Array(n),          /* index into S.watches — child */
+    wlen: new Float32Array(n),       /* world chord length after trim (dash reveal) */
+    start: new Float32Array(n),      /* weave start offset ms from reveal t0 */
+    bulge: new Float32Array(n),      /* peak curve deviation off the chord, world units */
+  };
+  for (let k = 0; k < n; k++) {
+    const { wp, wc, fan } = list[k];
+    const dx = wc.x - wp.x, dy = wc.y - wp.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const ux = dx / d, uy = dy / d;
+    /* threads gesture at watches, never touch them — trim 12 world units
+       (≈7px at fit zoom, the drawLineage r+6 gap spoken in world space) */
+    const x0 = wp.x + ux * 12, y0 = wp.y + uy * 12;
+    const x1 = wc.x - ux * 12, y1 = wc.y - uy * 12;
+    const clen = Math.hypot(x1 - x0, y1 - y0);
+    /* same centered fan as drawLineage; flatter curvature — a quieter register */
+    const spread = fan === 0 ? 1 : Math.sign(fan) * clamp(1 + Math.abs(fan) * 0.9, 1, 2.5);
+    const kk = 0.14 * spread * clen;
+    const px = -uy, py = ux;
+    const o = k * 8;
+    T.pts[o] = x0;
+    T.pts[o + 1] = y0;
+    T.pts[o + 2] = x0 + (x1 - x0) * 0.3 + px * kk;
+    T.pts[o + 3] = y0 + (y1 - y0) * 0.3 + py * kk;
+    T.pts[o + 4] = x0 + (x1 - x0) * 0.7 + px * kk;
+    T.pts[o + 5] = y0 + (y1 - y0) * 0.7 + py * kk;
+    T.pts[o + 6] = x1;
+    T.pts[o + 7] = y1;
+    /* edges from high-influence parents read as the strongest currents,
+       without ever leaving whisper territory */
+    T.base[k] = 0.04 + 0.06 * Math.sqrt(wp._desc / descMax);
+    T.ia[k] = idx.get(wp.id);
+    T.ib[k] = idx.get(wc.id);
+    T.wlen[k] = clen;
+    /* a symmetric cubic with both controls offset k⊥ peaks at 0.75·k off the
+       chord — cached so the cull can widen its margin per edge (a fanned
+       thread must not pop out mid-pan while its bulge is still on-screen) */
+    T.bulge[k] = 0.75 * Math.abs(kk);
+    T.start[k] = 1500 + (n > 1 ? k / (n - 1) : 0) * 900;
+  }
+  S.threads = T;
+}
+
+/* the pass — behind the stars, in front of the vignette. Runs in the export
+   path too (the poster IS the export): no isExport branch, no cached state. */
+function drawThreads(c, w_, h_, now, z, dimT, TY, timeOn) {
+  const T = S.threads;
+  if (!T || T.n === 0) return;
+  /* zoom fade — same z-space and terminus as the family labels:
+     full at/below TIER_2, gone by z = 4 (detail takes over) */
+  const Z = 1 - clamp((z - TIER_2) / 1.8, 0, 1);
+  if (Z <= 0.004) return;
+  /* the whole ambient layer recedes as one under selection/family/release —
+     ambient ink can never sit at full strength beneath the lume lineage */
+  const G = lerp(1, DIM_FIELD, dimT);
+  const weaving = S.weave && !S.weaveDone;
+  const reducedWeave = weaving && (S.weave.reduced || REDUCED);
+  const wt0 = weaving ? S.weave.t0 : 0;
+
+  /* toScreen allocates — hoist the affine once: screen = world·zc + (ox,oy) */
+  const zc = S.cam.z;
+  const ox = w_ / 2 - (S.cam.x + S.drift.x / zc) * zc;
+  const oy = h_ / 2 - (S.cam.y + S.drift.y / zc) * zc;
+
+  const watches = S.watches, pts = T.pts;
+  c.save();
+  c.lineWidth = 1;
+  c.strokeStyle = THREAD_INK;
+  for (let k = 0; k < T.n; k++) {
+    const wa = watches[T.ia[k]], wb = watches[T.ib[k]];
+    /* an edge to the unborn does not exist yet */
+    let B = 1;
+    if (timeOn) {
+      B = Math.min(bornAlphaOf(wa, TY), bornAlphaOf(wb, TY));
+      if (B <= 0) continue;
+    }
+    /* reveal weave — dash-draw 600ms per thread, oldest first; the alpha
+       ramps over the first 120ms so the dash tip never pops */
+    let p = 1, R = 1;
+    if (weaving) {
+      if (reducedWeave) {
+        R = clamp((now - wt0) / 400, 0, 1);
+      } else {
+        const dt = now - wt0 - T.start[k];
+        if (dt <= 0) continue;
+        p = easeGlide(clamp(dt / 600, 0, 1));
+        R = clamp(dt / 120, 0, 1);
+      }
+    }
+    const o = k * 8;
+    const x0 = pts[o] * zc + ox, y0 = pts[o + 1] * zc + oy;
+    const x1 = pts[o + 6] * zc + ox, y1 = pts[o + 7] * zc + oy;
+    /* conservative viewport cull on the two anchors, margin widened by the
+       edge's own bulge — a fanned thread's bow can be on-screen while both
+       anchors sit past the flat 80px margin */
+    const cm = 80 + T.bulge[k] * zc;
+    if ((x0 < -cm && x1 < -cm) || (x0 > w_ + cm && x1 > w_ + cm) ||
+        (y0 < -cm && y1 < -cm) || (y0 > h_ + cm && y1 > h_ + cm)) continue;
+    const Lscr = T.wlen[k] * zc;
+    /* a thread never pops; it resolves. Window 8→16px (not the drafted
+       12→24): min world spacing is 40 → wlen ≥ 16, so every edge registers
+       whenever z ≥ 0.5 — §4.1 "all 93 threads visible at fit" holds at real
+       fit zooms, still pop-free */
+    const edgeA = clamp((Lscr - 8) / 8, 0, 1);
+    /* lens — endpoint min; Ephemeris B above; selection G is global */
+    const L = Math.min(lensFactorOf(wa, now), lensFactorOf(wb, now));
+    const a = T.base[k] * Z * G * L * B * edgeA * R;
+    if (a <= 0.004) continue;
+    c.globalAlpha = a;
+    if (p < 1) {
+      const approx = Lscr * 1.06;
+      c.setLineDash([approx, approx]);
+      c.lineDashOffset = approx * (1 - p);
+    }
+    c.beginPath();
+    c.moveTo(x0, y0);
+    c.bezierCurveTo(
+      pts[o + 2] * zc + ox, pts[o + 3] * zc + oy,
+      pts[o + 4] * zc + ox, pts[o + 5] * zc + oy,
+      x1, y1);
+    c.stroke();
+    if (p < 1) { c.setLineDash([]); c.lineDashOffset = 0; }
+  }
+  c.restore();
+}
+
+/* ======================================================================
    14 · RENDERING
    ====================================================================== */
 
@@ -2340,7 +2582,7 @@ function glowSprite(w) {
   const g = c.getContext('2d');
   const dial = hexRgb(w.dialColor);
   const grad = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-  grad.addColorStop(0, rgbaStr(dial, 0.08));
+  grad.addColorStop(0, rgbaStr(dial, 0.10));
   grad.addColorStop(1, rgbaStr(dial, 0));
   g.fillStyle = grad;
   g.fillRect(0, 0, s, s);
@@ -2633,6 +2875,22 @@ function glyphRadiusFor(w) {
   return glyphDiameter(z) / 2;
 }
 
+/* the field-dim level this frame — ONE source of truth. Selections and
+   family views are seeded with dimFrom (the dim level at the moment they
+   were created), so a handoff while the field is already dimmed — family
+   card → watch, lineage row → watch, watch → family — never flashes every
+   unrelated star back to full brightness for a frame: the field never pops,
+   it resolves; only the membership of the related set crossfades. */
+function currentDimT(now) {
+  const ramp = t0 => REDUCED
+    ? clamp((now - t0) / 200, 0, 1)
+    : easeOut(clamp((now - t0) / 400, 0, 1));
+  if (S.selection) return lerp(S.selection.dimFrom || 0, 1, ramp(S.selection.t0));
+  if (S.familyView) return lerp(S.familyView.dimFrom || 0, 1, ramp(S.familyView.t0));
+  if (S.releasing) return 1 - ramp(S.releasing.t0);
+  return 0;
+}
+
 /* --- the frame --------------------------------------------------------- */
 function draw(c, w_, h_, now, isExport) {
   c.clearRect(0, 0, w_, h_);
@@ -2654,17 +2912,10 @@ function draw(c, w_, h_, now, isExport) {
   const sel = S.selection;
   const rel = sel ? sel.related : null;
 
-  /* selection dim: 0→1 over 400ms; release: back over 400ms
+  /* selection dim: dimFrom→1 over 400ms; release: back over 400ms
      (reduced motion: a plain 200ms fade — never an instant snap).
      A family view is a selection of many — same ramp, members as the set. */
-  let dimT = 0;
-  if (sel) dimT = REDUCED ? clamp((now - sel.t0) / 200, 0, 1) : easeOut(clamp((now - sel.t0) / 400, 0, 1));
-  else if (S.familyView) dimT = REDUCED
-    ? clamp((now - S.familyView.t0) / 200, 0, 1)
-    : easeOut(clamp((now - S.familyView.t0) / 400, 0, 1));
-  else if (S.releasing) dimT = REDUCED
-    ? 1 - clamp((now - S.releasing.t0) / 200, 0, 1)
-    : 1 - easeOut(clamp((now - S.releasing.t0) / 400, 0, 1));
+  const dimT = currentDimT(now);
   const dimVal = lerp(1, DIM_FIELD, dimT);
   const relSetForDim = sel ? rel
     : S.familyView ? S.familyView.members
@@ -2674,6 +2925,9 @@ function draw(c, w_, h_, now, isExport) {
   const mod = currentMinuteOfDay(now); /* touch to keep beat anim ticking */
   const TY = curTY;
   const timeOn = TY < S.time.max - 1e-6;
+
+  /* ---- pass 0: the threads — ambient lineage behind the stars (§13b) ---- */
+  drawThreads(c, w_, h_, now, z, dimT, TY, timeOn);
 
   /* ---- pass 1: points/glyphs ---- */
   const labelJobs = [];
@@ -2692,7 +2946,7 @@ function draw(c, w_, h_, now, isExport) {
       if (bornA <= 0) continue;
       glint = clamp(1 - (TY - w.year) / 1.2, 0, 1) * bornA;
       const dY = descAt(w, TY);
-      if (dY < w._desc) magScale = Math.min(1.25 + 0.45 * Math.sqrt(dY), 3.5) / w._r;
+      if (dY < w._desc) magScale = magR(dY) / w._r;
     }
     const hov = hoverProgress(w.id, now);
     /* selection dim and lens dim never stack — the deeper one wins */
@@ -2976,32 +3230,6 @@ function exitExport() {
 }
 
 /* ======================================================================
-   15b · OVERTURE — the first thirty seconds
-   Three unmistakable first moves. Any real engagement dismisses it;
-   it never returns within the session.
-   ====================================================================== */
-
-let overtureDone = false;
-try { overtureDone = sessionStorage.getItem('atlas.overture') === '1'; } catch (e) { /* private mode */ }
-
-function showOverture() {
-  if (overtureDone || S.failed || !S.loaded) return;
-  elOverture.hidden = false;
-  requestAnimationFrame(() => requestAnimationFrame(() => elOverture.classList.add('on')));
-}
-function dismissOverture() {
-  if (overtureDone) return;
-  overtureDone = true;
-  try { sessionStorage.setItem('atlas.overture', '1'); } catch (e) { /* private mode */ }
-  if (elOverture.hidden) return;
-  elOverture.classList.remove('on');
-  setTimeout(() => { elOverture.hidden = true; }, REDUCED ? 90 : 500);
-}
-elOvPlay.addEventListener('click', () => { dismissOverture(); togglePlay(); });
-elOvVisit.addEventListener('click', () => { dismissOverture(); if (S.heroId != null) selectWatch(S.heroId); });
-elOvDismiss.addEventListener('click', dismissOverture);
-
-/* ======================================================================
    15c · LIGHTBOX — the print room
    One image at full size on the dark field. Owns the keyboard while open;
    sits above every other layer and above the Esc ladder.
@@ -3069,16 +3297,8 @@ elLightbox.addEventListener('click', e => { if (e.target === elLightbox) lightbo
    16 · INPUT
    ====================================================================== */
 
-function markHinted() {
-  if (S.hinted) return;
-  S.hinted = true;
-  try { sessionStorage.setItem('atlas.hinted', '1'); } catch (e) { /* private mode */ }
-  setTimeout(() => { elHint.classList.add('gone'); elHHint.classList.add('gone'); }, 600);
-}
-
 function anyInput() {
   skipReveal();
-  dismissOverture();   /* engagement is the dismissal — no lingering card */
   hideFamPreview();    /* a preview never outlives the gesture that raised it */
   resetIdleTimer();
 }
@@ -3121,7 +3341,6 @@ canvas.addEventListener('pointermove', e => {
     S.cam.y -= (my - pinchState.py) / S.cam.z;
     pinchState.px = mx; pinchState.py = my;
     zoomAt(mx, my, (pinchState.z0 * (d / Math.max(pinchState.d0, 1))) / S.cam.z);
-    markHinted();
     return;
   }
   if (dragState && pointers.size === 1) {
@@ -3136,7 +3355,6 @@ canvas.addEventListener('pointermove', e => {
       S.cam.x = dragState.camX - dx / S.cam.z;
       S.cam.y = dragState.camY - dy / S.cam.z;
       clampCam();
-      markHinted();
       invalidate();
     }
     return;
@@ -3191,7 +3409,6 @@ canvas.addEventListener('wheel', e => {
   const k = e.ctrlKey ? 0.011 : 0.0024;   /* trackpad pinch arrives as ctrl+wheel */
   const factor = Math.exp(-e.deltaY * k);
   zoomAt(e.clientX, e.clientY, factor);
-  markHinted();
   chromeDim(true); chromeDim(false);
 }, { passive: false });
 
@@ -3209,12 +3426,10 @@ function zoomStep(dir) {
   /* compound from any pending reduced-motion cut, not the stale camera */
   const b = pendingCam || S.cam;
   const target = clamp(b.z * (dir > 0 ? 1.6 : 1 / 1.6), S.fitZ, Z_MAX);
-  markHinted();
   flyTo(b.x, b.y, target, 240, easeOut);
 }
 function panStep(dx, dy) {
   const b = pendingCam || S.cam;
-  markHinted();
   flyTo(b.x + dx / b.z, b.y + dy / b.z, b.z, 240, easeOut);
 }
 
@@ -3230,9 +3445,11 @@ window.addEventListener('keydown', e => {
   const t = e.target;
   const inInput = t === elSearchInput || /^(input|textarea|select)$/i.test((t && t.tagName) || '');
   /* single-letter shortcuts never fire from a focused control — no surprise
-     mode changes while tabbed onto the fit chip, panel close, or lineage rows */
+     mode changes while tabbed onto the fit chip, panel close, lineage rows,
+     or the div-based sliders (year track, price thumbs: role="slider") */
   const inControl = t instanceof Element &&
-    (t.isContentEditable || /^(input|textarea|select|button)$/i.test(t.tagName || ''));
+    (t.isContentEditable || /^(input|textarea|select|button)$/i.test(t.tagName || '') ||
+     t.getAttribute('role') === 'slider');
   /* arrows belong to the panel's scroll/focus when focus is inside chrome */
   const inChrome = t instanceof Element &&
     (elPanel.contains(t) || elSearch.contains(t) || elTimeline.contains(t) || elLensPanel.contains(t));

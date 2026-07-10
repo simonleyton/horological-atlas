@@ -1,11 +1,4 @@
 {
-  "rolex-submariner-14060-1990": {
-    "file": "img/rolex-submariner-14060-1990.jpg",
-    "credit": "WatchBase catalog render",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://watchbase.com/rolex/submariner/14060m-0004",
-    "confidence": "catalog"
-  },
   "omega-seamaster-professional-2531-1993": {
     "file": "img/omega-seamaster-professional-2531-1993.jpg",
     "credit": "WatchBase catalog render",
@@ -34,32 +27,11 @@
     "source": "https://watchbase.com/longines/legend-diver/l3-674-4-50-0",
     "confidence": "catalog"
   },
-  "breitling-superocean-heritage-2007": {
-    "file": "img/breitling-superocean-heritage-2007.jpg",
-    "credit": "WatchBase catalog render",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://watchbase.com/breitling/superocean-heritage/a1732024-b868-152a",
-    "confidence": "catalog"
-  },
   "omega-ploprof-1200-2009": {
     "file": "img/omega-ploprof-1200-2009.jpg",
     "credit": "WatchBase catalog render",
     "license": "Unlicensed \u2014 personal prototype; clear before publishing",
     "source": "https://watchbase.com/omega/seamaster-ploprof/224-30-55-21-04-001",
-    "confidence": "catalog"
-  },
-  "bremont-supermarine-s500-2010": {
-    "file": "img/bremont-supermarine-s500-2010.jpg",
-    "credit": "WatchBase catalog render",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://watchbase.com/bremont/supermarine/s500si",
-    "confidence": "catalog"
-  },
-  "oris-aquis-2011": {
-    "file": "img/oris-aquis-2011.jpg",
-    "credit": "WatchBase catalog render",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://watchbase.com/oris/aquis/01-733-7653-4783-set-rs",
     "confidence": "catalog"
   },
   "tudor-black-bay-2012": {
@@ -83,25 +55,11 @@
     "source": "https://watchbase.com/omega/seamaster-300/233-30-41-21-01-001",
     "confidence": "catalog"
   },
-  "oris-divers-sixty-five-2015": {
-    "file": "img/oris-divers-sixty-five-2015.jpg",
-    "credit": "WatchBase catalog render",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://watchbase.com/oris/divers-65/01-733-7707-4065-07-8-20-18",
-    "confidence": "catalog"
-  },
   "seiko-srp777-2016": {
     "file": "img/seiko-srp777-2016.jpg",
     "credit": "WatchBase catalog render",
     "license": "Unlicensed \u2014 personal prototype; clear before publishing",
     "source": "https://watchbase.com/seiko/prospex-divers/srp777",
-    "confidence": "catalog"
-  },
-  "eterna-super-kontiki-2016": {
-    "file": "img/eterna-super-kontiki-2016.jpg",
-    "credit": "WatchBase catalog render",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://watchbase.com/eterna/adventure/1273-41-49-1363",
     "confidence": "catalog"
   },
   "rolex-sea-dweller-126600-2017": {
@@ -130,13 +88,6 @@
     "credit": "WatchBase catalog render",
     "license": "Unlicensed \u2014 personal prototype; clear before publishing",
     "source": "https://watchbase.com/mido/ocean-star/m026-830-11-041-00",
-    "confidence": "catalog"
-  },
-  "tudor-pelagos-fxd-2021": {
-    "file": "img/tudor-pelagos-fxd-2021.jpg",
-    "credit": "WatchBase catalog render",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://watchbase.com/tudor/pelagos/m25707b-26-0001",
     "confidence": "catalog"
   },
   "omega-ultra-deep-2022": {

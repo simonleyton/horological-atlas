@@ -120,11 +120,9 @@ body.observatory .chrome { transition: opacity 300ms var(--ease-exit); }
    Ignition ends) so they can never contaminate later transitions. */
 body.pre-reveal #wordmark,
 body.pre-reveal #search,
-body.pre-reveal #hint,
 body.pre-reveal footer { opacity: 0; }
 body.revealing #wordmark { transition-duration: 320ms; }
 body.revealing #search { transition-duration: 320ms; transition-delay: 100ms; }
-body.revealing #hint { transition-duration: 320ms; transition-delay: 200ms; }
 body.revealing footer { transition-duration: 320ms; transition-delay: 200ms; }
 
 /* ---------- WORDMARK ---------- */
@@ -147,40 +145,6 @@ body.revealing footer { transition-duration: 320ms; transition-delay: 200ms; }
   text-transform: none;
   line-height: 1.5;
   color: var(--text-3);
-}
-
-/* ---------- OVERTURE — the first thirty seconds ---------- */
-
-#overture {
-  position: fixed; top: 96px; left: 24px;
-  width: 300px;
-  z-index: 2;
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: opacity 480ms var(--ease-out), transform 480ms var(--ease-out);
-  pointer-events: none;
-}
-#overture.on { opacity: 1; transform: none; pointer-events: auto; }
-#overture[hidden] { display: none; }
-#ov-lede {
-  font-size: 13px; font-weight: 400;
-  line-height: 1.6;
-  color: var(--text-2);
-}
-#ov-actions { margin-top: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
-#ov-actions button {
-  height: 28px; padding: 0 12px;
-  border: 1px solid var(--line-1);
-  border-radius: 6px;
-  font-size: 11px; font-weight: 500;
-  letter-spacing: 0.03em;
-  color: var(--text-3);
-  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out), background 160ms var(--ease-out);
-}
-#ov-actions button:hover { color: var(--text-1); border-color: var(--line-2); background: var(--surface-2); }
-#ov-play { color: var(--text-1); border-color: var(--line-2); }
-@media (max-width: 760px) {
-  #overture { left: 16px; right: 16px; width: auto; top: 88px; }
 }
 body.dim-chrome #wordmark { opacity: var(--dim-chrome); }
 body.observatory #wordmark, body.export #wordmark { opacity: 0; }
@@ -698,22 +662,6 @@ canvas.fi-strip {
   color: var(--text-3);
 }
 
-/* ---------- HINT ---------- */
-
-#hint {
-  position: fixed; bottom: 76px; left: 50%;
-  transform: translateX(-50%);
-  font-size: 11px; font-weight: 400;
-  letter-spacing: 0.02em;
-  color: var(--text-3);
-  line-height: 1.5;
-  white-space: nowrap;
-  z-index: 1;
-  user-select: none;
-}
-#hint.gone { opacity: 0 !important; transition: opacity 600ms var(--ease-exit); pointer-events: none; }
-#hint[hidden] { display: none; }
-
 /* ---------- THE EPHEMERIS — time scrubber ---------- */
 
 #timeline {
@@ -795,7 +743,7 @@ footer {
   position: fixed; left: 24px; right: 24px; bottom: 24px;
   display: flex; align-items: center; justify-content: space-between;
   pointer-events: none;
-  z-index: 3;   /* §5 stack: hint/footer < wordmark < fit chip — the chip rides here */
+  z-index: 3;   /* §5 stack: footer < wordmark < fit chip — the chip rides here */
   user-select: none;
 }
 #footer-left {
@@ -803,6 +751,16 @@ footer {
   line-height: 1.5;
 }
 #footer-right { display: flex; align-items: center; gap: 12px; pointer-events: auto; }
+/* the key legend — one quiet line, the only in-product disclosure of the
+   single-letter modes (H, E, Space, F); pan/zoom teach by form, these can't */
+#key-legend {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  opacity: 0.75;
+  margin-right: 4px;
+  user-select: none;
+}
 #fit-chip {
   height: 24px;
   padding: 0 10px;
@@ -814,12 +772,6 @@ footer {
   transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
 }
 #fit-chip:hover { color: var(--text-2); border-color: var(--line-2); }
-#h-hint {
-  font-size: 10px; font-weight: 400;
-  letter-spacing: 0.02em;
-  color: var(--text-3);
-  opacity: 0.55;
-}
 #lens-chip {
   height: 24px;
   padding: 0 10px;
@@ -949,8 +901,6 @@ footer {
 @media (max-width: 760px) {
   #lens-panel { right: 16px; left: 16px; width: auto; }
 }
-#h-hint.gone { opacity: 0; transition: opacity 600ms var(--ease-exit); }
-#h-hint[hidden] { display: none; }
 
 /* ---------- EXPORT CARTOUCHE ---------- */
 
@@ -989,13 +939,13 @@ footer {
   #panel.open { transform: none; }
   #panel.closing { transform: translateY(12px); }
   #search.open { width: calc(100vw - 48px); }
-  #hint { display: none; }
+  #key-legend { display: none; }   /* no keyboard, no legend */
 }
 
 /* ---------- REDUCED MOTION ---------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .chrome, #panel, #panel .sec, #search, #hint, #status, #panel-content,
+  .chrome, #panel, #panel .sec, #search, #status, #panel-content,
   #fam-preview, #fp-media img.fp-slide, #lightbox, #lb-img, #lens-panel {
     transition-duration: 80ms !important;
     transition-delay: 0ms !important;

@@ -2292,7 +2292,8 @@
       "heliumValve": true,
       "handsStyle": "sword",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/omega/seamaster-diver-300m/2531-80-00"
   },
   {
     "id": "seiko-skx007-1996",
@@ -2388,7 +2389,8 @@
       "heliumValve": false,
       "handsStyle": "sword",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/panerai/submersible/pam00024"
   },
   {
     "id": "seiko-monster-skx779-2000",
@@ -2640,7 +2642,8 @@
       "heliumValve": true,
       "handsStyle": "broad-arrow",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/omega/seamaster-planet-ocean/2900-50-91"
   },
   {
     "id": "sinn-u1-2005",
@@ -2670,7 +2673,8 @@
       "heliumValve": false,
       "handsStyle": "pencil",
       "lumePlots": "rectangular"
-    }
+    },
+    "watchbase": "https://watchbase.com/sinn/diving-watches/1010-010"
   },
   {
     "id": "steinhart-ocean-one-2006",
@@ -2796,7 +2800,8 @@
       "heliumValve": false,
       "handsStyle": "sword",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/longines/legend-diver/l3-674-4-50-0"
   },
   {
     "id": "longines-hydroconquest-2007",
@@ -2826,7 +2831,8 @@
       "heliumValve": false,
       "handsStyle": "sword",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/longines/hydroconquest/l3-742-4-56-6"
   },
   {
     "id": "breitling-superocean-heritage-2007",
@@ -3016,7 +3022,8 @@
       "heliumValve": true,
       "handsStyle": "plongeur",
       "lumePlots": "rectangular"
-    }
+    },
+    "watchbase": "https://watchbase.com/omega/seamaster-ploprof/224-30-55-21-04-001"
   },
   {
     "id": "rolex-submariner-116610ln-2010",
@@ -3048,7 +3055,8 @@
       "heliumValve": false,
       "handsStyle": "mercedes",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/rolex/submariner/116610ln-0001"
   },
   {
     "id": "richard-mille-rm028-2010",
@@ -3171,7 +3179,8 @@
       "heliumValve": false,
       "handsStyle": "snowflake",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/tudor/black-bay/79220r-0002"
   },
   {
     "id": "tudor-pelagos-2012",
@@ -3203,7 +3212,8 @@
       "heliumValve": true,
       "handsStyle": "snowflake",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/tudor/pelagos/25500tn-0001"
   },
   {
     "id": "blancpain-bathyscaphe-2013",
@@ -3235,7 +3245,8 @@
       "heliumValve": false,
       "handsStyle": "pencil",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/blancpain/fifty-fathoms/5000-1110-b52a"
   },
   {
     "id": "omega-seamaster-300-master-2014",
@@ -3267,7 +3278,8 @@
       "heliumValve": false,
       "handsStyle": "broad-arrow",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/omega/seamaster-300/233-30-41-21-01-001"
   },
   {
     "id": "iwc-aquatimer-2014",
@@ -3299,7 +3311,8 @@
       "heliumValve": false,
       "handsStyle": "sword",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/iwc/gst-aquatimer/iw3290-01"
   },
   {
     "id": "oris-divers-sixty-five-2015",
@@ -3425,7 +3438,8 @@
       "heliumValve": false,
       "handsStyle": "syringe",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/seiko/prospex-divers/srp777"
   },
   {
     "id": "damasko-dsub1-2016",
@@ -3643,7 +3657,8 @@
       "heliumValve": false,
       "handsStyle": "broad-arrow",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/rado/captain-cook/r32500315"
   },
   {
     "id": "halios-seaforth-2017",
@@ -3737,7 +3752,8 @@
       "heliumValve": true,
       "handsStyle": "mercedes",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/rolex/sea-dweller/126600-0001"
   },
   {
     "id": "doxa-sub-300-2017",
@@ -3801,7 +3817,8 @@
       "heliumValve": true,
       "handsStyle": "sword",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/omega/seamaster-diver-300m/210-30-42-20-01-001"
   },
   {
     "id": "tudor-black-bay-58-2018",
@@ -3834,7 +3851,8 @@
       "heliumValve": false,
       "handsStyle": "snowflake",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/tudor/black-bay-58/79030n-0002"
   },
   {
     "id": "certina-ds-ph200m-2018",
@@ -3898,7 +3916,8 @@
       "heliumValve": false,
       "handsStyle": "sword",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/tissot/seastar/t120-407-11-041-00"
   },
   {
     "id": "lorier-neptune-2018",
@@ -4058,7 +4077,8 @@
       "heliumValve": false,
       "handsStyle": "mercedes",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/rolex/submariner/126610ln-0001"
   },
   {
     "id": "seiko-spb143-2020",
@@ -4120,7 +4140,8 @@
       "heliumValve": false,
       "handsStyle": "sword",
       "lumePlots": "round"
-    }
+    },
+    "watchbase": "https://watchbase.com/mido/ocean-star/m026-830-11-041-00"
   },
   {
     "id": "serica-5303-2021",
@@ -4246,7 +4267,8 @@
       "heliumValve": false,
       "handsStyle": "broad-arrow",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/omega/seamaster-planet-ocean/215-30-46-21-06-001"
   },
   {
     "id": "tudor-pelagos-39-2022",
@@ -4278,7 +4300,8 @@
       "heliumValve": false,
       "handsStyle": "snowflake",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/tudor/pelagos/25407n-0001"
   },
   {
     "id": "panerai-radiomir-3646-1940",
@@ -4406,7 +4429,8 @@
       "heliumValve": false,
       "handsStyle": "baton",
       "lumePlots": "mixed"
-    }
+    },
+    "watchbase": "https://watchbase.com/panerai/luminor/pam00111"
   },
   {
     "id": "panerai-submersible-bronzo-2011",
@@ -4438,7 +4462,8 @@
       "heliumValve": false,
       "handsStyle": "sword",
       "lumePlots": "sandwich"
-    }
+    },
+    "watchbase": "https://watchbase.com/panerai/submersible/pam00382"
   },
   {
     "id": "panerai-submersible-quarantaquattro-2022",
@@ -4470,6 +4495,7 @@
       "heliumValve": false,
       "handsStyle": "sword",
       "lumePlots": "sandwich"
-    }
+    },
+    "watchbase": "https://watchbase.com/panerai/submersible/pam01229"
   }
 ]

@@ -111,32 +111,69 @@ def family_refs(brand_slug, fam_slug):
     return refs
 
 
+def slug_ref_matches(slug, ref_tok):
+    """RADICAL SPECIFICITY: our reference must equal the slug's reference
+    segment exactly (after stripping WatchBase's -NNNN variant suffix) —
+    never substring ('6200' must NOT match '176200')."""
+    base = re.sub(r"-\d{3,4}$", "", slug)
+    return norm_token(base) == ref_tok or norm_token(slug) == ref_tok
+
+
+def model_tokens_of(w):
+    return [t for t in re.split(r"[^a-z0-9]+", w["model"].lower()) if len(t) >= 3
+            and t not in ("watch", "the", "diver", "divers")]
+
+
+def fam_coheres(fam, model_toks):
+    """the family slug must relate to the model — a correct ref number in the
+    wrong collection is still the wrong watch."""
+    if not model_toks:
+        return True
+    return any(t in fam or fam.replace("-", "") in t for t in model_toks)
+
+
+TITLE_RE = re.compile(r"<title>([^<]*)</title>", re.I)
+
+
+def title_ok(html, w):
+    """the detail page must name the brand AND (the reference or a model word)."""
+    m = TITLE_RE.search(html)
+    if not m:
+        return False
+    tt = norm_token(m.group(1))
+    if norm_token(w["brand"]) not in tt:
+        return False
+    ref_tok = norm_token(w.get("reference", ""))
+    if ref_tok and len(ref_tok) >= 4 and ref_tok in tt:
+        return True
+    return any(tok in tt for tok in model_tokens_of(w))
+
+
 def find_detail_url(w):
-    """brand page -> ref token match; else best-family pages -> ref match."""
+    """brand page -> exact ref-segment match in a model-coherent family;
+    else coherent family pages -> exact ref match. No fuzz, no substrings."""
     bslug = slugify(w["brand"])
     bp = brand_page(bslug)
     if bp is None:
         return None
     ref_tok = norm_token(w.get("reference", ""))
-    model_toks = [t for t in re.split(r"[^a-z0-9]+", w["model"].lower()) if len(t) >= 3]
+    model_toks = model_tokens_of(w)
 
     def match_in(refs):
         if ref_tok and len(ref_tok) >= 4:
             for fam, ref, url in refs:
-                if ref_tok in norm_token(ref):
+                if slug_ref_matches(ref, ref_tok) and fam_coheres(fam, model_toks):
                     return url
-        # model-token fallback: unique family whose slug contains a model token
         return None
 
     hit = match_in(bp["refs"])
     if hit:
         return hit
 
-    # rank families by similarity to model name, try the top few
     fams = sorted(bp["families"],
                   key=lambda f: -sum(1 for t in model_toks if t in f))
     for fam in fams[:4]:
-        if not any(t in fam for t in model_toks) and (not ref_tok or len(ref_tok) < 4):
+        if not fam_coheres(fam, model_toks):
             continue
         refs = family_refs(bslug, fam)
         hit = match_in(refs)
@@ -204,15 +241,17 @@ def knockout(img):
         return img
 
     arr = np.asarray(img.convert("RGB"), dtype=np.float64)
-    mn = arr.min(axis=2)
-    sat = arr.max(axis=2) - mn
     lum = arr.mean(axis=2)
 
-    core = (mn < 190) | (sat > 22)            # definitely-watch pixels
+    # edge energy: the watch is textured, background and shadows are smooth —
+    # this keeps polished steel (bright but detailed) that thresholds lose
+    gy, gx = np.gradient(lum)
+    edge = np.hypot(gx, gy) > 6.0
+    m = Image.fromarray((edge * 255).astype("uint8"))
+    m = m.filter(ImageFilter.MaxFilter(7)).filter(ImageFilter.MaxFilter(7))
+    core = np.array(m) > 127
     core = _keep_center_component(core)
     core = _fill_holes(core)
-    core_img = Image.fromarray((core * 255).astype("uint8")).filter(ImageFilter.MaxFilter(3))
-    core = np.array(core_img) > 127
 
     # outside the silhouette: un-compose from white — shadow opacity from darkness
     shadow_a = np.clip((255.0 - lum) * 0.85, 0, 255)
@@ -240,6 +279,102 @@ def compose(png_bytes):
     return canvas
 
 
+CAT_DIR = DATA / "img-catalog"
+CATALOG = DATA / "catalog.json"
+REPORT = DATA / "watchbase-report.json"
+SPEC_ROW = re.compile(r"<tr><th>([^<:]+):?</th>\s*<td>([^<]*)</td></tr>")
+
+
+def parse_specs(html):
+    rows = {k.strip().lower(): v.strip() for k, v in SPEC_ROW.findall(html)}
+    spec = {}
+    m = re.match(r"(\d{4})", rows.get("produced", ""))
+    if m:
+        spec["year"] = int(m.group(1))
+    m = re.match(r"([\d.]+)", rows.get("diameter", ""))
+    if m:
+        spec["diameterMm"] = float(m.group(1))
+    m = re.match(r"([\d.]+)", rows.get("w/r", ""))
+    if m:
+        spec["waterResistanceM"] = float(m.group(1))
+    return spec
+
+
+def crawl_all():
+    """Catalog layer for EVERY watch WatchBase carries + the reference spine:
+    canonical URL recorded on each watch, page specs diffed into a report
+    (report only — the dataset is never silently corrected)."""
+    watches = json.loads((DATA / "watches.json").read_text())
+    CAT_DIR.mkdir(exist_ok=True)
+    catalog = json.loads(CATALOG.read_text()) if CATALOG.exists() else {}
+    report = json.loads(REPORT.read_text()) if REPORT.exists() else {}
+    known = {}
+    if SHARD.exists():
+        for wid, e in json.loads(SHARD.read_text()).items():
+            if e.get("source"):
+                known[wid] = e["source"]
+    matched, missed = 0, []
+
+    for i, w in enumerate(watches):
+        wid = w["id"]
+        if wid in catalog and (DATA / catalog[wid]["file"]).exists() and w.get("watchbase"):
+            continue
+        try:
+            url = known.get(wid) or w.get("watchbase") or find_detail_url(w)
+            if not url:
+                missed.append(wid)
+                log(f"skip  {wid}")
+                continue
+            html_b, final_url = fetch(url)
+            time.sleep(SLEEP)
+            html = html_b.decode("utf-8", "replace")
+
+            if not title_ok(html, w):
+                missed.append(wid)
+                log(f"skip  {wid} (title mismatch — wrong watch)")
+                continue
+
+            w["watchbase"] = final_url
+            spec = parse_specs(html)
+            diffs = []
+            if spec.get("year") and w.get("year") and spec["year"] != w["year"]:
+                diffs.append(f"year: ours {w['year']} vs page {spec['year']}")
+            if spec.get("diameterMm") and w.get("diameterMm") and abs(spec["diameterMm"] - w["diameterMm"]) > 0.6:
+                diffs.append(f"diameter: ours {w['diameterMm']} vs page {spec['diameterMm']}")
+            if spec.get("waterResistanceM") and w.get("waterResistanceM") and abs(spec["waterResistanceM"] - w["waterResistanceM"]) > 0.5:
+                diffs.append(f"wr: ours {w['waterResistanceM']} vs page {spec['waterResistanceM']}")
+            if diffs:
+                report[wid] = {"url": final_url, "diffs": diffs}
+
+            m = OG_IMAGE.search(html)
+            if m and "default" not in m.group(1) and "logo" not in m.group(1):
+                img_bytes, _ = fetch(m.group(1), binary=True)
+                time.sleep(SLEEP)
+                if len(img_bytes) >= 8000:
+                    compose(img_bytes).convert("RGB").save(CAT_DIR / f"{wid}.jpg", "JPEG", quality=88)
+                    catalog[wid] = {
+                        "file": f"img-catalog/{wid}.jpg",
+                        "credit": "WatchBase catalog render",
+                        "license": "Unlicensed — personal prototype; clear before publishing",
+                        "source": final_url,
+                        "confidence": "catalog",
+                    }
+                    CATALOG.write_text(json.dumps(catalog, indent=2) + "\n")
+            matched += 1
+            log(f"ok    {wid}  [{i + 1}/{len(watches)}]")
+        except Exception as e:
+            missed.append(wid)
+            log(f"err   {wid}: {e}")
+
+    (DATA / "watches.json").write_text(json.dumps(watches, indent=2, ensure_ascii=False) + "\n")
+    REPORT.write_text(json.dumps(report, indent=2) + "\n")
+    log("\n---- summary ----")
+    log(f"pages matched:   {matched}")
+    log(f"catalog renders: {len(catalog)}")
+    log(f"spec diffs:      {len(report)}")
+    log(f"unmatched ({len(missed)}): {','.join(missed)}")
+
+
 def redo():
     """Re-render every shard entry through the current treatment,
     refetching og:image from the recorded source page."""
@@ -264,6 +399,9 @@ def redo():
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--all":
+        crawl_all()
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "--redo":
         redo()
         return

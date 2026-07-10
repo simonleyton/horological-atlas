@@ -20,16 +20,6 @@
     <span id="tagline">A map of dive-watch design, arranged by kinship — brightness is influence.</span>
   </header>
 
-  <section id="overture" aria-label="Introduction" hidden>
-    <p id="ov-lede">Every significant dive watch since 1932, placed beside its
-      nearest relatives. The brighter the star, the more designs it fathered.</p>
-    <div id="ov-actions">
-      <button id="ov-play" type="button">Play the century</button>
-      <button id="ov-visit" type="button">Visit the brightest star</button>
-      <button id="ov-dismiss" type="button">Explore on my own</button>
-    </div>
-  </section>
-
   <div id="search" class="chrome">
     <button id="search-toggle" type="button">Search <span class="kbd">⌘K</span></button>
     <input id="search-input" type="text" role="combobox" aria-expanded="false"
@@ -47,10 +37,8 @@
     <div id="panel-content"></div>
   </aside>
 
-  <p id="hint" class="chrome">Drag to pan · Scroll to zoom · ⌘K to search</p>
-
   <div id="timeline" class="chrome at-now" hidden>
-    <button id="tl-play" type="button" aria-label="Play the century">
+    <button id="tl-play" type="button" aria-label="Play the century" title="Play the century (Space)" aria-keyshortcuts="Space">
       <svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 0.8 L8.2 5 L1 9.2 Z" fill="currentColor"/></svg>
     </button>
     <div id="tl-track" role="slider" tabindex="0" aria-label="Year — the field as it existed"
@@ -64,9 +52,9 @@
   <footer class="chrome">
     <div id="footer-left"></div>
     <div id="footer-right">
+      <span id="key-legend">H hide&thinsp;&middot;&thinsp;E export&thinsp;&middot;&thinsp;Space play&thinsp;&middot;&thinsp;F fit</span>
       <button id="lens-chip" type="button" aria-expanded="false" aria-controls="lens-panel">LENS</button>
-      <button id="fit-chip" type="button">FIT</button>
-      <span id="h-hint">H hides the interface</span>
+      <button id="fit-chip" type="button" title="Fit the whole field (F)" aria-keyshortcuts="F">FIT</button>
     </div>
   </footer>
 

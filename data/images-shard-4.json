@@ -1,0 +1,44 @@
+{
+ "rolex-submariner-6204-1953": {
+  "file": "img/rolex-submariner-6204-1953.jpg",
+  "credit": "Bob's Watches (editorial)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.bobswatches.com/watch-resources/rolex-submariner-ref-6204-history",
+  "confidence": "curated"
+ },
+ "blancpain-fifty-fathoms-milspec-1957": {
+  "file": "img/blancpain-fifty-fathoms-milspec-1957.jpg",
+  "credit": "Phillips Watches (auction catalogue)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.phillips.com/detail/blancpain/CH080119/135",
+  "confidence": "curated"
+ },
+ "aquastar-deepstar-1965": {
+  "file": "img/aquastar-deepstar-1965.jpg",
+  "credit": "Analog:Shift (dealer photography)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.analogshift.com/products/aquastar-deepstar",
+  "confidence": "curated"
+ },
+ "jlc-deep-sea-alarm-1959": {
+  "file": "img/jlc-deep-sea-alarm-1959.jpg",
+  "credit": "Sotheby's auction catalogue — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.sothebys.com/en/auctions/ecatalogue/2019/watches-l19071/lot.5.html",
+  "confidence": "curated"
+ },
+ "seiko-6215-1967": {
+  "file": "img/seiko-6215-1967.jpg",
+  "credit": "Unknown — recovered from prior sweep (Fratello watermark visible)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated"
+ },
+ "doxa-sub-300t-1968": {
+  "file": "img/doxa-sub-300t-1968.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated"
+ }
+}

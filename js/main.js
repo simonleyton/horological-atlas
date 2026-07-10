@@ -1,0 +1,3328 @@
+/* THE HOROLOGICAL ATLAS — app
+   Deep Field — Magnitude Is Influence.
+   Zero dependencies. Canvas 2D. ES module. */
+
+'use strict';
+
+/* ======================================================================
+   0 · TOKENS (mirrors app.css)
+   ====================================================================== */
+
+const FIELD_HEX = '#06080B';
+const FIELD_RGB = [6, 8, 11];
+const INK_RGB = [233, 237, 242];            /* #E9EDF2 */
+const VIGNETTE_RGB = [4, 5, 10];            /* #04050A */
+const TEXT_2 = '#9AA4B2';
+const TEXT_3 = '#5C6672';
+const TEXT_2_RGB = [154, 164, 178];
+const TEXT_3_RGB = [92, 102, 114];         /* label hover lerps these — no per-frame parsing */
+const LUME = '#E4D5A8';
+const LUME_RGB = [228, 213, 168];
+const LUME_GLOW_0 = 'rgba(228,213,168,0.14)';   /* precomputed — no per-frame strings */
+const LUME_GLOW_1 = 'rgba(228,213,168,0)';
+const DIM_FIELD = 0.12;
+
+const FONT_UI = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, 'Helvetica Neue', sans-serif";
+const FONT_MONO = "ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace";
+
+const Z_MAX = 14;
+const TIER_2 = 2.2;                          /* star → glyph */
+const TIER_3 = 6;                            /* glyph → labeled glyph */
+const XFADE = 0.12;                          /* ±12% crossfade band */
+
+let REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => { REDUCED = e.matches; invalidate(); });
+
+/* ======================================================================
+   1 · UTILITIES
+   ====================================================================== */
+
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+/* cubic-bezier easing (CSS-compatible), Newton–Raphson on x */
+function cubicBezier(x1, y1, x2, y2) {
+  const ax = 3 * x1 - 3 * x2 + 1, bx = 3 * x2 - 6 * x1, cx = 3 * x1;
+  const ay = 3 * y1 - 3 * y2 + 1, by = 3 * y2 - 6 * y1, cy = 3 * y1;
+  const sampleX = t => ((ax * t + bx) * t + cx) * t;
+  const sampleY = t => ((ay * t + by) * t + cy) * t;
+  const sampleDX = t => (3 * ax * t + 2 * bx) * t + cx;
+  return x => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let t = x;
+    for (let i = 0; i < 6; i++) {
+      const err = sampleX(t) - x;
+      const d = sampleDX(t);
+      if (Math.abs(err) < 1e-5) break;
+      if (Math.abs(d) < 1e-6) break;
+      t -= err / d;
+    }
+    return sampleY(clamp(t, 0, 1));
+  };
+}
+const easeGlide = cubicBezier(0.4, 0.0, 0.1, 1);
+const easeOut = cubicBezier(0.22, 1, 0.36, 1);
+const easeExit = cubicBezier(0.4, 0, 1, 1);
+const easeBeat = cubicBezier(0.3, 0, 0, 1);
+
+/* color — the anti-confetti rule. No data hex ever hits the canvas raw. */
+const hexCache = new Map();
+function hexRgb(hex) {
+  if (hexCache.has(hex)) return hexCache.get(hex);
+  let out = [154, 164, 178];
+  if (typeof hex === 'string') {
+    let h = hex.replace('#', '').trim();
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    if (/^[0-9a-fA-F]{6}$/.test(h)) {
+      out = [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    }
+  }
+  hexCache.set(hex, out);
+  return out;
+}
+const rgbStr = (c) => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+const rgbaStr = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+
+const mixCache = new Map();
+function mixed(kind, hex) {
+  const key = kind + '|' + hex;
+  if (mixCache.has(key)) return mixCache.get(key);
+  const d = hexRgb(hex);
+  let out;
+  if (kind === 'fill') {           /* mix(data, field, 22% data) */
+    out = FIELD_RGB.map((f, i) => f + 0.22 * (d[i] - f));
+  } else if (kind === 'stroke') {  /* data + 70% toward ink */
+    out = d.map((v, i) => v + 0.70 * (INK_RGB[i] - v));
+  } else {                         /* 'star': dial + 70% toward white(#E9EDF2) */
+    out = d.map((v, i) => v + 0.70 * (INK_RGB[i] - v));
+  }
+  const s = rgbStr(out);
+  mixCache.set(key, s);
+  return s;
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+const fmtNum = n => Number(n).toLocaleString('en-US');
+const sentence = s => { s = String(s ?? ''); return s.charAt(0).toUpperCase() + s.slice(1); };
+
+/* nearest plain-English color name, for `Rotating · Black` spec values */
+const COLOR_NAMES = [
+  ['Black', [12, 14, 16]], ['Blue', [30, 60, 120]], ['Navy', [16, 28, 60]],
+  ['Green', [30, 90, 60]], ['Red', [170, 40, 40]], ['Orange', [225, 120, 40]],
+  ['Yellow', [220, 190, 60]], ['Grey', [120, 126, 134]], ['Silver', [190, 195, 200]],
+  ['White', [235, 236, 238]], ['Cream', [228, 213, 180]], ['Gold', [190, 150, 80]],
+  ['Brown', [95, 65, 45]], ['Burgundy', [100, 30, 45]], ['Teal', [40, 110, 115]],
+  ['Purple', [90, 60, 130]]
+];
+function colorName(hex) {
+  if (!hex) return null;
+  const c = hexRgb(hex);
+  let best = null, bd = Infinity;
+  for (const [name, ref] of COLOR_NAMES) {
+    const d = (c[0] - ref[0]) ** 2 + (c[1] - ref[1]) ** 2 + (c[2] - ref[2]) ** 2;
+    if (d < bd) { bd = d; best = name; }
+  }
+  return best;
+}
+
+const familyLabel = id => sentence(String(id ?? '').replace(/-/g, ' '));
+
+/* one sentence per family — the only prose in the family index */
+const FAMILY_CHARACTER = {
+  'pioneers': "Two watches from before the formula existed — Omega's double-cased Marine and the radium-lit Radiomir — between them sketching everything the century would refine.",
+  'submariner-lineage': "The template itself: rotating bezel, Oyster case, Mercedes hands, revised in increments so small the 1953 original remains legible in the 2020 reference.",
+  'fifty-fathoms-lineage': "The other 1953 — Fiechter's combat-swimmer brief of locking bezel and moisture indicator, the diver written first as a military specification.",
+  'seamaster-lineage': "Omega's long argument with the Submariner, carried from broad-arrow CK2913 to monobloc PloProf to a 6,000-metre Ultra Deep — the lineage that kept experimenting.",
+  'tudor-lineage': "The working-grade sibling that grew snowflake hands into a house style, then taught the whole industry how to mine an archive with the Black Bay.",
+  'japanese-toolwatch': "From the 62MAS forward, Seiko and Citizen rebuilt the diver as honest industrial product — Tunas, Turtles, and the quartz that democratized the depth rating.",
+  'doxa-professional': "An orange dial and a no-decompression bezel, dived by Cousteau's people and written into Clive Cussler — the professional's watch sold to amateurs who actually dove.",
+  'super-compressor': "EPSA's spring-loaded caseback sealed tighter the deeper it went; its twin crowns and inner bezel remain the most-copied case architecture never signed by a watch brand.",
+  'italian-military': "Radium instruments for the frogmen of the Decima MAS, cushion cases supplied by Rolex — and a crown-sealing lever that still defines the house.",
+  'german-engineering': "Submarine steel, tegimented surfaces, captive bezels — the dive watch treated as an engineering problem with a documented, over-built solution.",
+  'vintage-skindiver': "The sixties' democratic diver — slim bezel, broad crown, a hundred Swiss names — the common stock every revival since has drawn against.",
+  'modern-heritage': "The established houses reopening their own drawers: Sixty-Five, Captain Cook, KonTiki — reissues faithful enough to sit on this map beside their sources.",
+  'microbrand-modern': "Direct-to-collector brands built on the skin-diver's plain grammar — thirty-nine millimetres, two hundred metres, nothing the brief didn't ask for.",
+  'avant-garde': "What happens when the formula is optional: Zenith's faceted Defy and Richard Mille's RM 028, divers built as provocations four decades apart."
+};
+
+/* ======================================================================
+   2 · DOM
+   ====================================================================== */
+
+const $ = id => document.getElementById(id);
+const canvas = $('atlas'), body = document.body;
+const elStatus = $('status'), elS1 = $('status-1'), elS2 = $('status-2');
+const elSearch = $('search'), elSearchToggle = $('search-toggle'),
+      elSearchInput = $('search-input'), elSearchResults = $('search-results');
+const elPanel = $('panel'), elPanelClose = $('panel-close'), elPanelContent = $('panel-content');
+const elHint = $('hint'), elHHint = $('h-hint'), elFooterLeft = $('footer-left'),
+      elFitChip = $('fit-chip'), elCartouche = $('cartouche'), elCart2 = $('cart-2'), elLive = $('live');
+const elTimeline = $('timeline'), elTlPlay = $('tl-play'), elTlTrack = $('tl-track'),
+      elTlRuler = $('tl-ruler'), elTlThumb = $('tl-thumb'), elTlReadout = $('tl-readout'),
+      elTlNow = $('tl-now');
+const tlCtx = elTlRuler.getContext('2d');
+const elOverture = $('overture'), elOvPlay = $('ov-play'),
+      elOvVisit = $('ov-visit'), elOvDismiss = $('ov-dismiss');
+const elFamPreview = $('fam-preview'), elFpMedia = $('fp-media'),
+      elFpOverline = $('fp-overline'), elFpName = $('fp-name'), elFpLine = $('fp-line');
+const elLightbox = $('lightbox'), elLbImg = $('lb-img'), elLbClose = $('lb-close'),
+      elLbPrev = $('lb-prev'), elLbNext = $('lb-next'),
+      elLbTitle = $('lb-title'), elLbCredit = $('lb-credit'), elLbCount = $('lb-count');
+const elLensChip = $('lens-chip'), elLensPanel = $('lens-panel'),
+      elLensGroups = $('lens-groups'), elLensClear = $('lens-clear');
+
+const ctx = canvas.getContext('2d');
+let dpr = 1, W = 0, H = 0;
+let vignetteCanvas = null;
+let haloCache = null;            /* {x,y,R,grad} — selection halo, invalidates on move */
+
+/* ======================================================================
+   3 · STATE
+   ====================================================================== */
+
+const S = {
+  loaded: false,
+  failed: false,
+  watches: [],
+  families: [],
+  byId: new Map(),
+  children: new Map(),           /* id -> direct child ids */
+  bounds: { minX: 0, maxX: 1, minY: 0, maxY: 1 },
+  yearMin: 1932, yearMax: 2026,
+
+  cam: { x: 0, y: 0, z: 1 },
+  fitZ: 0.5,
+  flight: null,                  /* {from,to,t0,dur,ease,arcZ} */
+
+  hoverId: null,
+  hoverAnims: new Map(),         /* id -> {from,to,t0,dur} */
+
+  selection: null,               /* {id, related:Set, edges:[], panelAnc:[], panelDesc:[], t0, genSpan} */
+  releasing: null,               /* {edges, related, t0} */
+
+  familyView: null,              /* {id, members:Set, memberList:[year-asc], label, minYear, maxYear, t0, chained} */
+  famHoverId: null,              /* family id under the pointer (labels) */
+  famHoverAnims: new Map(),      /* famId -> {from,to,t0,dur} — 160ms in / 220ms out */
+  famLabelRects: [],             /* rebuilt each frame by draw() pass 4 — winning rects only */
+
+  panelHoverId: null,
+  panelHoverAnims: new Map(),    /* id(str) -> {from,to,t0} — 120ms curve-brighten on lineage-row hover */
+
+  reveal: null,                  /* {t0} — ignite choreography */
+  revealDone: false,
+
+  drift: { x: 0, y: 0, on: false, angle: Math.random() * Math.PI * 2, release: null },
+  observatoryManual: false,
+  observatoryIdle: false,
+  exportMode: false,
+
+  /* the Ephemeris — y is the displayed year; y === max means the present (no filter) */
+  time: { y: 2026, min: 1930, max: 2026, anim: null, playing: false, playFrom: 0, playT0: 0 },
+
+  minuteAnim: null,              /* {from,to,t0} minute-of-day dead-beat */
+  dispMinute: null,
+
+  dragging: false,
+  hinted: false
+};
+
+/* effective year this frame — Infinity until data arrives, then S.time.max (the present) */
+let curTY = Infinity;
+
+/* photograph manifest — id -> {file, credit, license, source}; empty until it loads */
+let IMAGES = {};
+
+try { S.hinted = sessionStorage.getItem('atlas.hinted') === '1'; } catch (e) { /* private mode */ }
+if (S.hinted) { elHint.hidden = true; elHHint.hidden = true; }
+
+/* ======================================================================
+   4 · SCHEDULING — single rAF loop, idle when settled
+   ====================================================================== */
+
+let rafId = null;
+function invalidate() {
+  if (rafId === null) rafId = requestAnimationFrame(frame);
+}
+function animating() {
+  const now = performance.now();
+  if (S.flight) return true;
+  if (S.drift.on || S.drift.release) return true;
+  if (S.reveal && !S.revealDone) return true;
+  if (S.time.anim || S.time.playing) return true;
+  if (lensAnim.from !== lensAnim.to && now - lensAnim.t0 < 420) return true;
+  if (S.minuteAnim && now - S.minuteAnim.t0 < 140) return true;
+  for (const a of S.hoverAnims.values()) if (now - a.t0 < a.dur) return true;
+  for (const a of S.famHoverAnims.values()) if (now - a.t0 < 220) return true;
+  for (const a of famActiveAnims.values()) if (now - a.t0 < a.dur) return true;
+  for (const a of S.panelHoverAnims.values()) if (now - a.t0 < 140) return true;
+  if (S.selection && now - S.selection.t0 < S.selection.animLen + 500) return true;
+  if (S.familyView && now - S.familyView.t0 < 900) return true;   /* dim ramp window */
+  if (S.releasing && now - S.releasing.t0 < 420) return true;
+  return false;
+}
+/* idle drift is the only continuous animation — 8px/min cannot justify 60fps */
+function driftOnly(now) {
+  if (!S.drift.on || S.flight || S.drift.release) return false;
+  if (S.reveal && !S.revealDone) return false;
+  if (S.time.anim || S.time.playing) return false;
+  if (lensAnim.from !== lensAnim.to && performance.now() - lensAnim.t0 < 420) return false;
+  if (S.minuteAnim && now - S.minuteAnim.t0 < 140) return false;
+  for (const a of S.hoverAnims.values()) if (now - a.t0 < a.dur) return false;
+  for (const a of S.famHoverAnims.values()) if (now - a.t0 < 220) return false;
+  for (const a of famActiveAnims.values()) if (now - a.t0 < a.dur) return false;
+  for (const a of S.panelHoverAnims.values()) if (now - a.t0 < 140) return false;
+  if (S.selection && now - S.selection.t0 < S.selection.animLen + 500) return false;
+  if (S.familyView && now - S.familyView.t0 < 900) return false;
+  if (S.releasing) return false;
+  return true;
+}
+function frame(now) {
+  rafId = null;
+  stepFlight(now);
+  stepDrift(now);
+  if (S.loaded) {
+    curTY = timeYear(now);
+    positionThumb(curTY);
+    maybeTimeChrome(curTY);
+    /* a selected watch scrubbed out of existence releases its selection —
+       or falls back to its family index when it came through one. Birth is
+       judged against where time is headed, not the interpolating frame:
+       selecting an unborn watch time-travels and must not be killed mid-flight */
+    if (S.selection) {
+      const targetY = S.time.anim ? S.time.anim.to : curTY;
+      if (targetY < S.time.max - 1e-6) {
+        const sw = S.byId.get(S.selection.id);
+        if (sw && bornAlphaOf(sw, targetY) <= 0) {
+          if (S.familyView && S.familyView.chained) returnToFamily();
+          else deselect();
+        }
+      }
+    }
+  }
+  draw(ctx, W, H, now, false);
+  if (animating()) {
+    if (driftOnly(performance.now())) setTimeout(invalidate, 100);   /* ~10fps is plenty for drift */
+    else invalidate();
+  }
+}
+
+/* ======================================================================
+   5 · DATA
+   ====================================================================== */
+
+async function loadData() {
+  /* photographs are progressive enhancement — never block the field on them */
+  fetch('./data/images.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)
+    .then(j => { if (j && typeof j === 'object') IMAGES = j; })
+    .catch(() => { /* no manifest yet — glyphs carry the panel */ });
+  const t = setTimeout(() => {
+    if (!S.loaded && !S.failed) {
+      elS1.textContent = 'Charting the atlas…';
+      elS2.textContent = '';
+      elStatus.hidden = false;
+      requestAnimationFrame(() => elStatus.classList.add('on'));
+    }
+  }, 300);
+  try {
+    const res = await fetch('./data/atlas.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error('http ' + res.status);
+    const data = await res.json();
+    if (!data || !Array.isArray(data.watches) || data.watches.length === 0) throw new Error('empty');
+    clearTimeout(t);
+    initData(data);
+  } catch (err) {
+    clearTimeout(t);
+    S.failed = true;
+    elSearch.hidden = true;        /* search is inert while failed — don't offer a dead control */
+    elStatus.classList.add('error');
+    elS1.textContent = 'The atlas could not be loaded.';
+    elS2.textContent = 'Serve the project root and ensure data/atlas.json exists.';
+    elStatus.hidden = false;
+    requestAnimationFrame(() => elStatus.classList.add('on'));
+    body.classList.remove('pre-reveal');
+    invalidate();
+  }
+}
+
+function initData(data) {
+  S.watches = data.watches.filter(w => w && w.id != null && isFinite(w.x) && isFinite(w.y));
+  S.families = Array.isArray(data.families) ? data.families : [];
+  S.byId = new Map(S.watches.map(w => [w.id, w]));
+
+  /* graph */
+  S.children = new Map();
+  for (const w of S.watches) {
+    for (const p of (w.parents || [])) {
+      if (!S.byId.has(p)) continue;
+      if (!S.children.has(p)) S.children.set(p, []);
+      S.children.get(p).push(w.id);
+    }
+  }
+  for (const kids of S.children.values()) kids.sort((a, b) => (S.byId.get(a).year || 0) - (S.byId.get(b).year || 0));
+
+  /* transitive descendant count — THE ONE LAW: magnitude = influence */
+  const memo = new Map();
+  const countDesc = (id, seen) => {
+    if (memo.has(id)) return memo.get(id);
+    if (seen.has(id)) return new Set();      /* cycle guard */
+    seen.add(id);
+    const acc = new Set();
+    for (const c of (S.children.get(id) || [])) {
+      acc.add(c);
+      for (const d of countDesc(c, seen)) acc.add(d);
+    }
+    seen.delete(id);
+    memo.set(id, acc);
+    return acc;
+  };
+  for (const w of S.watches) {
+    const dset = countDesc(w.id, new Set());
+    w._desc = dset.size;
+    /* sorted descendant intro years — magnitude becomes a function of time */
+    w._descYears = [...dset].map(i => S.byId.get(i).year || 0).sort((a, b) => a - b);
+    w._r = Math.min(1.25 + 0.45 * Math.sqrt(w._desc), 3.5);
+    w._glow = null;
+  }
+
+  /* reveal order: canon first */
+  const ranked = [...S.watches].sort((a, b) => b._desc - a._desc);
+  S.heroId = ranked.length ? ranked[0].id : null;   /* the brightest star */
+  const n = ranked.length;
+  ranked.forEach((w, i) => {
+    /* ignite start distributed by rank inside 200–1100ms (each fade is 300ms → ends by 1400ms) */
+    w._ignite = 200 + (n > 1 ? (i / (n - 1)) : 0) * 900;
+  });
+
+  /* world bounds */
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const w of S.watches) {
+    if (w.x < minX) minX = w.x; if (w.x > maxX) maxX = w.x;
+    if (w.y < minY) minY = w.y; if (w.y > maxY) maxY = w.y;
+  }
+  if (!isFinite(minX)) { minX = 0; maxX = 1; minY = 0; maxY = 1; }
+  S.bounds = { minX, maxX, minY, maxY };
+
+  const years = S.watches.map(w => w.year).filter(y => isFinite(y));
+  S.yearMin = years.length ? Math.min(...years) : 1932;
+  S.yearMax = years.length ? Math.max(...years) : 2026;
+
+  /* the Ephemeris — time domain, family birth years, ruler */
+  S.time.min = Math.floor(S.yearMin / 10) * 10;
+  S.time.max = S.yearMax;
+  S.time.y = S.time.max;
+  curTY = S.time.max;
+  yearsSorted = years.slice().sort((a, b) => a - b);
+  const famMin = new Map();
+  for (const w of S.watches) {
+    const k = w.designFamily;
+    if (!famMin.has(k) || (w.year || 9999) < famMin.get(k)) famMin.set(k, w.year || 9999);
+  }
+  for (const f of S.families) f._minYear = famMin.get(f.id) ?? S.yearMin;
+
+  /* the Lens — attribute keys per watch */
+  for (const w of S.watches) {
+    const lo = Array.isArray(w.priceBandUsd) ? w.priceBandUsd[0] : 0;
+    const hi = Array.isArray(w.priceBandUsd) ? w.priceBandUsd[1] : lo;
+    const p = Math.sqrt(Math.max(lo, 1) * Math.max(hi, 1));
+    const cn = colorName(w.dialColor);
+    w._price = p;   /* geometric mean of the band — the range slider keys on this */
+    w._lens = {
+      dial: cn === 'Black' ? 'black'
+        : (cn === 'Blue' || cn === 'Navy' || cn === 'Teal' || cn === 'Purple') ? 'blue'
+        : cn === 'Green' ? 'green'
+        : (cn === 'Orange' || cn === 'Red' || cn === 'Burgundy' || cn === 'Yellow') ? 'warm'
+        : (cn === 'White' || cn === 'Cream' || cn === 'Silver' || cn === 'Grey') ? 'light'
+        : (cn === 'Gold' || cn === 'Brown') ? 'gilt' : null,
+      movement: w.movement || null,
+      size: w.diameterMm <= 38 ? 's1' : w.diameterMm <= 42 ? 's2' : 's3',
+      origin: (w.country === 'CH' || w.country === 'JP' || w.country === 'DE') ? w.country : 'XX',
+    };
+  }
+  buildLens();
+
+  elTlTrack.setAttribute('aria-valuemin', String(S.time.min));
+  elTlTrack.setAttribute('aria-valuemax', String(S.time.max));
+  elTimeline.hidden = false;
+  sizeRuler();
+
+  /* chrome copy computed from data */
+  elFooterLeft.textContent = `${S.yearMin} — ${S.yearMax} · ${S.watches.length} watches`;
+  elCart2.textContent = `${S.yearMin} — ${S.yearMax} · ${S.watches.length} WATCHES`;
+  canvas.setAttribute('aria-label',
+    `The Horological Atlas — a map of ${S.watches.length} dive watches, ${S.yearMin}–${S.yearMax}`);
+
+  elStatus.classList.remove('on');
+  setTimeout(() => { elStatus.hidden = true; }, 340);
+
+  computeFit();
+  S.cam.x = (minX + maxX) / 2;
+  S.cam.y = (minY + maxY) / 2;
+  S.cam.z = S.fitZ;
+
+  S.loaded = true;
+  startReveal();
+  scheduleMinuteTick();
+  resetIdleTimer();
+  /* the overture waits for the ignition to finish, then offers first moves */
+  setTimeout(showOverture, S.revealDone ? 400 : (REDUCED ? 700 : 2100));
+  invalidate();
+}
+
+function computeFit() {
+  const { minX, maxX, minY, maxY } = S.bounds;
+  const ew = Math.max(maxX - minX, 1e-6), eh = Math.max(maxY - minY, 1e-6);
+  S.fitZ = Math.min((W - 120) / ew, (H - 120) / eh);
+  if (!isFinite(S.fitZ) || S.fitZ <= 0) S.fitZ = 1;
+}
+const worldDiag = () => Math.hypot(S.bounds.maxX - S.bounds.minX, S.bounds.maxY - S.bounds.minY);
+
+/* ======================================================================
+   6 · CAMERA
+   ====================================================================== */
+
+function toScreen(wx, wy) {
+  return [
+    (wx - (S.cam.x + S.drift.x / S.cam.z)) * S.cam.z + W / 2,
+    (wy - (S.cam.y + S.drift.y / S.cam.z)) * S.cam.z + H / 2
+  ];
+}
+function toWorld(sx, sy) {
+  return [
+    (sx - W / 2) / S.cam.z + S.cam.x + S.drift.x / S.cam.z,
+    (sy - H / 2) / S.cam.z + S.cam.y + S.drift.y / S.cam.z
+  ];
+}
+
+function clampCam() {
+  const { minX, maxX, minY, maxY } = S.bounds;
+  const px = (maxX - minX) * 0.25, py = (maxY - minY) * 0.25;
+  S.cam.x = clamp(S.cam.x, minX - px, maxX + px);
+  S.cam.y = clamp(S.cam.y, minY - py, maxY + py);
+  S.cam.z = clamp(S.cam.z, S.fitZ, Z_MAX);
+}
+
+let reducedCutTimer = null;      /* pending reduced-motion cut — cancellable like any flight */
+let pendingCam = null;           /* target of the pending cut, so steps compound correctly */
+function flyTo(x, y, z, dur = 1000, ease = easeGlide) {
+  z = clamp(z, S.fitZ, Z_MAX);
+  if (REDUCED) {
+    /* cut with a 200ms whole-canvas opacity crossfade — cancellable, compoundable */
+    pendingCam = { x, y, z };
+    clearTimeout(reducedCutTimer);
+    canvas.style.transition = 'opacity 100ms linear';
+    canvas.style.opacity = '0';
+    reducedCutTimer = setTimeout(() => {
+      reducedCutTimer = null;
+      const tgt = pendingCam; pendingCam = null;
+      if (tgt) { S.cam.x = tgt.x; S.cam.y = tgt.y; S.cam.z = tgt.z; clampCam(); }
+      canvas.style.opacity = '1';
+      setTimeout(() => { canvas.style.transition = ''; }, 120);
+      invalidate();
+    }, 100);
+    return;
+  }
+  const from = { x: S.cam.x, y: S.cam.y, z: S.cam.z };
+  const to = { x, y, z };
+  /* van Wijk arc when travel > 40% of world extent */
+  let arcZ = null;
+  const dist = Math.hypot(to.x - from.x, to.y - from.y);
+  if (dist > 0.4 * worldDiag()) {
+    const bw = Math.abs(to.x - from.x) + 80 / Math.min(from.z, to.z);
+    const bh = Math.abs(to.y - from.y) + 80 / Math.min(from.z, to.z);
+    const zBoth = Math.min((W - 120) / Math.max(bw, 1e-6), (H - 120) / Math.max(bh, 1e-6));
+    arcZ = clamp(Math.min(zBoth, from.z, to.z), S.fitZ, Z_MAX);
+    if (arcZ >= Math.min(from.z, to.z) * 0.98) arcZ = null;
+  }
+  S.flight = { from, to, arcZ, t0: performance.now(), dur, ease };
+  chromeDim(true);
+  invalidate();
+}
+
+function cancelFlight() {
+  if (S.flight) { S.flight = null; chromeDim(false); }
+  if (reducedCutTimer !== null) {
+    clearTimeout(reducedCutTimer);
+    reducedCutTimer = null;
+    pendingCam = null;
+    canvas.style.opacity = '1';
+    canvas.style.transition = '';
+  }
+}
+
+function stepFlight(now) {
+  const f = S.flight;
+  if (!f) return;
+  const p = clamp((now - f.t0) / f.dur, 0, 1);
+  const e = f.ease(p);
+  S.cam.x = lerp(f.from.x, f.to.x, e);
+  S.cam.y = lerp(f.from.y, f.to.y, e);
+  let zl = lerp(Math.log(f.from.z), Math.log(f.to.z), e);
+  if (f.arcZ != null) {
+    const peak = 0.35;
+    const b = p < peak ? easeGlide(p / peak) : easeGlide((1 - p) / (1 - peak));
+    zl = lerp(zl, Math.log(f.arcZ), b);
+  }
+  S.cam.z = Math.exp(zl);
+  clampCam();
+  if (p >= 1) { S.flight = null; chromeDim(false); }
+}
+
+function fitAll(dur = 1000) {
+  const { minX, maxX, minY, maxY } = S.bounds;
+  computeFit();
+  flyTo((minX + maxX) / 2, (minY + maxY) / 2, S.fitZ, dur);
+}
+
+/* selection flight — panel never covers the watch */
+function flyToWatch(w) {
+  const z = Math.max(S.cam.z, 7);
+  let cx = w.x, cy = w.y;
+  if (window.innerWidth > 760) {
+    /* watch lands at viewport x = (vw − 360)/2 → camera center offset right by 180/z */
+    cx = w.x + 180 / z;
+  } else {
+    /* bottom sheet: watch lands in the visible upper band (~19vh) */
+    cy = w.y + (H / 2 - H * 0.19) / z;
+  }
+  flyTo(cx, cy, z);
+}
+
+/* family flight — the panel never covers the family's territory.
+   Bbox uses ALL members regardless of time: geography is fixed; the camera
+   must not lurch when the user scrubs with the index open. */
+function fitFamily(fam) {
+  const members = S.watches.filter(w => w.designFamily === fam.id);
+  if (!members.length) return;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const w of members) {
+    if (w.x < minX) minX = w.x; if (w.x > maxX) maxX = w.x;
+    if (w.y < minY) minY = w.y; if (w.y > maxY) maxY = w.y;
+  }
+  const bw = Math.max(maxX - minX, 1e-6), bh = Math.max(maxY - minY, 1e-6);
+  let z, cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  if (window.innerWidth > 760) {
+    /* free region = viewport minus the 360px panel + 16px inset; z capped
+       at 5 so a two-member family stays a region of the field, not an exhibit */
+    z = clamp(Math.min((W - 392 - 120) / bw, (H - 120) / bh), S.fitZ, 5);
+    cx += 180 / z;
+  } else {
+    /* bottom sheet: fit into the visible upper band */
+    z = clamp(Math.min((W - 64) / bw, (H * 0.34) / bh), S.fitZ, 5);
+    cy += (H / 2 - H * 0.19) / z;
+  }
+  flyTo(cx, cy, z, 1000);
+}
+
+/* ======================================================================
+   7 · CHROME DIM / OBSERVATORY / IDLE
+   ====================================================================== */
+
+let chromeRestoreTimer = null;
+function chromeDim(on) {
+  if (on) {
+    clearTimeout(chromeRestoreTimer);
+    body.classList.add('dim-chrome');
+  } else {
+    clearTimeout(chromeRestoreTimer);
+    chromeRestoreTimer = setTimeout(() => body.classList.remove('dim-chrome'), 400);
+  }
+}
+
+let idleTimer = null;
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  if (S.observatoryIdle) wakeFromIdle();
+  if (REDUCED || !S.loaded) return;
+  idleTimer = setTimeout(() => {
+    if (S.exportMode || S.observatoryManual) return;
+    S.observatoryIdle = true;
+    S.drift.on = true;
+    S.drift.last = performance.now();
+    body.classList.add('observatory');
+    scheduleCousteau();
+    invalidate();
+  }, 45000);
+}
+
+/* ---- the surfacing — Cousteau, once per session, only in idle drift ---- */
+const elCousteau = $('cousteau');
+let cousteauTimer = null, cousteauHideTimer = null, cousteauSeen = false;
+try { cousteauSeen = sessionStorage.getItem('atlas.cousteau') === '1'; } catch (e) { /* private mode */ }
+
+function scheduleCousteau() {
+  if (cousteauSeen) return;
+  clearTimeout(cousteauTimer);
+  /* five seconds of drift first — the sky settles before the words arrive */
+  cousteauTimer = setTimeout(() => {
+    if (!S.observatoryIdle || S.exportMode) return;
+    cousteauSeen = true;
+    try { sessionStorage.setItem('atlas.cousteau', '1'); } catch (e) { /* private mode */ }
+    elCousteau.hidden = false;
+    requestAnimationFrame(() => elCousteau.classList.add('on'));
+    /* long enough to read twice, gone before it becomes furniture */
+    cousteauHideTimer = setTimeout(dismissCousteau, 18000);
+  }, 5000);
+}
+function dismissCousteau() {
+  clearTimeout(cousteauTimer);
+  clearTimeout(cousteauHideTimer);
+  cousteauTimer = cousteauHideTimer = null;
+  if (elCousteau.hidden) return;
+  elCousteau.classList.remove('on');
+  elCousteau.classList.add('off');
+  setTimeout(() => { elCousteau.hidden = true; elCousteau.classList.remove('off'); }, 950);
+}
+function wakeFromIdle() {
+  S.observatoryIdle = false;
+  S.drift.on = false;
+  dismissCousteau();
+  /* drift is display-only and cancels on wake — glide the offset home over 240ms */
+  if (S.drift.x || S.drift.y) {
+    S.drift.release = { x: S.drift.x, y: S.drift.y, t0: performance.now() };
+  }
+  if (!S.observatoryManual && !S.exportMode) body.classList.remove('observatory');
+  invalidate();
+}
+function stepDrift(now) {
+  if (S.drift.on) {
+    const dt = Math.min(now - (S.drift.last || now), 100);
+    S.drift.last = now;
+    const v = 8 / 60000;                       /* ~8 px/min */
+    S.drift.angle += dt * 0.00002;
+    S.drift.x += Math.cos(S.drift.angle) * v * dt;
+    S.drift.y += Math.sin(S.drift.angle) * v * dt;
+  } else if (S.drift.release) {
+    const p = clamp((now - S.drift.release.t0) / 240, 0, 1);
+    const e = 1 - easeOut(p);
+    S.drift.x = S.drift.release.x * e;
+    S.drift.y = S.drift.release.y * e;
+    if (p >= 1) { S.drift.release = null; S.drift.x = 0; S.drift.y = 0; }
+  }
+}
+
+function toggleObservatory() {
+  S.observatoryManual = !S.observatoryManual;
+  if (S.observatoryManual) closeLensPanel();
+  if (S.observatoryManual) body.classList.add('observatory');
+  else if (!S.observatoryIdle) body.classList.remove('observatory');
+  invalidate();
+}
+
+/* ======================================================================
+   8 · REVEAL (Ignition)
+   ====================================================================== */
+
+function startReveal() {
+  /* runs once per session (§4) — mirror the hint pattern */
+  let seen = false;
+  try { seen = sessionStorage.getItem('atlas.revealed') === '1'; } catch (e) { /* private mode */ }
+  try { sessionStorage.setItem('atlas.revealed', '1'); } catch (e) { /* private mode */ }
+  if (seen) {
+    S.reveal = null; S.revealDone = true;
+    body.classList.remove('pre-reveal');
+    invalidate();
+    return;
+  }
+  if (REDUCED) {
+    /* reduced motion: a single 400ms opacity fade, no scale, no stagger */
+    S.reveal = { t0: performance.now(), reduced: true };
+    body.classList.remove('pre-reveal');
+    setTimeout(() => { S.revealDone = true; invalidate(); }, 400);
+    invalidate();
+    return;
+  }
+  S.reveal = { t0: performance.now() };
+  body.classList.add('revealing');
+  setTimeout(() => body.classList.remove('pre-reveal'), 1500);
+  setTimeout(() => { S.revealDone = true; invalidate(); }, 1950);
+  setTimeout(() => body.classList.remove('revealing'), 2100);   /* stagger CSS must not outlive the Ignition */
+  invalidate();
+}
+function skipReveal() {
+  if (S.reveal && !S.revealDone) {
+    S.revealDone = true;
+    body.classList.remove('pre-reveal');
+    body.classList.remove('revealing');
+    invalidate();
+  }
+}
+function revealState(w, now) {
+  if (S.revealDone || !S.reveal) return { a: 1, s: 1 };
+  if (S.reveal.reduced) return { a: clamp((now - S.reveal.t0) / 400, 0, 1), s: 1 };
+  const t = now - S.reveal.t0 - w._ignite;
+  if (t <= 0) return { a: 0, s: 0.6 };
+  const p = easeOut(clamp(t / 300, 0, 1));
+  return { a: p, s: 0.6 + 0.4 * p };
+}
+function revealFamAlpha(now) {
+  if (S.revealDone || !S.reveal) return 1;
+  if (S.reveal.reduced) return clamp((now - S.reveal.t0) / 400, 0, 1);
+  return clamp((now - S.reveal.t0 - 1200) / 400, 0, 1);
+}
+
+/* ======================================================================
+   9 · TIME — live hands, dead-beat minute
+   ====================================================================== */
+
+let minuteTimer = null;
+function scheduleMinuteTick() {
+  clearTimeout(minuteTimer);
+  const d = new Date();
+  const wait = (60 - d.getSeconds()) * 1000 - d.getMilliseconds() + 20;
+  minuteTimer = setTimeout(() => {
+    const n = new Date();
+    const m = n.getHours() * 60 + n.getMinutes();
+    if (S.dispMinute != null && m !== S.dispMinute && !REDUCED) {
+      /* shortest forward step modulo 1440 — at midnight animate 1439 → 1440,
+         never backward through the day (angle math wraps via mod) */
+      let delta = m - S.dispMinute;
+      if (delta < -720) delta += 1440;
+      S.minuteAnim = { from: m - delta, to: m, t0: performance.now() };
+    }
+    S.dispMinute = m;
+    scheduleMinuteTick();
+    invalidate();
+  }, Math.max(wait, 250));
+}
+function currentMinuteOfDay(now) {
+  if (S.dispMinute == null) {
+    const d = new Date();
+    S.dispMinute = d.getHours() * 60 + d.getMinutes();
+  }
+  if (S.minuteAnim && !REDUCED) {
+    const p = clamp((now - S.minuteAnim.t0) / 120, 0, 1);
+    const v = lerp(S.minuteAnim.from, S.minuteAnim.to, easeBeat(p));
+    if (p >= 1) S.minuteAnim = null;
+    return v;
+  }
+  return S.dispMinute;
+}
+
+/* ======================================================================
+   9b · THE EPHEMERIS — the field as it existed
+   Scrub the century: watches unborn at the chosen year do not render, and
+   magnitude re-derives from only the descendants that existed by then.
+   The one law holds — every pixel still encodes data, now indexed by time.
+   ====================================================================== */
+
+const PLAY_MS = 32000;                /* the whole century in 32s (~3 yr/s) */
+let yearsSorted = [];
+let tlW = 0, tlH = 0, tlDragging = false;
+let lastTlYear = null, lastTlEngaged = null, lastLensSig = '';
+
+function bornAlphaOf(w, TY) {
+  const y = w.year || 0;
+  return y <= TY ? 1 : TY > y - 0.6 ? (TY - (y - 0.6)) / 0.6 : 0;
+}
+function descAt(w, TY) {
+  const a = w._descYears || [];
+  let lo = 0, hi = a.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] <= TY) lo = m + 1; else hi = m; }
+  return lo;
+}
+function countBorn(yr) {
+  let lo = 0, hi = yearsSorted.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (yearsSorted[m] <= yr) lo = m + 1; else hi = m; }
+  return lo;
+}
+function timeEngaged() {
+  return S.time.playing || S.time.anim != null || S.time.y < S.time.max - 1e-6;
+}
+function timeYear(now) {
+  const T = S.time;
+  if (T.anim) {
+    const p = clamp((now - T.anim.t0) / T.anim.dur, 0, 1);
+    const v = lerp(T.anim.from, T.anim.to, T.anim.ease(p));
+    if (p >= 1) { T.y = T.anim.to; T.anim = null; }
+    return v;
+  }
+  if (T.playing) {
+    let v = T.playFrom + (now - T.playT0) / PLAY_MS * (T.max - T.min);
+    if (REDUCED) v = T.playFrom + Math.floor((v - T.playFrom) / 2) * 2;  /* stepped, not swept */
+    if (v >= T.max) { T.playing = false; T.y = T.max; setPlayIcon(false); return T.max; }
+    return v;
+  }
+  return T.y;
+}
+function setTimeYear(y, opts = {}) {
+  const T = S.time;
+  if (T.playing) { T.playing = false; setPlayIcon(false); }
+  y = clamp(y, T.min, T.max);
+  if (y >= T.max - 0.25) y = T.max;   /* the right edge is the present */
+  const from = timeYear(performance.now());
+  if (opts.dur && !REDUCED && Math.abs(y - from) > 0.01) {
+    T.anim = { from, to: y, t0: performance.now(), dur: opts.dur, ease: opts.ease || easeGlide };
+  } else {
+    T.anim = null;
+    T.y = y;
+  }
+  invalidate();
+}
+function stopPlay() {
+  if (!S.time.playing) return;
+  S.time.y = timeYear(performance.now());
+  S.time.playing = false;
+  setPlayIcon(false);
+}
+function togglePlay() {
+  if (!S.loaded) return;
+  const T = S.time;
+  if (T.playing) { stopPlay(); invalidate(); return; }
+  const cur = T.anim ? T.anim.to : T.y;
+  T.anim = null;
+  T.playFrom = cur >= T.max - 1e-6 ? T.min : cur;   /* from the top, or resume */
+  T.playT0 = performance.now();
+  T.playing = true;
+  setPlayIcon(true);
+  elLive.textContent = 'Playing the century.';
+  invalidate();
+}
+function returnToPresent() {
+  stopPlay();
+  setTimeYear(S.time.max, { dur: 900 });
+  elLive.textContent = 'Returned to the present.';
+}
+
+const ICON_PLAY = '<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M1 0.8 L8.2 5 L1 9.2 Z" fill="currentColor"/></svg>';
+const ICON_PAUSE = '<svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true"><path d="M2 1 V9 M7 1 V9" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>';
+function setPlayIcon(playing) {
+  elTlPlay.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
+  elTlPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play the century');
+}
+
+function positionThumb(TY) {
+  if (tlW <= 0) return;
+  const T = S.time;
+  const x = (clamp(TY, T.min, T.max) - T.min) / (T.max - T.min) * tlW;
+  elTlThumb.style.transform = `translateX(${x}px)`;
+}
+function sizeRuler() {
+  tlW = elTlTrack.clientWidth;
+  tlH = elTlTrack.clientHeight || 40;
+  if (tlW <= 0) return;
+  elTlRuler.width = Math.max(1, Math.round(tlW * dpr));
+  elTlRuler.height = Math.max(1, Math.round(tlH * dpr));
+  tlCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawRuler(curTY === Infinity ? S.time.max : curTY);
+}
+function drawRuler(TY) {
+  if (!S.loaded || tlW <= 0) return;
+  const T = S.time;
+  tlCtx.clearRect(0, 0, tlW, tlH);
+  const pxY = tlW / (T.max - T.min);
+  const base = 18.5;
+  const engaged = TY < T.max - 1e-6;
+  tlCtx.lineWidth = 1;
+  tlCtx.strokeStyle = 'rgba(233,237,242,0.10)';
+  tlCtx.beginPath(); tlCtx.moveTo(0, base); tlCtx.lineTo(tlW, base); tlCtx.stroke();
+  const step = pxY * 5 >= 44 ? 5 : pxY * 10 >= 44 ? 10 : 20;
+  const minor = pxY >= 3;
+  tlCtx.textAlign = 'center';
+  tlCtx.textBaseline = 'alphabetic';
+  tlCtx.font = '400 9px ' + FONT_MONO;
+  for (let y = Math.ceil(T.min); y <= T.max; y++) {
+    const isMajor = y % step === 0;
+    if (!isMajor && !minor) continue;
+    const x = Math.round((y - T.min) * pxY) + 0.5;
+    const dim = engaged && y > TY ? 0.35 : 1;      /* epochs not yet reached recede */
+    tlCtx.strokeStyle = `rgba(233,237,242,${(isMajor ? 0.22 : 0.10) * dim})`;
+    tlCtx.beginPath();
+    tlCtx.moveTo(x, base + 1.5);
+    tlCtx.lineTo(x, base + 1.5 + (isMajor ? 6 : 3));
+    tlCtx.stroke();
+    if (isMajor && x >= 15 && x <= tlW - 15) {
+      /* a clipped year is worse than no year — edge labels wait for space */
+      tlCtx.fillStyle = engaged && y > TY ? 'rgba(92,102,114,0.4)' : TEXT_3;
+      tlCtx.fillText(String(y), x, base - 6);
+    }
+  }
+}
+function maybeTimeChrome(TY) {
+  const yr = Math.round(TY);
+  const engaged = TY < S.time.max - 1e-6;
+  const lsig = lensSigStr();
+  if (yr === lastTlYear && engaged === lastTlEngaged && lsig === lastLensSig) return;
+  lastTlYear = yr; lastTlEngaged = engaged; lastLensSig = lsig;
+  const total = S.watches.length;
+  const lensOn = lensActive();
+  if (engaged) {
+    const vis = countBorn(yr);
+    const suffix = lensOn ? ` · ${lensCount()} in lens` : '';
+    elFooterLeft.textContent = `${S.yearMin} — ${yr} · ${vis} of ${total} watches${suffix}`;
+    elCart2.textContent = `AS OF ${yr} · ${vis} OF ${total} WATCHES${lensOn ? ` · LENS ${lensCount()}` : ''}`;
+    elTlTrack.setAttribute('aria-valuetext', `${yr} — ${vis} of ${total} watches`);
+  } else if (lensOn) {
+    elFooterLeft.textContent = `${lensCount()} of ${total} · ${lensSummaryText()}`;
+    elCart2.textContent = `${lensCount()} OF ${total} · ${lensSummaryText().toUpperCase()}`;
+    elTlTrack.setAttribute('aria-valuetext', `Now — all ${total} watches`);
+  } else {
+    elFooterLeft.textContent = `${S.yearMin} — ${S.yearMax} · ${total} watches`;
+    elCart2.textContent = `${S.yearMin} — ${S.yearMax} · ${total} WATCHES`;
+    elTlTrack.setAttribute('aria-valuetext', `Now — all ${total} watches`);
+  }
+  elTlTrack.setAttribute('aria-valuenow', String(yr));
+  elTlReadout.textContent = String(yr);
+  elTimeline.classList.toggle('engaged', engaged);
+  elTimeline.classList.toggle('at-now', !engaged);
+  drawRuler(TY);
+  /* the family index counts honestly under time — class flips only, no re-inject */
+  if (S.familyView && !S.selection && !elPanel.hidden) updateFamilyPanelTime(yr, engaged);
+}
+
+/* --- ephemeris input --- */
+function scrubTo(e) {
+  const r = elTlTrack.getBoundingClientRect();
+  if (r.width <= 0) return;
+  const f = clamp((e.clientX - r.left) / r.width, 0, 1);
+  const y = S.time.min + f * (S.time.max - S.time.min);
+  S.time.anim = null;
+  S.time.y = y >= S.time.max - 0.25 ? S.time.max : y;
+  invalidate();
+}
+elTlTrack.addEventListener('pointerdown', e => {
+  if (!S.loaded) return;
+  anyInput();
+  stopPlay();
+  tlDragging = true;
+  elTlTrack.setPointerCapture(e.pointerId);
+  scrubTo(e);
+});
+elTlTrack.addEventListener('pointermove', e => { if (tlDragging) scrubTo(e); });
+function endTlDrag() {
+  if (!tlDragging) return;
+  tlDragging = false;
+  /* detent — settle on the whole year, dead-beat */
+  if (S.time.y < S.time.max - 1e-6) setTimeYear(Math.round(S.time.y), { dur: 140, ease: easeBeat });
+}
+elTlTrack.addEventListener('pointerup', endTlDrag);
+elTlTrack.addEventListener('pointercancel', endTlDrag);
+elTlTrack.addEventListener('keydown', e => {
+  if (!S.loaded) return;
+  const T = S.time;
+  const cur = Math.round(T.anim ? T.anim.to : T.playing ? timeYear(performance.now()) : T.y);
+  let y = null;
+  switch (e.key) {
+    case 'ArrowLeft': case 'ArrowDown': y = cur - (e.shiftKey ? 10 : 1); break;
+    case 'ArrowRight': case 'ArrowUp': y = cur + (e.shiftKey ? 10 : 1); break;
+    case 'Home': y = T.min; break;
+    case 'End': y = T.max; break;
+    case ' ': e.preventDefault(); e.stopPropagation(); togglePlay(); return;
+    default: return;
+  }
+  e.preventDefault();
+  e.stopPropagation();
+  stopPlay();
+  setTimeYear(y, { dur: 140, ease: easeBeat });
+});
+elTlPlay.addEventListener('click', () => { anyInput(); togglePlay(); });
+elTlNow.addEventListener('click', () => { anyInput(); returnToPresent(); });
+
+/* ======================================================================
+   9c · THE LENS — attribute lenses on the field
+   Not a filter form: a lens. Matching watches hold full magnitude; the
+   rest recede with the selection dim. The sky never empties — it focuses.
+   OR within a group, AND across groups. Esc clears; counts stay honest.
+   ====================================================================== */
+
+const LENS_GROUPS = [
+  { key: 'price', label: 'PRICE' },
+  { key: 'dial', label: 'DIAL' },
+  { key: 'movement', label: 'MOVEMENT' },
+  { key: 'size', label: 'CASE SIZE' },
+  { key: 'origin', label: 'ORIGIN' },
+];
+const LENS_CHIPS = {
+  dial: [['black', 'Black', '#14171b'], ['blue', 'Blue', '#2c4f7d'], ['green', 'Green', '#2e5a44'],
+         ['warm', 'Orange & red', '#c2632e'], ['light', 'White & silver', '#c9ced4'], ['gilt', 'Gold & brown', '#8a6b45']],
+  movement: [['automatic', 'Automatic'], ['manual', 'Hand-wound'], ['quartz', 'Quartz'],
+             ['digital', 'Digital'], ['solar', 'Solar'], ['spring-drive', 'Spring Drive']],
+  size: [['s1', '≤ 38 mm'], ['s2', '39–42 mm'], ['s3', '43 mm +']],
+  origin: [['CH', 'Switzerland'], ['JP', 'Japan'], ['DE', 'Germany'], ['XX', 'Elsewhere']],
+};
+const SET_KEYS = ['dial', 'movement', 'size', 'origin'];
+const lensSel = { dial: new Set(), movement: new Set(), size: new Set(), origin: new Set() };
+/* price is a continuous range on a log scale — min/max = data domain, lo/hi = handles */
+const lensPrice = { min: 100, max: 1000000, lo: 100, hi: 1000000 };
+let lensGhost = null;             /* outgoing selection, so the release fades rather than pops */
+let lensAnim = { v: 0, from: 0, to: 0, t0: 0 };
+let lensOpen = false;
+const lensChipMeta = {};
+
+function priceEngaged() {
+  return lensPrice.lo > lensPrice.min + 0.5 || lensPrice.hi < lensPrice.max - 0.5;
+}
+function lensActive() {
+  return priceEngaged() || SET_KEYS.some(k => lensSel[k].size > 0);
+}
+function lensSnapshot() {
+  const s = { plo: priceEngaged() ? lensPrice.lo : null, phi: lensPrice.hi };
+  for (const k of SET_KEYS) s[k] = new Set(lensSel[k]);
+  return s;
+}
+function lensMatch(w, snap) {
+  if (snap) {
+    if (snap.plo != null && (w._price < snap.plo || w._price > snap.phi)) return false;
+    for (const k of SET_KEYS) {
+      const s = snap[k];
+      if (s.size && !s.has((w._lens || {})[k])) return false;
+    }
+    return true;
+  }
+  if (priceEngaged() && (w._price < lensPrice.lo || w._price > lensPrice.hi)) return false;
+  for (const k of SET_KEYS) {
+    const s = lensSel[k];
+    if (s.size && !s.has((w._lens || {})[k])) return false;
+  }
+  return true;
+}
+function lensProgress(now) {
+  const p = clamp((now - lensAnim.t0) / 400, 0, 1);
+  lensAnim.v = lerp(lensAnim.from, lensAnim.to, REDUCED ? 1 : easeOut(p));
+  return lensAnim.v;
+}
+function lensFactorOf(w, now) {
+  const p = lensProgress(now);
+  if (p <= 0.001) return 1;
+  const ghost = lensAnim.to === 0 && lensGhost ? lensGhost : null;
+  return lensMatch(w, ghost) ? 1 : lerp(1, DIM_FIELD, p);
+}
+function lensSigStr() {
+  return SET_KEYS.map(k => [...lensSel[k]].sort().join(',')).join('|') +
+    '|' + Math.round(lensPrice.lo) + '-' + Math.round(lensPrice.hi);
+}
+function lensCount() {
+  let n = 0;
+  for (const w of S.watches) if (lensMatch(w, null)) n++;
+  return n;
+}
+function fmtShortUsd(v) {
+  if (v >= 1e6) return '$' + (Math.round(v / 1e5) / 10).toString().replace(/\.0$/, '') + 'M';
+  if (v >= 1000) return '$' + (Math.round(v / 100) / 10).toString().replace(/\.0$/, '') + 'k';
+  return '$' + Math.round(v);
+}
+function lensSummaryText() {
+  const parts = [];
+  if (priceEngaged()) {
+    const atMin = lensPrice.lo <= lensPrice.min + 0.5;
+    const atMax = lensPrice.hi >= lensPrice.max - 0.5;
+    parts.push(atMin ? `Under ${fmtShortUsd(lensPrice.hi)}`
+      : atMax ? `${fmtShortUsd(lensPrice.lo)} +`
+      : `${fmtShortUsd(lensPrice.lo)}–${fmtShortUsd(lensPrice.hi)}`);
+  }
+  for (const k of SET_KEYS) {
+    for (const v of lensSel[k]) parts.push(lensChipMeta[k + ':' + v] || v);
+  }
+  return parts.slice(0, 3).join(' · ') + (parts.length > 3 ? ' · …' : '');
+}
+function lensRetarget() {
+  const now = performance.now();
+  lensAnim = { v: lensAnim.v, from: lensProgress(now), to: lensActive() ? 1 : 0, t0: now };
+  if (lensActive()) lensGhost = null;
+  lastTlYear = null;              /* force the footer/cartouche to re-read */
+  updateLensChrome();
+  invalidate();
+}
+function updateLensChrome() {
+  const n = SET_KEYS.reduce((a, k) => a + lensSel[k].size, 0) + (priceEngaged() ? 1 : 0);
+  elLensChip.textContent = n ? `LENS · ${n}` : 'LENS';
+  elLensChip.classList.toggle('active', n > 0);
+  elLensClear.hidden = n === 0;
+}
+function lensToggle(groupKey, value, btn) {
+  const before = lensSnapshot();
+  const wasActive = lensActive();
+  const s = lensSel[groupKey];
+  if (s.has(value)) s.delete(value); else s.add(value);
+  btn.classList.toggle('on', s.has(value));
+  btn.setAttribute('aria-pressed', s.has(value) ? 'true' : 'false');
+  if (!lensActive() && wasActive) lensGhost = before;   /* fade out what was, not what is */
+  lensRetarget();
+  elLive.textContent = lensActive()
+    ? `Lens: ${lensCount()} of ${S.watches.length} watches.` : 'Lens cleared.';
+}
+function lensClear() {
+  if (!lensActive()) return;
+  lensGhost = lensSnapshot();
+  for (const k of SET_KEYS) lensSel[k].clear();
+  lensPrice.lo = lensPrice.min;
+  lensPrice.hi = lensPrice.max;
+  for (const b of elLensGroups.querySelectorAll('.lens-opt.on')) {
+    b.classList.remove('on');
+    b.setAttribute('aria-pressed', 'false');
+  }
+  syncPriceUI(false);
+  lensRetarget();
+  elLive.textContent = 'Lens cleared.';
+}
+
+/* --- the price range — log-scale dual slider + typed fields ------------ */
+
+let lpEls = null;                 /* {hist, track, fill, lo, hi, fMin, fMax} */
+let lpBuckets = null;
+const LP_BUCKETS = 36;
+
+const priceToT = p => (Math.log(p) - Math.log(lensPrice.min)) / (Math.log(lensPrice.max) - Math.log(lensPrice.min));
+const tToPrice = t => Math.exp(lerp(Math.log(lensPrice.min), Math.log(lensPrice.max), clamp(t, 0, 1)));
+function snapPrice(v) {
+  if (!isFinite(v)) return lensPrice.min;
+  const step = v < 1000 ? 50 : v < 10000 ? 100 : v < 100000 ? 1000 : 5000;
+  return clamp(Math.round(v / step) * step, lensPrice.min, lensPrice.max);
+}
+function fmtUsd(v) { return '$' + fmtNum(Math.round(v)); }
+
+function setPriceRange(lo, hi, announce) {
+  const before = lensSnapshot();
+  const wasActive = lensActive();
+  lo = snapPrice(lo); hi = snapPrice(hi);
+  if (lo > hi) { const t = lo; lo = hi; hi = t; }
+  lensPrice.lo = lo;
+  lensPrice.hi = hi;
+  if (!lensActive() && wasActive) lensGhost = before;
+  syncPriceUI(true);
+  lensRetarget();
+  if (announce) {
+    elLive.textContent = priceEngaged()
+      ? `Price ${fmtUsd(lensPrice.lo)} to ${fmtUsd(lensPrice.hi)} — ${lensCount()} of ${S.watches.length} watches.`
+      : 'Price range cleared.';
+  }
+}
+
+function syncPriceUI(fromInteraction) {
+  if (!lpEls) return;
+  const tLo = priceToT(lensPrice.lo), tHi = priceToT(lensPrice.hi);
+  lpEls.lo.style.left = (tLo * 100) + '%';
+  lpEls.hi.style.left = (tHi * 100) + '%';
+  lpEls.fill.style.left = (tLo * 100) + '%';
+  lpEls.fill.style.width = ((tHi - tLo) * 100) + '%';
+  /* fields hold the live value unless the user is mid-typing in them */
+  if (document.activeElement !== lpEls.fMin || !fromInteraction) lpEls.fMin.value = fmtUsd(lensPrice.lo);
+  if (document.activeElement !== lpEls.fMax || !fromInteraction) lpEls.fMax.value = fmtUsd(lensPrice.hi);
+  for (const [el, v, label] of [[lpEls.lo, lensPrice.lo, 'Minimum price'], [lpEls.hi, lensPrice.hi, 'Maximum price']]) {
+    el.setAttribute('aria-valuemin', String(lensPrice.min));
+    el.setAttribute('aria-valuemax', String(lensPrice.max));
+    el.setAttribute('aria-valuenow', String(Math.round(v)));
+    el.setAttribute('aria-valuetext', fmtUsd(v));
+    el.setAttribute('aria-label', label);
+  }
+  drawPriceHist();
+}
+
+function drawPriceHist() {
+  if (!lpEls || !lpBuckets) return;
+  const cnv = lpEls.hist;
+  const cw = cnv.clientWidth, ch = cnv.clientHeight || 28;
+  if (cw <= 0) return;
+  cnv.width = Math.max(1, Math.round(cw * dpr));
+  cnv.height = Math.max(1, Math.round(ch * dpr));
+  const g = cnv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const maxN = Math.max(...lpBuckets, 1);
+  const bw = cw / LP_BUCKETS;
+  const tLo = priceToT(lensPrice.lo), tHi = priceToT(lensPrice.hi);
+  for (let i = 0; i < LP_BUCKETS; i++) {
+    const n = lpBuckets[i];
+    if (!n) continue;
+    const tc = (i + 0.5) / LP_BUCKETS;
+    const inRange = tc >= tLo - 1e-6 && tc <= tHi + 1e-6;
+    const h = Math.max(2, Math.sqrt(n / maxN) * (ch - 4));
+    g.fillStyle = inRange ? 'rgba(233,237,242,0.30)' : 'rgba(233,237,242,0.09)';
+    g.fillRect(i * bw + 0.5, ch - h, Math.max(1, bw - 1), h);
+  }
+}
+
+function parsePriceField(el, isMin) {
+  const digits = (el.value.match(/[0-9]/g) || []).join('');
+  const v = digits ? Number(digits) : (isMin ? lensPrice.min : lensPrice.max);
+  if (isMin) setPriceRange(Math.min(v, lensPrice.hi), lensPrice.hi, true);
+  else setPriceRange(lensPrice.lo, Math.max(v, lensPrice.lo), true);
+}
+function nice125(v, up) {
+  const e = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1))));
+  const m = v / e;
+  if (up) { for (const g of [1, 2, 5, 10]) if (m <= g + 1e-9) return g * e; return 10 * e; }
+  for (const g of [10, 5, 2, 1]) if (m >= g - 1e-9) return g * e;
+  return e;
+}
+
+function buildLens() {
+  /* price domain + histogram buckets from the data */
+  const prices = S.watches.map(w => w._price).filter(p => isFinite(p) && p > 0);
+  lensPrice.min = nice125(Math.min(...prices), false);
+  lensPrice.max = nice125(Math.max(...prices), true);
+  lensPrice.lo = lensPrice.min;
+  lensPrice.hi = lensPrice.max;
+  lpBuckets = new Array(LP_BUCKETS).fill(0);
+  for (const p of prices) {
+    const i = clamp(Math.floor(priceToT(p) * LP_BUCKETS), 0, LP_BUCKETS - 1);
+    lpBuckets[i]++;
+  }
+
+  elLensGroups.innerHTML = '';
+
+  /* PRICE — histogram, log dual slider, typed fields */
+  const psec = document.createElement('div');
+  psec.className = 'lens-group';
+  psec.innerHTML =
+    `<p class="lens-label">PRICE</p>
+     <div id="lens-price">
+       <canvas id="lp-hist" aria-hidden="true"></canvas>
+       <div id="lp-track">
+         <div id="lp-fill"></div>
+         <div class="lp-thumb" id="lp-lo" role="slider" tabindex="0"></div>
+         <div class="lp-thumb" id="lp-hi" role="slider" tabindex="0"></div>
+       </div>
+       <div id="lp-fields">
+         <input id="lp-min" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Minimum price">
+         <span class="lp-dash" aria-hidden="true">–</span>
+         <input id="lp-max" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" aria-label="Maximum price">
+       </div>
+     </div>`;
+  elLensGroups.appendChild(psec);
+  lpEls = {
+    hist: psec.querySelector('#lp-hist'),
+    track: psec.querySelector('#lp-track'),
+    fill: psec.querySelector('#lp-fill'),
+    lo: psec.querySelector('#lp-lo'),
+    hi: psec.querySelector('#lp-hi'),
+    fMin: psec.querySelector('#lp-min'),
+    fMax: psec.querySelector('#lp-max'),
+  };
+
+  /* drag — nearest thumb takes the pointer; membership updates live */
+  let lpDrag = null;   /* {side, ghost} */
+  const trackT = e => {
+    const r = lpEls.track.getBoundingClientRect();
+    return r.width > 0 ? clamp((e.clientX - r.left) / r.width, 0, 1) : 0;
+  };
+  lpEls.track.addEventListener('pointerdown', e => {
+    anyInput();
+    const t = trackT(e);
+    const dLo = Math.abs(t - priceToT(lensPrice.lo));
+    const dHi = Math.abs(t - priceToT(lensPrice.hi));
+    lpDrag = { side: dLo <= dHi ? 'lo' : 'hi', ghost: lensSnapshot() };
+    lpEls.track.setPointerCapture(e.pointerId);
+    lpApply(t);
+    e.preventDefault();
+  });
+  lpEls.track.addEventListener('pointermove', e => { if (lpDrag) lpApply(trackT(e)); });
+  const lpEnd = () => {
+    if (!lpDrag) return;
+    const wasEngagedGhost = lpDrag.ghost;
+    lpDrag = null;
+    if (!lensActive() && (wasEngagedGhost.plo != null || SET_KEYS.some(k => wasEngagedGhost[k].size))) {
+      lensGhost = wasEngagedGhost;
+      lensRetarget();
+    }
+    elLive.textContent = priceEngaged()
+      ? `Price ${fmtUsd(lensPrice.lo)} to ${fmtUsd(lensPrice.hi)} — ${lensCount()} of ${S.watches.length} watches.`
+      : 'Price range cleared.';
+  };
+  lpEls.track.addEventListener('pointerup', lpEnd);
+  lpEls.track.addEventListener('pointercancel', lpEnd);
+  function lpApply(t) {
+    const v = snapPrice(tToPrice(t));
+    if (lpDrag.side === 'lo') lensPrice.lo = Math.min(v, lensPrice.hi);
+    else lensPrice.hi = Math.max(v, lensPrice.lo);
+    /* dragging back to full range releases through the ghost, never a pop */
+    if (!lensActive()) lensGhost = lpDrag.ghost;
+    syncPriceUI(true);
+    lensRetarget();
+  }
+
+  /* thumb keyboard — log-space steps */
+  for (const side of ['lo', 'hi']) {
+    lpEls[side].addEventListener('keydown', e => {
+      let dt = 0;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') dt = -(e.shiftKey ? 0.08 : 0.02);
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') dt = e.shiftKey ? 0.08 : 0.02;
+      else if (e.key === 'Home') dt = -2;
+      else if (e.key === 'End') dt = 2;
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+      const cur = priceToT(side === 'lo' ? lensPrice.lo : lensPrice.hi);
+      const v = snapPrice(tToPrice(clamp(cur + dt, 0, 1)));
+      if (side === 'lo') setPriceRange(Math.min(v, lensPrice.hi), lensPrice.hi, true);
+      else setPriceRange(lensPrice.lo, Math.max(v, lensPrice.lo), true);
+    });
+  }
+
+  lpEls.fMin.addEventListener('change', () => parsePriceField(lpEls.fMin, true));
+  lpEls.fMax.addEventListener('change', () => parsePriceField(lpEls.fMax, false));
+  for (const f of [lpEls.fMin, lpEls.fMax]) {
+    f.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); f.blur(); }
+      e.stopPropagation();
+    });
+  }
+  syncPriceUI(false);
+
+  /* the chip groups */
+  const counts = {};
+  for (const w of S.watches) {
+    for (const k of SET_KEYS) {
+      const v = (w._lens || {})[k];
+      if (v) counts[k + ':' + v] = (counts[k + ':' + v] || 0) + 1;
+    }
+  }
+  for (const g of LENS_GROUPS) {
+    if (g.key === 'price') continue;
+    const items = LENS_CHIPS[g.key].filter(([v]) => counts[g.key + ':' + v]);
+    if (!items.length) continue;
+    const sec = document.createElement('div');
+    sec.className = 'lens-group';
+    const h = document.createElement('p');
+    h.className = 'lens-label';
+    h.textContent = g.label;
+    sec.appendChild(h);
+    const row = document.createElement('div');
+    row.className = 'lens-row';
+    for (const [v, label, swatch] of items) {
+      lensChipMeta[g.key + ':' + v] = label;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lens-opt';
+      b.setAttribute('aria-pressed', 'false');
+      if (swatch) {
+        const dot = document.createElement('i');
+        dot.style.background = swatch;
+        b.appendChild(dot);
+      }
+      b.appendChild(document.createTextNode(label));
+      b.addEventListener('click', () => lensToggle(g.key, v, b));
+      row.appendChild(b);
+    }
+    sec.appendChild(row);
+    elLensGroups.appendChild(sec);
+  }
+}
+function openLensPanel() {
+  if (lensOpen || !S.loaded) return;
+  lensOpen = true;
+  elLensPanel.hidden = false;
+  elLensChip.setAttribute('aria-expanded', 'true');
+  requestAnimationFrame(() => {
+    elLensPanel.classList.add('on');
+    syncPriceUI(false);   /* histogram canvas has real width only once visible */
+  });
+  if (lpEls) lpEls.lo.focus({ preventScroll: true });
+}
+function closeLensPanel() {
+  if (!lensOpen) return;
+  lensOpen = false;
+  elLensPanel.classList.remove('on');
+  elLensChip.setAttribute('aria-expanded', 'false');
+  setTimeout(() => { elLensPanel.hidden = true; }, REDUCED ? 90 : 250);
+  if (elLensPanel.contains(document.activeElement)) elLensChip.focus({ preventScroll: true });
+}
+elLensChip.addEventListener('click', () => { anyInput(); lensOpen ? closeLensPanel() : openLensPanel(); });
+elLensClear.addEventListener('click', () => { anyInput(); lensClear(); });
+document.addEventListener('pointerdown', e => {
+  if (!lensOpen) return;
+  if (elLensPanel.contains(e.target) || elLensChip.contains(e.target)) return;
+  closeLensPanel();
+}, true);
+
+/* ======================================================================
+   10 · HOVER
+   ====================================================================== */
+
+function hoverProgress(id, now) {
+  const a = S.hoverAnims.get(id);
+  if (!a) return id === S.hoverId ? 1 : 0;
+  const p = clamp((now - a.t0) / a.dur, 0, 1);
+  const v = lerp(a.from, a.to, easeOut(p));
+  if (p >= 1 && a.to === 0) S.hoverAnims.delete(id);
+  return v;
+}
+function setHover(id) {
+  if (id === S.hoverId) return;
+  const now = performance.now();
+  if (S.hoverId != null) {
+    S.hoverAnims.set(S.hoverId, { from: hoverProgress(S.hoverId, now), to: 0, t0: now, dur: 220 });
+  }
+  if (id != null) {
+    S.hoverAnims.set(id, { from: hoverProgress(id, now), to: 1, t0: now, dur: 160 });
+  }
+  S.hoverId = id;
+  canvas.classList.toggle('pointing', id != null || S.famHoverId != null);
+  invalidate();
+}
+
+/* family-label hover — the setHover pattern, 160ms in / 220ms out */
+function famHoverProgress(id, now) {
+  const a = S.famHoverAnims.get(id);
+  if (!a) return id === S.famHoverId ? 1 : 0;
+  const p = clamp((now - a.t0) / a.dur, 0, 1);
+  const v = lerp(a.from, a.to, REDUCED ? p : easeOut(p));
+  if (p >= 1 && a.to === 0) S.famHoverAnims.delete(id);
+  return v;
+}
+function setFamHover(id) {
+  if (id === S.famHoverId) return;
+  const now = performance.now();
+  if (S.famHoverId != null) {
+    S.famHoverAnims.set(S.famHoverId, { from: famHoverProgress(S.famHoverId, now), to: 0, t0: now, dur: REDUCED ? 80 : 220 });
+  }
+  if (id != null) {
+    S.famHoverAnims.set(id, { from: famHoverProgress(id, now), to: 1, t0: now, dur: REDUCED ? 80 : 160 });
+  }
+  S.famHoverId = id;
+  canvas.classList.toggle('pointing', S.hoverId != null || id != null);
+  if (id != null) queueFamPreview(id);
+  else hideFamPreview();
+  invalidate();
+}
+
+/* the open family's label is held bright — driven through the same 160/220ms
+   vocabulary as hover so opening via search (label unhovered) never snaps,
+   and closing the index never pops the label back to text-3 */
+const famActiveAnims = new Map();   /* famId -> {from, to, t0, dur} */
+function famActiveProgress(id, now) {
+  const a = famActiveAnims.get(id);
+  if (!a) return (S.familyView && S.familyView.id === id) ? 1 : 0;
+  const p = clamp((now - a.t0) / a.dur, 0, 1);
+  const v = lerp(a.from, a.to, REDUCED ? p : easeOut(p));
+  if (p >= 1 && a.to === 0) famActiveAnims.delete(id);
+  return v;
+}
+function holdFamActive(id) {
+  const now = performance.now();
+  famActiveAnims.set(id, {
+    from: Math.max(famActiveProgress(id, now), famHoverProgress(id, now)),
+    to: 1, t0: now, dur: REDUCED ? 80 : 160
+  });
+}
+/* call BEFORE S.familyView is dropped or retargeted, wherever that happens */
+function releaseFamActive() {
+  if (!S.familyView) return;
+  const now = performance.now();
+  const id = S.familyView.id;
+  famActiveAnims.set(id, { from: famActiveProgress(id, now), to: 0, t0: now, dur: REDUCED ? 80 : 220 });
+}
+
+function hitTest(sx, sy) {
+  if (!S.loaded) return null;
+  let best = null, bd = Infinity;
+  for (const w of S.watches) {
+    /* the unborn cannot be pointed at */
+    if (curTY < S.time.max - 1e-6 && bornAlphaOf(w, curTY) < 0.5) continue;
+    const [x, y] = toScreen(w.x, w.y);
+    if (x < -20 || x > W + 20 || y < -20 || y > H + 20) continue;
+    const d = Math.hypot(x - sx, y - sy);
+    /* hit geometry must agree with rendered geometry — selection-enlarged
+       lineage glyphs included (glyphRadiusFor handles that case) */
+    const pad = Math.max(S.cam.z < TIER_2 ? 8 : 12, glyphRadiusFor(w) + 4);
+    if (d < pad && d < bd) { bd = d; best = w; }
+  }
+  return best;
+}
+
+/* family-label hit test — winning pass-4 rects only; a culled label is not a door */
+function famHitTest(sx, sy) {
+  if (!S.loaded) return null;
+  /* visibility gate — must mirror the paint gate exactly */
+  if (tierAlphas(S.cam.z).fam * revealFamAlpha(performance.now()) <= 0.01) return null;
+  for (const r of S.famLabelRects) {
+    /* a family mid-birth or unborn cannot be pointed at (same 0.5 rule as watches) */
+    if (r.fA < 0.5) continue;
+    if (sx >= r.x && sx <= r.x + r.w && sy >= r.y && sy <= r.y + r.h) return r;
+  }
+  return null;
+}
+
+/* ======================================================================
+   10b · FAMILY PREVIEW — hover card with media carousel
+   Pure preview: pointer-events none, aria-hidden. The label remains the
+   control; the family index remains the accessible content. Photographs
+   where they exist; the five most influential members, drawn, where none do.
+   ====================================================================== */
+
+let fpShowTimer = null, fpHideTimer = null, fpCycleTimer = null;
+
+function familyMedia(famId) {
+  const withPhotos = S.watches.filter(w => w.designFamily === famId && IMAGES[w.id] && IMAGES[w.id].file);
+  /* high-confidence photography first, then by influence */
+  withPhotos.sort((a, b) => {
+    const ca = IMAGES[a.id].confidence === 'high' ? 0 : 1;
+    const cb = IMAGES[b.id].confidence === 'high' ? 0 : 1;
+    return ca - cb || b._desc - a._desc;
+  });
+  return withPhotos.slice(0, 5);
+}
+
+function drawFamilyStrip(cnv, famId) {
+  const members = S.watches.filter(w => w.designFamily === famId)
+    .sort((a, b) => b._desc - a._desc).slice(0, 5);
+  if (!members.length) return;
+  const cw = cnv.clientWidth || 224, ch = cnv.clientHeight || 96;
+  cnv.width = Math.max(1, Math.round(cw * dpr));
+  cnv.height = Math.max(1, Math.round(ch * dpr));
+  const g = cnv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const now = performance.now();
+  const D = Math.min(44, ch - 32);
+  const step = cw / members.length;
+  /* frozen like the cards — a plate entry, not a live instrument */
+  members.forEach((w, i) => drawGlyph(g, w, step * (i + 0.5), ch / 2, D, 0, now));
+}
+
+function fpStopCycle() { clearInterval(fpCycleTimer); fpCycleTimer = null; }
+
+function fpPopulate(famId) {
+  const fam = S.families.find(f => f.id === famId);
+  const members = S.watches.filter(w => w.designFamily === famId);
+  const years = members.map(w => w.year).filter(y => isFinite(y));
+  const media = familyMedia(famId);
+  elFpOverline.textContent = years.length
+    ? `${members.length} WATCHES · ${Math.min(...years)}—${Math.max(...years)}`
+    : `${members.length} WATCHES`;
+  elFpName.textContent = (fam && fam.label) || familyLabel(famId);
+  elFpLine.textContent = FAMILY_CHARACTER[famId] || '';
+  fpStopCycle();
+  elFpMedia.innerHTML = '';
+  elFpMedia.classList.toggle('fp-drawn', media.length === 0);
+  if (media.length === 0) {
+    const cnv = document.createElement('canvas');
+    cnv.setAttribute('aria-hidden', 'true');
+    elFpMedia.appendChild(cnv);
+    requestAnimationFrame(() => drawFamilyStrip(cnv, famId));
+    return;
+  }
+  media.forEach((w, i) => {
+    const img = document.createElement('img');
+    img.className = 'fp-slide' + (i === 0 ? ' on' : '');
+    img.src = './data/' + IMAGES[w.id].file;
+    img.alt = '';
+    img.addEventListener('error', () => img.remove());
+    elFpMedia.appendChild(img);
+  });
+  if (media.length > 1) {
+    const dots = document.createElement('div');
+    dots.id = 'fp-dots';
+    media.forEach((_, i) => {
+      const d = document.createElement('i');
+      if (i === 0) d.className = 'on';
+      dots.appendChild(d);
+    });
+    elFpMedia.appendChild(dots);
+    if (!REDUCED) {
+      let idx = 0;
+      fpCycleTimer = setInterval(() => {
+        const slides = elFpMedia.querySelectorAll('img.fp-slide');
+        const dotEls = elFpMedia.querySelectorAll('#fp-dots i');
+        if (slides.length < 2) { fpStopCycle(); return; }
+        idx = (idx + 1) % slides.length;
+        slides.forEach((s, i) => s.classList.toggle('on', i === idx));
+        dotEls.forEach((d, i) => d.classList.toggle('on', i === idx));
+      }, 1800);
+    }
+  }
+}
+
+function fpPosition(famId) {
+  const r = S.famLabelRects.find(x => x.id === famId);
+  if (!r) return false;
+  elFamPreview.style.visibility = 'hidden';
+  elFamPreview.hidden = false;
+  const cw = elFamPreview.offsetWidth, chh = elFamPreview.offsetHeight;
+  let px = clamp(r.x + r.w / 2 - cw / 2, 16, W - cw - 16);
+  let py = r.y - chh - 14;                 /* above the label, else below */
+  if (py < 16) py = r.y + r.h + 14;
+  py = clamp(py, 16, H - chh - 16);
+  elFamPreview.style.left = px + 'px';
+  elFamPreview.style.top = py + 'px';
+  elFamPreview.style.visibility = '';
+  return true;
+}
+
+function queueFamPreview(famId) {
+  clearTimeout(fpShowTimer);
+  /* the open family's preview is redundant — its index is already on screen */
+  if (S.familyView && S.familyView.id === famId && !elPanel.hidden) return;
+  if (S.exportMode || body.classList.contains('observatory')) return;
+  fpShowTimer = setTimeout(() => {
+    if (S.famHoverId !== famId) return;
+    clearTimeout(fpHideTimer);
+    fpPopulate(famId);
+    if (!fpPosition(famId)) { elFamPreview.hidden = true; return; }
+    requestAnimationFrame(() => elFamPreview.classList.add('on'));
+  }, REDUCED ? 80 : 220);
+}
+
+function hideFamPreview() {
+  clearTimeout(fpShowTimer);
+  fpShowTimer = null;
+  fpStopCycle();
+  if (elFamPreview.hidden) return;
+  elFamPreview.classList.remove('on');
+  clearTimeout(fpHideTimer);
+  fpHideTimer = setTimeout(() => {
+    elFamPreview.hidden = true;
+    elFpMedia.innerHTML = '';
+  }, REDUCED ? 90 : 250);
+}
+
+/* ======================================================================
+   11 · SELECTION + LINEAGE
+   ====================================================================== */
+
+function buildLineage(id) {
+  /* {a, b, gen, sib, fan, kind} — sib is per-parent (stagger, capped at 4),
+     fan is centered per-parent (symmetric sibling spread) */
+  const edges = [];
+  const related = new Set([id]);
+  const ancIds = new Set();
+
+  /* ancestors — BFS up the parents chain, radiating backward in time */
+  let frontier = [id], gen = 0;
+  const seenUp = new Set([id]);
+  while (frontier.length && gen < 24) {
+    const next = [];
+    for (const nid of frontier) {
+      const node = S.byId.get(nid);
+      const parents = (node?.parents || []).filter(p => S.byId.has(p));
+      parents.forEach((p, i) => {
+        edges.push({ a: nid, b: p, gen, sib: Math.min(i, 4), fan: i - (parents.length - 1) / 2, kind: 'anc' });
+        if (!seenUp.has(p)) { seenUp.add(p); next.push(p); }
+        ancIds.add(p); related.add(p);
+      });
+    }
+    frontier = next; gen++;
+  }
+  const ancGens = gen;
+
+  /* descendants — BFS down, forward in time (transitive) */
+  frontier = [id]; gen = 0;
+  const seenDown = new Set([id]);
+  while (frontier.length && gen < 24) {
+    const next = [];
+    for (const nid of frontier) {
+      const kids = (S.children.get(nid) || []).filter(c => !seenDown.has(c));
+      kids.forEach((c, i) => {
+        seenDown.add(c);
+        edges.push({ a: nid, b: c, gen: ancGens + gen, sib: Math.min(i, 4), fan: i - (kids.length - 1) / 2, kind: 'desc' });
+        related.add(c);
+        next.push(c);
+      });
+    }
+    frontier = next; gen++;
+  }
+
+  const genSpan = ancGens + gen;
+  const panelAnc = [...ancIds].map(i => S.byId.get(i)).sort((a, b) => (a.year || 0) - (b.year || 0));
+  const panelDesc = (S.children.get(id) || []).map(i => S.byId.get(i));
+  return { edges, related, panelAnc, panelDesc, genSpan };
+}
+
+function selectWatch(id, opts = {}) {
+  const w = S.byId.get(id) ?? S.byId.get(Number(id));
+  if (!w) return;
+  id = w.id;
+  /* choosing a watch not yet born advances time to its moment */
+  if (curTY < S.time.max - 1e-6 && bornAlphaOf(w, curTY) < 1) {
+    stopPlay();
+    setTimeYear(clamp(w.year || S.time.max, S.time.min, S.time.max), { dur: 700 });
+  }
+  /* the panel crossfades whether it held a watch or a family index */
+  const wasOpen = !!S.selection || (!!S.familyView && !elPanel.hidden);
+  /* the chain holds only while the selection came through the family index */
+  if (opts.viaChain && S.familyView) S.familyView.chained = true;
+  else { releaseFamActive(); S.familyView = null; }
+  const lin = buildLineage(id);
+  S.releasing = null;
+  S.selection = {
+    id, ...lin,
+    t0: performance.now(),
+    /* ring completes (240ms) before curves; stagger capped at 4·80ms per generation */
+    animLen: 240 + lin.genSpan * 230 + 320 + 600
+  };
+  S.panelHoverId = null;
+  S.panelHoverAnims.clear();
+  /* a hover owned by soon-to-be-removed panel cards (fi-card mouseenter/focus)
+     must not outlive them — innerHTML replacement never fires mouseleave/blur.
+     Harmless for map clicks: the selection halo takes over from the hover glow. */
+  setHover(null);
+  showPanel(w, lin, wasOpen);
+  announce(w, lin);
+  if (opts.fly !== false) flyToWatch(w);
+  invalidate();
+}
+
+function deselect() {
+  if (!S.selection) return;
+  S.releasing = { edges: S.selection.edges, related: S.selection.related, t0: performance.now() };
+  S.selection = null;
+  S.panelHoverId = null;
+  S.panelHoverAnims.clear();
+  hidePanel();
+  invalidate();
+}
+
+/* ======================================================================
+   11b · FAMILY VIEW — a selection of many
+   ====================================================================== */
+
+function openFamily(id) {
+  const fam = S.families.find(f => f.id === id);
+  if (!fam) return;
+  hideFamPreview();
+  /* re-clicking the open family's label changes nothing — re-fitting the camera
+     is the only honest response; no panel re-inject, no t0 reset, no re-announce */
+  if (S.familyView && S.familyView.id === id && !S.familyView.chained &&
+      !S.selection && !elPanel.hidden && !elPanel.classList.contains('closing')) {
+    fitFamily(fam);
+    return;
+  }
+  const memberList = S.watches.filter(w => w.designFamily === id)
+    .sort((a, b) => (a.year || 0) - (b.year || 0) || b._desc - a._desc);
+  if (!memberList.length) return;
+  const members = new Set(memberList.map(w => w.id));
+  const years = memberList.map(w => w.year).filter(y => isFinite(y));
+  const now = performance.now();
+  /* a selected watch releases its edges; the family dim takes over on the same frame */
+  if (S.selection) {
+    S.releasing = { edges: S.selection.edges, related: members, t0: now };
+    S.selection = null;
+    S.panelHoverId = null;
+    S.panelHoverAnims.clear();
+  }
+  /* switching families: the outgoing label lets go before the incoming holds */
+  if (S.familyView && S.familyView.id !== id) releaseFamActive();
+  holdFamActive(id);
+  S.familyView = {
+    id, members, memberList,
+    label: fam.label || familyLabel(id),
+    minYear: years.length ? Math.min(...years) : S.yearMin,
+    maxYear: years.length ? Math.max(...years) : S.yearMax,
+    t0: now, chained: false
+  };
+  showFamilyPanel();
+  announceFamily();
+  fitFamily(fam);
+  invalidate();
+}
+
+function closeFamily() {
+  if (!S.familyView) return;
+  releaseFamActive();
+  /* an empty edge list is a no-op in drawLineage — this rides the release-dim path */
+  S.releasing = { edges: [], related: S.familyView.members, t0: performance.now() };
+  S.familyView = null;
+  hidePanel();
+  invalidate();
+}
+
+/* back from a chained watch detail — no camera move; the user parked it */
+function returnToFamily() {
+  const fv = S.familyView;
+  if (!fv) { deselect(); return; }
+  let returnId = null;
+  if (S.selection) {
+    returnId = S.selection.id;
+    S.releasing = { edges: S.selection.edges, related: fv.members, t0: performance.now() };
+    S.selection = null;
+    S.panelHoverId = null;
+    S.panelHoverAnims.clear();
+  }
+  fv.chained = false;
+  fv.t0 = performance.now();
+  showFamilyPanel(returnId);
+  announceFamily();
+  invalidate();
+}
+
+function announceFamily() {
+  const fv = S.familyView;
+  if (!fv) return;
+  const total = fv.memberList.length;
+  if (S.loaded && curTY < S.time.max - 1e-6) {
+    const yr = Math.round(curTY);
+    const born = fv.memberList.filter(w => (w.year || 0) <= yr).length;
+    elLive.textContent = `${fv.label} — ${born} of ${total} watches as of ${yr}, ${fv.minYear} to ${fv.maxYear}.`;
+  } else {
+    elLive.textContent = `${fv.label} — ${total} watches, ${fv.minYear} to ${fv.maxYear}.`;
+  }
+}
+
+/* lineage-row hover — brighten that curve over 120ms (same pattern as hoverAnims) */
+function panelHotProgress(id, now) {
+  const a = S.panelHoverAnims.get(id);
+  if (!a) return id === S.panelHoverId ? 1 : 0;
+  const p = clamp((now - a.t0) / 120, 0, 1);
+  const v = lerp(a.from, a.to, easeOut(p));
+  if (p >= 1 && a.to === 0) S.panelHoverAnims.delete(id);
+  return v;
+}
+function setPanelHover(id) {
+  id = id != null ? String(id) : null;
+  if (id === S.panelHoverId) return;
+  const now = performance.now();
+  if (S.panelHoverId != null) {
+    S.panelHoverAnims.set(S.panelHoverId, { from: panelHotProgress(S.panelHoverId, now), to: 0, t0: now });
+  }
+  if (id != null) {
+    S.panelHoverAnims.set(id, { from: panelHotProgress(id, now), to: 1, t0: now });
+  }
+  S.panelHoverId = id;
+  invalidate();
+}
+
+function announce(w, lin) {
+  elLive.textContent =
+    `${w.brand} ${w.model}, ${w.year}. ${lin.panelAnc.length} ancestors, ${lin.panelDesc.length} descendants.`;
+}
+
+/* ======================================================================
+   12 · DETAIL PANEL
+   ====================================================================== */
+
+function specValue(w, key) {
+  const f = w.features || {};
+  switch (key) {
+    case 'Case': return w.caseShape ? sentence(w.caseShape) : null;
+    case 'Diameter': return isFinite(w.diameterMm) ? `${w.diameterMm} mm` : null;
+    case 'Bezel': {
+      if (!w.bezelType) return null;
+      if (w.bezelType === 'none') return 'None';
+      const cn = colorName(w.bezelColor);
+      return cn ? `${sentence(w.bezelType)} · ${cn}` : sentence(w.bezelType);
+    }
+    case 'Movement': return w.movement ? sentence(w.movement) : null;
+    case 'Water resistance': return isFinite(w.waterResistanceM) ? `${w.waterResistanceM} m` : null;
+    case 'Hands': return f.handsStyle ? sentence(f.handsStyle) : null;
+    case 'Lume': return f.lumePlots && f.lumePlots !== 'none' ? sentence(f.lumePlots) : null;
+    case 'Price today': return Array.isArray(w.priceBandUsd) && w.priceBandUsd.length === 2
+      ? `$${fmtNum(w.priceBandUsd[0])} – $${fmtNum(w.priceBandUsd[1])}` : null;
+    default: return null;
+  }
+}
+
+function panelHtml(w, lin) {
+  const specKeys = ['Case', 'Diameter', 'Bezel', 'Movement', 'Water resistance', 'Hands', 'Lume', 'Price today'];
+  const rows = specKeys
+    .map(k => [k, specValue(w, k)])
+    .filter(([, v]) => v != null)
+    .map(([k, v]) => `<div class="p-spec-row"><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`)
+    .join('');
+
+  const linRow = x =>
+    `<li><button type="button" data-goto="${escapeHtml(String(x.id))}">` +
+    `<span>${escapeHtml(x.brand)} ${escapeHtml(x.model)}</span>` +
+    `<span class="yr">${escapeHtml(String(x.year ?? ''))}</span></button></li>`;
+
+  let lineage = '';
+  if (lin.panelAnc.length === 0 && lin.panelDesc.length === 0) {
+    lineage = `<p class="p-lin-one">A lineage of one.</p>`;
+  } else {
+    if (lin.panelAnc.length) {
+      lineage += `<h3 class="p-lin-head">ANCESTRY</h3><ul class="p-lin-list">${lin.panelAnc.map(linRow).join('')}</ul>`;
+    }
+    if (lin.panelDesc.length) {
+      lineage += `<h3 class="p-lin-head">DESCENDANTS</h3><ul class="p-lin-list">${lin.panelDesc.map(linRow).join('')}</ul>`;
+    }
+  }
+
+  /* the specimen plate — only when a photograph exists; the glyph is never apologised for */
+  const ph = IMAGES[w.id];
+  const photo = ph && ph.file ? `
+    <div class="sec p-photo">
+      <img src="./data/${escapeHtml(ph.file)}" alt="${escapeHtml(w.brand + ' ' + w.model)}"
+           loading="lazy" onerror="this.parentElement.style.display='none'">
+      <p class="p-credit">Photo ${escapeHtml(ph.credit || 'Wikimedia Commons')}${ph.license ? ' · ' + escapeHtml(ph.license) : ''}</p>
+    </div>` : '';
+
+  /* breadcrumb chip — only while the path genuinely came from a family index */
+  const crumb = S.familyView && S.familyView.chained
+    ? `<button type="button" class="p-crumb" data-crumb aria-label="Back to ${escapeHtml(S.familyView.label)}">← ${escapeHtml(S.familyView.label)}</button>`
+    : '';
+
+  return `
+    <div class="sec">${crumb}
+      <p class="p-overline">${escapeHtml(w.brand)}</p>
+      <h2 class="p-title">${escapeHtml(w.model)}</h2>
+      <p class="p-ref">${w.reference ? `Ref. ${escapeHtml(w.reference)} · ` : ''}${escapeHtml(String(w.year ?? ''))}</p>
+    </div>${photo}
+    <div class="sec"><p class="p-significance">${escapeHtml(w.significance || '')}</p></div>
+    <div class="sec"><dl class="p-specs">${rows}</dl></div>
+    <div class="sec">${lineage}</div>`;
+}
+
+let panelHideTimer = null;
+let panelPrevFocus = null;       /* focus returns here on close (dialog contract) */
+
+/* shared open/swap scaffolding — watch detail and family index speak one dialect */
+function openPanelWith(ariaLabel, inject, crossfade) {
+  clearTimeout(panelHideTimer);
+  elPanel.setAttribute('aria-label', ariaLabel);
+  if (crossfade && !elPanel.hidden) {
+    /* a mid-close shell is resurrected — hidePanel leaves hidden=false for 250ms
+       while '.closing' animates; without this the panel would stay at opacity 0 */
+    elPanel.classList.remove('closing');
+    elPanel.classList.add('open');
+    elPanelContent.classList.add('swap');
+    setTimeout(() => {
+      /* the clicked row is about to be replaced — keep focus in the dialog */
+      const keepFocus = elPanel.contains(document.activeElement) || document.activeElement === body;
+      inject();
+      elPanelContent.classList.remove('swap');
+      elPanel.scrollTop = 0;
+      if (keepFocus) elPanel.focus({ preventScroll: true });
+    }, 130);
+  } else {
+    panelPrevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    inject();
+    elPanel.hidden = false;
+    elPanel.classList.remove('closing');
+    elPanel.scrollTop = 0;
+    elPanel.focus({ preventScroll: true });
+    /* two frames so the enter transition runs */
+    requestAnimationFrame(() => requestAnimationFrame(() => elPanel.classList.add('open')));
+  }
+}
+
+function showPanel(w, lin, crossfade) {
+  openPanelWith(`${w.brand} ${w.model}`, () => {
+    elPanelContent.innerHTML = panelHtml(w, lin);
+    for (const b of elPanelContent.querySelectorAll('[data-goto]')) {
+      /* the chain propagates down lineage rows — the breadcrumb persists */
+      b.addEventListener('click', () => selectWatch(b.dataset.goto,
+        S.familyView && S.familyView.chained ? { viaChain: true } : {}));
+      b.addEventListener('mouseenter', () => setPanelHover(b.dataset.goto));
+      b.addEventListener('mouseleave', () => setPanelHover(null));
+    }
+    const crumb = elPanelContent.querySelector('[data-crumb]');
+    if (crumb) crumb.addEventListener('click', returnToFamily);
+    const photo = elPanelContent.querySelector('.p-photo img');
+    if (photo) {
+      const ph = IMAGES[w.id];
+      photo.addEventListener('click', () => lightboxOpen([{
+        src: photo.src,
+        title: `${w.brand} ${w.model} · ${w.year}`,
+        credit: ph ? photoCredit(ph) : ''
+      }], 0));
+    }
+  }, crossfade);
+}
+
+/* --- the family index — a chronology in the panel shell ---------------- */
+
+function familyMetaLine(w) {
+  return [
+    isFinite(w.diameterMm) ? `Ø ${w.diameterMm} mm` : null,
+    isFinite(w.waterResistanceM) ? `${w.waterResistanceM} m` : null,
+    w.movement ? sentence(w.movement) : null
+  ].filter(Boolean).join(' · ');            /* omit missing fields — never a blank slot */
+}
+
+function familyHtml(fv) {
+  const total = fv.memberList.length;
+  const yr = Math.round(curTY);
+  const engaged = curTY < S.time.max - 1e-6;
+  const born = engaged ? fv.memberList.filter(w => (w.year || 0) <= yr).length : total;
+  const overline = engaged ? `FAMILY · ${born} OF ${total}` : `FAMILY · ${total} WATCHES`;
+  const cards = fv.memberList.map(w => {
+    const meta = familyMetaLine(w);
+    const price = Array.isArray(w.priceBandUsd) && w.priceBandUsd.length === 2
+      ? `$${fmtNum(w.priceBandUsd[0])} – ${fmtNum(w.priceBandUsd[1])}` : '';
+    const unborn = engaged && (w.year || 0) > yr;
+    return `<li><button type="button" class="fi-card${unborn ? ' fi-unborn' : ''}" data-id="${escapeHtml(String(w.id))}">` +
+      `<canvas class="fi-glyph" aria-hidden="true"></canvas>` +
+      `<span class="fi-main">` +
+      `<span class="fi-brand">${escapeHtml(String(w.brand || '').toUpperCase())}</span>` +
+      `<span class="fi-model">${escapeHtml(w.model || '')}</span>` +
+      (meta ? `<span class="fi-meta">${escapeHtml(meta)}</span>` : '') +
+      `</span><span class="fi-side">` +
+      `<span class="fi-year">${escapeHtml(String(w.year ?? ''))}</span>` +
+      (price ? `<span class="fi-price">${escapeHtml(price)}</span>` : '') +
+      `</span></button></li>`;
+  }).join('');
+  /* the family hero — its most influential photographed member on the specimen
+     plate; where no free photography exists, its five brightest members, drawn */
+  const media = familyMedia(fv.id);
+  let hero;
+  if (media.length) {
+    const hw = media[0], ph = IMAGES[hw.id];
+    hero = `<div class="sec fi-hero">` +
+      `<img src="./data/${escapeHtml(ph.file)}" alt="${escapeHtml(hw.brand + ' ' + hw.model)}"` +
+      ` loading="lazy" onerror="this.parentElement.style.display='none'">` +
+      `<p class="p-credit">${escapeHtml(hw.brand + ' ' + hw.model)} · Photo ${escapeHtml(ph.credit || 'Wikimedia Commons')}${ph.license ? ' · ' + escapeHtml(ph.license) : ''}</p>` +
+      `</div>`;
+  } else {
+    hero = `<div class="sec fi-hero"><canvas class="fi-strip" data-fam="${escapeHtml(fv.id)}" aria-hidden="true"></canvas></div>`;
+  }
+  return `
+    <div class="sec">
+      <p class="p-overline">${escapeHtml(overline)}</p>
+      <h2 class="p-title">${escapeHtml(fv.label)}</h2>
+      <p class="p-ref">${escapeHtml(String(fv.minYear))} — ${escapeHtml(String(fv.maxYear))}</p>
+    </div>${hero}
+    <div class="sec"><p class="p-significance">${escapeHtml(FAMILY_CHARACTER[fv.id] || '')}</p></div>
+    <div class="sec"><ul class="fi-list">${cards}</ul></div>`;
+}
+
+/* card glyphs drawn once after layout settles — the map's own language, frozen:
+   t3Alpha = 0, deliberately. A card is a chronology entry, not a live instrument. */
+function drawCardGlyphs() {
+  requestAnimationFrame(() => {
+    const now = performance.now();
+    for (const cnv of elPanelContent.querySelectorAll('canvas.fi-glyph')) {
+      const card = cnv.closest('.fi-card');
+      const w = card && S.byId.get(card.dataset.id);
+      if (!w) continue;
+      cnv.width = Math.max(1, Math.round(28 * dpr));
+      cnv.height = Math.max(1, Math.round(28 * dpr));
+      const g = cnv.getContext('2d');
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawGlyph(g, w, 14, 14, 22, 0, now);
+    }
+    for (const cnv of elPanelContent.querySelectorAll('canvas.fi-strip')) {
+      drawFamilyStrip(cnv, cnv.dataset.fam);
+    }
+  });
+}
+
+function showFamilyPanel(focusId) {
+  const fv = S.familyView;
+  if (!fv) return;
+  openPanelWith(fv.label, () => {
+    elPanelContent.innerHTML = familyHtml(fv);
+    for (const b of elPanelContent.querySelectorAll('.fi-card')) {
+      b.addEventListener('click', () => selectWatch(b.dataset.id, { viaChain: true }));
+      /* card hover/focus lights the watch on the map, exactly as map-hover does */
+      b.addEventListener('mouseenter', () => setHover(b.dataset.id));
+      b.addEventListener('mouseleave', () => setHover(null));
+      b.addEventListener('focus', () => setHover(b.dataset.id));
+      b.addEventListener('blur', () => setHover(null));
+    }
+    /* the family hero opens the whole family gallery in the print room */
+    const hero = elPanelContent.querySelector('.fi-hero img');
+    if (hero) {
+      hero.addEventListener('click', () => {
+        const gallery = familyMedia(fv.id).map(w => ({
+          src: './data/' + IMAGES[w.id].file,
+          title: `${w.brand} ${w.model} · ${w.year}`,
+          credit: photoCredit(IMAGES[w.id])
+        }));
+        lightboxOpen(gallery, 0);
+      });
+    }
+    drawCardGlyphs();
+    /* returning from a watch detail resumes at that watch's card */
+    if (focusId != null) {
+      const btn = elPanelContent.querySelector(`.fi-card[data-id="${CSS.escape(String(focusId))}"]`);
+      if (btn) requestAnimationFrame(() => btn.focus());
+    }
+  }, !elPanel.hidden);
+}
+
+/* live time updates while the index is open — count + unborn class flips only */
+function updateFamilyPanelTime(yr, engaged) {
+  const fv = S.familyView;
+  if (!fv) return;
+  /* during the 130ms crossfade the panel still holds the outgoing watch detail —
+     its .p-overline is the brand line and must not be rewritten to family copy */
+  if (!elPanelContent.querySelector('.fi-list')) return;
+  const total = fv.memberList.length;
+  const ov = elPanelContent.querySelector('.p-overline');
+  if (ov) {
+    const born = engaged ? fv.memberList.filter(w => (w.year || 0) <= yr).length : total;
+    ov.textContent = engaged ? `FAMILY · ${born} OF ${total}` : `FAMILY · ${total} WATCHES`;
+  }
+  for (const b of elPanelContent.querySelectorAll('.fi-card')) {
+    const w = S.byId.get(b.dataset.id);
+    if (w) b.classList.toggle('fi-unborn', engaged && (w.year || 0) > yr);
+  }
+}
+function hidePanel() {
+  if (elPanel.hidden) return;
+  elPanel.classList.remove('open');
+  elPanel.classList.add('closing');
+  clearTimeout(panelHideTimer);
+  const focusWasInside = elPanel.contains(document.activeElement) || document.activeElement === elPanel;
+  panelHideTimer = setTimeout(() => {
+    elPanel.hidden = true;
+    elPanel.classList.remove('closing');
+    elPanelContent.innerHTML = '';
+  }, REDUCED ? 90 : 250);
+  if (focusWasInside && panelPrevFocus && document.contains(panelPrevFocus)) {
+    panelPrevFocus.focus({ preventScroll: true });
+  }
+  panelPrevFocus = null;
+}
+
+/* ======================================================================
+   13 · SEARCH
+   ====================================================================== */
+
+let searchOpen = false, searchResults = [], searchActive = -1;
+let searchRestW = null, searchWidthTimer = null;
+
+/* pin current width → retarget → clear the inline width once the 240ms
+   transition lands, so the stylesheet (incl. the <760px calc) owns the box */
+function animateSearchWidth(targetPx) {
+  elSearch.style.width = elSearch.offsetWidth + 'px';
+  void elSearch.offsetWidth;                      /* commit the start width */
+  elSearch.style.width = targetPx;
+  clearTimeout(searchWidthTimer);
+  searchWidthTimer = setTimeout(() => { elSearch.style.width = ''; }, 300);
+}
+
+function openSearch() {
+  if (searchOpen || S.failed) return;
+  skipReveal();
+  dismissOverture();
+  searchOpen = true;
+  if (searchRestW == null) searchRestW = elSearch.offsetWidth;
+  const target = window.innerWidth <= 760 ? (window.innerWidth - 48) + 'px' : '320px';
+  animateSearchWidth(target);
+  elSearch.classList.add('open');
+  elSearchInput.hidden = false;
+  elSearchInput.value = '';
+  elSearchInput.setAttribute('aria-expanded', 'true');
+  elSearchInput.focus();
+  renderResults([]);
+}
+function closeSearch() {
+  if (!searchOpen) return;
+  searchOpen = false;
+  animateSearchWidth(searchRestW != null ? searchRestW + 'px' : '');
+  elSearch.classList.remove('open');
+  elSearchInput.hidden = true;
+  elSearchInput.value = '';
+  elSearchInput.setAttribute('aria-expanded', 'false');
+  elSearchInput.removeAttribute('aria-activedescendant');
+  elSearchResults.hidden = true;
+  elSearchResults.innerHTML = '';
+  searchResults = []; searchActive = -1;
+}
+
+function rankMatches(q) {
+  q = q.trim().toLowerCase();
+  if (!q) return [];
+  const scored = [];
+  for (const w of S.watches) {
+    const brand = String(w.brand || '').toLowerCase();
+    const model = String(w.model || '').toLowerCase();
+    const ref = String(w.reference || '').toLowerCase();
+    const year = String(w.year || '');
+    const combo = brand + ' ' + model;
+    let score = Infinity;
+    if (brand.startsWith(q) || model.startsWith(q) || combo.startsWith(q) || ref.startsWith(q) || year.startsWith(q)) score = 0;
+    else if (model.split(/\s+/).some(t => t.startsWith(q)) || brand.split(/\s+/).some(t => t.startsWith(q))) score = 1;
+    else if (combo.includes(q) || ref.includes(q)) score = 2;
+    if (score < Infinity) scored.push([score, w]);
+  }
+  scored.sort((a, b) => a[0] - b[0] || b[1]._desc - a[1]._desc || (a[1].year || 0) - (b[1].year || 0));
+  /* families join after watches — same three tiers, scored on BOTH the display
+     label and the id-derived name ('vintage' must find the Skin Divers) */
+  const famScored = [];
+  for (const fam of S.families) {
+    const names = [String(fam.label || ''), familyLabel(fam.id)]
+      .filter(Boolean).map(s => s.toLowerCase());
+    let score = Infinity;
+    for (const label of names) {
+      if (label.startsWith(q)) score = Math.min(score, 0);
+      else if (label.split(/\s+/).some(t => t.startsWith(q))) score = Math.min(score, 1);
+      else if (label.includes(q)) score = Math.min(score, 2);
+    }
+    if (score < Infinity) famScored.push([score, fam]);
+  }
+  famScored.sort((a, b) => a[0] - b[0] || (b[1].count || 0) - (a[1].count || 0));
+  /* families reserve at most 2 rows, then watches fill to capacity — models
+     never drown under lineages, and no slot ever sits empty */
+  const fams = famScored.slice(0, scored.length ? 2 : 8).map(s => ({ type: 'family', item: s[1] }));
+  const watches = scored.slice(0, 8 - fams.length).map(s => ({ type: 'watch', item: s[1] }));
+  return watches.concat(fams);
+}
+
+function renderResults(list) {
+  searchResults = list;
+  searchActive = list.length ? 0 : -1;
+  const q = elSearchInput.value.trim();
+  if (!q) {
+    elSearchResults.hidden = true;
+    elSearchResults.innerHTML = '';
+    elSearchInput.removeAttribute('aria-activedescendant');
+    return;
+  }
+  elSearchResults.hidden = false;
+  if (!list.length) {
+    elSearchResults.innerHTML = `<li class="sr-empty" role="presentation">Nothing by that name — yet.</li>`;
+    elSearchInput.removeAttribute('aria-activedescendant');
+    return;
+  }
+  elSearchResults.innerHTML = list.map((r, i) => {
+    const model = r.type === 'family'
+      ? escapeHtml(r.item.label || familyLabel(r.item.id))
+      : `${escapeHtml(r.item.brand)} ${escapeHtml(r.item.model)}`;
+    const meta = r.type === 'family'
+      ? `FAMILY · ${r.item.count || 0}`
+      : escapeHtml(String(r.item.year ?? ''));
+    return `<li id="sr-${i}" role="option" aria-selected="${i === searchActive}" class="${i === searchActive ? 'active' : ''}" data-i="${i}">` +
+      `<span class="sr-model">${model}</span>` +
+      `<span class="sr-meta">${meta}</span></li>`;
+  }).join('');
+  elSearchInput.setAttribute('aria-activedescendant', 'sr-0');
+  for (const li of elSearchResults.querySelectorAll('li[data-i]')) {
+    li.addEventListener('mousedown', e => e.preventDefault());
+    li.addEventListener('click', () => { commitSearch(Number(li.dataset.i)); });
+  }
+}
+function moveActive(d) {
+  if (!searchResults.length) return;
+  searchActive = (searchActive + d + searchResults.length) % searchResults.length;
+  const items = elSearchResults.querySelectorAll('li[data-i]');
+  items.forEach((li, i) => {
+    li.classList.toggle('active', i === searchActive);
+    li.setAttribute('aria-selected', String(i === searchActive));
+  });
+  elSearchInput.setAttribute('aria-activedescendant', 'sr-' + searchActive);
+}
+function commitSearch(i) {
+  const r = searchResults[i];
+  if (!r) return;
+  closeSearch();
+  if (r.type === 'family') openFamily(r.item.id);
+  else selectWatch(r.item.id);
+}
+
+elSearchToggle.addEventListener('click', openSearch);
+elSearchInput.addEventListener('input', () => renderResults(rankMatches(elSearchInput.value)));
+elSearchInput.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
+  else if (e.key === 'Enter') { e.preventDefault(); commitSearch(searchActive); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSearch(); }
+});
+elSearchInput.addEventListener('blur', () => setTimeout(() => { if (searchOpen && !elSearch.contains(document.activeElement)) closeSearch(); }, 120));
+
+/* ======================================================================
+   14 · RENDERING
+   ====================================================================== */
+
+const trackable = 'letterSpacing' in ctx;
+
+function setType(c, sizePx, weight, mono, trackingEm) {
+  c.font = `${weight} ${sizePx}px ${mono ? FONT_MONO : FONT_UI}`;
+  if (trackable) c.letterSpacing = (trackingEm ? trackingEm * sizePx : 0) + 'px';
+}
+
+const snap = v => Math.round(v * dpr) / dpr;
+
+function glyphDiameter(z) {
+  const d2 = clamp(14 + 8 * (z - TIER_2) / (TIER_3 - TIER_2), 14, 22);
+  const d3 = clamp(28 + 2 * (z - TIER_3), 28, 44);
+  const t = clamp((z - TIER_3 * (1 - XFADE)) / (TIER_3 * 2 * XFADE), 0, 1);
+  return lerp(d2, d3, t);
+}
+function tierAlphas(z) {
+  const star = 1 - clamp((z - TIER_2 * (1 - XFADE)) / (TIER_2 * 2 * XFADE), 0, 1);
+  const glyph = 1 - star;
+  const t3 = clamp((z - TIER_3 * (1 - XFADE)) / (TIER_3 * 2 * XFADE), 0, 1);
+  const label = clamp((z - 6) / 1, 0, 1);
+  const fam = 1 - clamp((z - 3) / 1, 0, 1);
+  return { star, glyph, t3, label, fam };
+}
+
+/* cached radial glow sprite per watch (no shadowBlur per frame) */
+function glowSprite(w) {
+  if (w._glow && w._glow.dpr === dpr) return w._glow;
+  const R = 3 * w._r;
+  const s = Math.max(2, Math.ceil(R * 2 * dpr));
+  const c = document.createElement('canvas');
+  c.width = s; c.height = s;
+  const g = c.getContext('2d');
+  const dial = hexRgb(w.dialColor);
+  const grad = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  grad.addColorStop(0, rgbaStr(dial, 0.08));
+  grad.addColorStop(1, rgbaStr(dial, 0));
+  g.fillStyle = grad;
+  g.fillRect(0, 0, s, s);
+  w._glow = { c, R, dpr };
+  return w._glow;
+}
+
+/* --- case paths ------------------------------------------------------ */
+function traceCase(c, shape, R) {
+  c.beginPath();
+  if (shape === 'cushion') {
+    const n = 3.5, e = 2 / n, steps = 40;
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * Math.PI * 2;
+      const ct = Math.cos(t), st = Math.sin(t);
+      const x = Math.sign(ct) * Math.pow(Math.abs(ct), e) * R;
+      const y = Math.sign(st) * Math.pow(Math.abs(st), e) * R;
+      i === 0 ? c.moveTo(x, y) : c.lineTo(x, y);
+    }
+    c.closePath();
+  } else if (shape === 'tonneau') {
+    c.moveTo(-0.6 * R, -0.85 * R);
+    c.quadraticCurveTo(0, -1.0 * R, 0.6 * R, -0.85 * R);
+    c.bezierCurveTo(0.95 * R, -0.45 * R, 0.95 * R, 0.45 * R, 0.6 * R, 0.85 * R);
+    c.quadraticCurveTo(0, 1.0 * R, -0.6 * R, 0.85 * R);
+    c.bezierCurveTo(-0.95 * R, 0.45 * R, -0.95 * R, -0.45 * R, -0.6 * R, -0.85 * R);
+    c.closePath();
+  } else if (shape === 'asymmetric') {
+    /* circle with the 30°–90° (clock) arc offset +1.5px — the Seawolf shoulder */
+    const a0 = -Math.PI / 3, a1 = 0;   /* canvas radians for clock 30°→90° */
+    c.arc(0, 0, R, a1, a0, false);     /* long way round */
+    c.arc(0, 0, R + 1.5, a0, a1, false);
+    c.closePath();
+  } else {
+    c.arc(0, 0, R, 0, Math.PI * 2);
+  }
+}
+
+/* --- hands ------------------------------------------------------------ */
+function drawHand(c, style, angle, len, isMinute, stroke) {
+  const dx = Math.sin(angle), dy = -Math.cos(angle);
+  const tx = dx * len, ty = dy * len;
+  c.strokeStyle = stroke;
+  c.fillStyle = stroke;
+  let wPx = 1;
+  switch (style) {
+    case 'sword': wPx = 1.25; break;
+    case 'plongeur': wPx = isMinute ? 2 : 1; break;
+    case 'pencil': wPx = 1.25; break;
+    case 'cathedral': wPx = 1.5; break;
+    default: wPx = 1;
+  }
+  c.lineWidth = wPx;
+  c.beginPath();
+  c.moveTo(0, 0);
+  c.lineTo(tx, ty);
+  c.stroke();
+  c.lineWidth = 1;
+  if (style === 'mercedes' && !isMinute) {
+    c.beginPath(); c.arc(dx * len * 0.72, dy * len * 0.72, 2, 0, Math.PI * 2); c.stroke();
+  } else if (style === 'snowflake' && !isMinute) {
+    const px = dx * len * 0.72, py = dy * len * 0.72, s = 2.5;
+    c.beginPath();
+    c.moveTo(px + dx * s, py + dy * s);
+    c.lineTo(px - dy * s, py + dx * s);
+    c.lineTo(px - dx * s, py - dy * s);
+    c.lineTo(px + dy * s, py - dx * s);
+    c.closePath(); c.stroke();
+  } else if (style === 'broad-arrow') {
+    const bx = dx * len * 0.8, by = dy * len * 0.8, s = 2.2;
+    c.beginPath();
+    c.moveTo(bx - dy * s - dx * s, by + dx * s - dy * s);
+    c.lineTo(tx, ty);
+    c.lineTo(bx + dy * s - dx * s, by - dx * s - dy * s);
+    c.stroke();
+  }
+}
+
+/* --- the glyph — a patent drawing, ≤3 primitives per element ---------- */
+function drawGlyph(c, w, x, y, D, t3Alpha, now) {
+  const R = D / 2;
+  const f = w.features || {};
+  const stroke = mixed('stroke', w.dialColor);
+  const dialFill = mixed('fill', w.dialColor);
+
+  c.save();
+  c.translate(snap(x), snap(y));
+  c.lineWidth = 1;
+
+  /* case + dial */
+  traceCase(c, w.caseShape, R);
+  c.fillStyle = dialFill;
+  c.fill();
+  c.strokeStyle = stroke;
+  c.stroke();
+
+  /* bezel — concentric ring 2px inside case edge */
+  if (w.bezelType && w.bezelType !== 'none') {
+    const rb = (w.caseShape === 'tonneau' ? R * 0.72 : R - 2);
+    if (rb > 3) {
+      c.save();
+      if (w.bezelType === 'internal') c.globalAlpha *= 0.55;
+      c.strokeStyle = w.bezelType === 'rotating' ? mixed('stroke', w.bezelColor) : stroke;
+      c.beginPath(); c.arc(0, 0, rb, 0, Math.PI * 2); c.stroke();
+      if (w.bezelType === 'rotating') {
+        c.beginPath(); c.moveTo(0, -rb); c.lineTo(0, -rb + 2); c.stroke();
+      }
+      c.restore();
+    }
+  }
+  const rDial = (w.caseShape === 'tonneau' ? R * 0.72 : R - 2) - 2.5;
+
+  /* accent — exactly once: 1.5px pip at 12 */
+  c.fillStyle = mixed('stroke', w.accentColor);
+  c.beginPath(); c.arc(0, -Math.max(rDial, 2), 0.75, 0, Math.PI * 2); c.fill();
+
+  /* crown at 3; crown guard flanks */
+  c.strokeStyle = stroke;
+  c.beginPath(); c.moveTo(R, -1); c.lineTo(R + 1.5, -1); c.moveTo(R, 1); c.lineTo(R + 1.5, 1); c.stroke();
+  if (f.crownGuard) {
+    c.beginPath();
+    c.moveTo(R - 0.5, -3); c.lineTo(R + 2, -2.2);
+    c.moveTo(R - 0.5, 3); c.lineTo(R + 2, 2.2);
+    c.stroke();
+  }
+
+  /* TIER 3 — lume, date, live hands */
+  if (t3Alpha > 0.01 && rDial > 5) {
+    c.save();
+    c.globalAlpha *= t3Alpha;
+    const lumeStroke = mixed('stroke', w.accentColor);
+
+    if (f.lumePlots && f.lumePlots !== 'none') {
+      c.fillStyle = lumeStroke;
+      c.strokeStyle = lumeStroke;
+      for (let h = 0; h < 12; h++) {
+        if (h === 3 && f.dateWindow) continue;
+        const a = h / 12 * Math.PI * 2;
+        const px = Math.sin(a) * rDial, py = -Math.cos(a) * rDial;
+        const kind = f.lumePlots === 'mixed' ? (h % 3 === 0 ? 'rect' : 'dot') :
+                     f.lumePlots === 'rectangular' ? 'rect' : 'dot';
+        c.save();
+        if (f.lumePlots === 'sandwich') c.globalAlpha *= 0.55;
+        if (kind === 'rect') {
+          c.save();
+          c.translate(px, py); c.rotate(a);
+          c.fillRect(-0.5, -1, 1, 2);
+          c.restore();
+        } else {
+          c.beginPath(); c.arc(px, py, 0.75, 0, Math.PI * 2); c.fill();
+        }
+        c.restore();
+      }
+    }
+
+    if (f.dateWindow) {
+      c.strokeStyle = stroke;
+      c.strokeRect(rDial - 1, -1.25, 2, 2.5);
+    }
+
+    /* live time — hour + minute, no seconds hands anywhere */
+    const mod = currentMinuteOfDay(now);
+    const mAngle = (mod % 60) / 60 * Math.PI * 2;
+    const hAngle = ((mod / 60) % 12) / 12 * Math.PI * 2;
+    const style = f.handsStyle || 'baton';
+    drawHand(c, style, hAngle, rDial * 0.52, false, stroke);
+    drawHand(c, style, mAngle, rDial * 0.78, true, stroke);
+    c.restore();
+  }
+  c.restore();
+}
+
+/* --- labels ----------------------------------------------------------- */
+function labelLines(w) {
+  let model = String(w.model || '');
+  if (model.length > 22) model = model.slice(0, 21) + '…';
+  return [String(w.brand || '').toUpperCase(), model];
+}
+function drawWatchLabel(c, w, x, y, R, alpha, withYear) {
+  if (alpha <= 0.01) return;
+  const [brand, model] = labelLines(w);
+  c.save();
+  c.globalAlpha *= alpha;
+  c.textAlign = 'center';
+  c.textBaseline = 'top';
+  let ty = snap(y + R + 8);
+  setType(c, 9, 500, false, 0.14);
+  c.fillStyle = TEXT_3;
+  c.fillText(brand, snap(x), ty);
+  ty += 13;
+  setType(c, 11, 450, false, 0.02);
+  c.fillStyle = TEXT_2;
+  c.fillText(model, snap(x), ty);
+  if (withYear && w.year) {
+    ty += 15;
+    setType(c, 8, 400, true, 0);
+    c.fillStyle = TEXT_3;
+    c.fillText(String(w.year), snap(x), ty);
+  }
+  c.restore();
+}
+
+function wrapFamily(label) {
+  const words = String(label || '').toUpperCase().split(/\s+/);
+  const lines = [];
+  let cur = '';
+  for (const wd of words) {
+    if (cur && (cur + ' ' + wd).length > 14) { lines.push(cur); cur = wd; }
+    else cur = cur ? cur + ' ' + wd : wd;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+/* --- lineage curves ---------------------------------------------------- */
+function edgeHot(e, now) {
+  if (S.panelHoverId == null && S.panelHoverAnims.size === 0) return 0;
+  return Math.max(panelHotProgress(String(e.a), now), panelHotProgress(String(e.b), now));
+}
+
+function drawLineage(c, edges, now, t0, animLen, fading) {
+  const baseA = c.globalAlpha;
+  /* reduced motion: lineage appears fully drawn in one 200ms fade */
+  const reducedRamp = (REDUCED && !fading) ? clamp((now - t0) / 200, 0, 1) : 1;
+  c.lineWidth = 1;
+  c.strokeStyle = LUME;
+  for (const e of edges) {
+    const wa = S.byId.get(e.a), wb = S.byId.get(e.b);
+    if (!wa || !wb) continue;
+    /* an edge to the unborn does not exist yet */
+    let bornEdge = 1;
+    if (curTY < S.time.max - 1e-6) {
+      bornEdge = Math.min(bornAlphaOf(wa, curTY), bornAlphaOf(wb, curTY));
+      if (bornEdge <= 0) continue;
+    }
+    let [x0, y0] = toScreen(wa.x, wa.y);
+    let [x1, y1] = toScreen(wb.x, wb.y);
+    const dx = x1 - x0, dy = y1 - y0;
+    const len = Math.hypot(dx, dy);
+    if (len < 17) continue;
+    /* short edges fade, never pop — a point never pops, it resolves */
+    const edgeA = clamp((len - 16) / 16, 0, 1);
+    const ux = dx / len, uy = dy / len;
+    const rA = glyphRadiusFor(wa), rB = glyphRadiusFor(wb);
+    /* lines gesture at watches, never touch them — stop 6px short */
+    x0 += ux * (rA + 6); y0 += uy * (rA + 6);
+    x1 -= ux * (rB + 6); y1 -= uy * (rB + 6);
+    const clen = Math.hypot(x1 - x0, y1 - y0);
+    if (clen < 8) continue;
+    /* control points perpendicular to the chord at 18%; per-parent fans
+       spread symmetrically about the chord (fan is centered at 0) */
+    const spread = e.fan === 0 ? 1 : Math.sign(e.fan) * clamp(1 + Math.abs(e.fan) * 0.9, 1, 2.5);
+    const k = 0.18 * spread * clen;
+    const px = -uy, py = ux;
+    const c1x = x0 + (x1 - x0) * 0.3 + px * k, c1y = y0 + (y1 - y0) * 0.3 + py * k;
+    const c2x = x0 + (x1 - x0) * 0.7 + px * k, c2y = y0 + (y1 - y0) * 0.7 + py * k;
+
+    let p = 1;
+    if (!fading && !REDUCED) {
+      /* ring (240ms) first, then curves — ancestors backward, descendants forward */
+      const start = 240 + e.gen * 230 + e.sib * 80;
+      p = clamp((now - t0 - start) / 600, 0, 1);
+      p = easeGlide(p);
+    }
+    if (p <= 0) continue;
+
+    const hot = edgeHot(e, now);
+    const kindA = e.kind === 'anc' ? 1 : lerp(0.55, 1, hot);
+    c.globalAlpha = baseA * edgeA * kindA * reducedRamp * bornEdge;
+    if (c.globalAlpha <= 0.004) continue;
+    if (p < 1) {
+      const approx = clen * 1.06;
+      c.setLineDash([approx, approx]);
+      c.lineDashOffset = approx * (1 - p);
+    }
+    c.beginPath();
+    c.moveTo(x0, y0);
+    c.bezierCurveTo(c1x, c1y, c2x, c2y, x1, y1);
+    c.stroke();
+    if (p < 1) { c.setLineDash([]); c.lineDashOffset = 0; }
+  }
+  c.globalAlpha = baseA;
+}
+
+function glyphRadiusFor(w) {
+  const z = S.cam.z;
+  const sel = S.selection;
+  if (sel && sel.related.has(w.id)) return Math.max(glyphDiameter(z), 28) / 2;
+  if (z < TIER_2 * (1 - XFADE)) return w._r;
+  return glyphDiameter(z) / 2;
+}
+
+/* --- the frame --------------------------------------------------------- */
+function draw(c, w_, h_, now, isExport) {
+  c.clearRect(0, 0, w_, h_);
+  c.fillStyle = FIELD_HEX;
+  c.fillRect(0, 0, w_, h_);
+
+  /* vignette */
+  if (!isExport && vignetteCanvas) {
+    c.drawImage(vignetteCanvas, 0, 0, w_, h_);
+  } else {
+    paintVignette(c, w_, h_);
+  }
+  if (!S.loaded) return;
+  /* winning label rects are re-earned every frame — nothing painted, nothing hittable */
+  if (!isExport) S.famLabelRects = [];
+
+  const z = S.cam.z;
+  const A = tierAlphas(z);
+  const sel = S.selection;
+  const rel = sel ? sel.related : null;
+
+  /* selection dim: 0→1 over 400ms; release: back over 400ms
+     (reduced motion: a plain 200ms fade — never an instant snap).
+     A family view is a selection of many — same ramp, members as the set. */
+  let dimT = 0;
+  if (sel) dimT = REDUCED ? clamp((now - sel.t0) / 200, 0, 1) : easeOut(clamp((now - sel.t0) / 400, 0, 1));
+  else if (S.familyView) dimT = REDUCED
+    ? clamp((now - S.familyView.t0) / 200, 0, 1)
+    : easeOut(clamp((now - S.familyView.t0) / 400, 0, 1));
+  else if (S.releasing) dimT = REDUCED
+    ? 1 - clamp((now - S.releasing.t0) / 200, 0, 1)
+    : 1 - easeOut(clamp((now - S.releasing.t0) / 400, 0, 1));
+  const dimVal = lerp(1, DIM_FIELD, dimT);
+  const relSetForDim = sel ? rel
+    : S.familyView ? S.familyView.members
+    : (S.releasing ? S.releasing.related : null);
+
+  const famA = A.fam * revealFamAlpha(now);
+  const mod = currentMinuteOfDay(now); /* touch to keep beat anim ticking */
+  const TY = curTY;
+  const timeOn = TY < S.time.max - 1e-6;
+
+  /* ---- pass 1: points/glyphs ---- */
+  const labelJobs = [];
+  for (const w of S.watches) {
+    const [x, y] = toScreen(w.x, w.y);
+    if (x < -80 || x > w_ + 80 || y < -80 || y > h_ + 80) continue;
+
+    const isRel = relSetForDim ? relSetForDim.has(w.id) : false;
+    const isSel = sel && w.id === sel.id;
+    const rv = revealState(w, now);
+    if (rv.a <= 0) continue;
+    /* the Ephemeris: unborn watches don't render; magnitude re-derives per year */
+    let bornA = 1, glint = 0, magScale = 1;
+    if (timeOn) {
+      bornA = bornAlphaOf(w, TY);
+      if (bornA <= 0) continue;
+      glint = clamp(1 - (TY - w.year) / 1.2, 0, 1) * bornA;
+      const dY = descAt(w, TY);
+      if (dY < w._desc) magScale = Math.min(1.25 + 0.45 * Math.sqrt(dY), 3.5) / w._r;
+    }
+    const hov = hoverProgress(w.id, now);
+    /* selection dim and lens dim never stack — the deeper one wins */
+    const selFactor = isRel || !relSetForDim ? 1 : dimVal;
+    const baseAlpha = rv.a * bornA * Math.min(selFactor, lensFactorOf(w, now));
+    if (baseAlpha <= 0.005) continue;
+
+    const relFull = sel && rel && rel.has(w.id);   /* related render at full tier detail */
+    /* reduced motion: no scale transforms anywhere — glow ×2 + label carry the hover */
+    const scale = (REDUCED ? 1 : 1 + 0.06 * hov) * rv.s;
+
+    c.save();
+    c.globalAlpha = baseAlpha;
+
+    if (relFull) {
+      const D = Math.max(glyphDiameter(z), 28) * scale;
+      drawGlyph(c, w, x, y, D, 1, now);
+      labelJobs.push({ w, x, y, R: D / 2, a: 1, yr: true, pri: Infinity });
+    } else {
+      /* star tier */
+      if (A.star > 0.005) {
+        c.save();
+        c.globalAlpha *= A.star;
+        const sM = scale * magScale;                 /* magnitude as of the chosen year */
+        const g = glowSprite(w);
+        const glowA = 1 + hov;                       /* hover: glow ×2 */
+        c.globalAlpha *= Math.min(1, glowA);
+        c.drawImage(g.c, x - g.R * sM, y - g.R * sM, g.R * 2 * sM, g.R * 2 * sM);
+        if (hov > 0) {
+          /* hover: glow alpha ×2 — a second pass scaled by hover progress */
+          c.globalAlpha = baseAlpha * A.star * hov;
+          c.drawImage(g.c, x - g.R * sM, y - g.R * sM, g.R * 2 * sM, g.R * 2 * sM);
+          c.globalAlpha = baseAlpha * A.star;
+        }
+        c.fillStyle = mixed('star', w.dialColor);
+        c.beginPath();
+        c.arc(snap(x), snap(y), w._r * sM, 0, Math.PI * 2);
+        c.fill();
+        if (glint > 0.02) {
+          /* ignition — a watch is new to the field for ~14 months */
+          c.globalAlpha = baseAlpha * A.star * glint * 0.7;
+          c.strokeStyle = LUME;
+          c.lineWidth = 1;
+          c.beginPath();
+          c.arc(snap(x), snap(y), w._r * sM + 2.5, 0, Math.PI * 2);
+          c.stroke();
+        }
+        c.restore();
+      }
+      /* glyph tier */
+      if (A.glyph > 0.005) {
+        c.save();
+        c.globalAlpha *= A.glyph;
+        const g = glowSprite(w);
+        c.save();
+        c.globalAlpha *= 0.5 * (1 + hov);
+        c.drawImage(g.c, x - g.R, y - g.R, g.R * 2, g.R * 2);
+        c.restore();
+        const D = glyphDiameter(z) * scale;
+        drawGlyph(c, w, x, y, D, A.t3, now);
+        c.restore();
+      }
+      /* labels: tier 3 fade, or hover reveal below tier; hidden for unrelated during selection */
+      const labelBase = Math.max(A.label, hov);
+      const labA = labelBase * (relSetForDim && !isRel ? 0 : 1) * rv.a;
+      if (labA > 0.01) {
+        labelJobs.push({
+          w, x, y,
+          R: (A.glyph > 0.5 ? glyphDiameter(z) / 2 : w._r) * scale,
+          a: labA, yr: hov > 0.5 && A.label < 0.5,
+          pri: w._desc + (hov > 0 ? 1e6 : 0)
+        });
+      }
+    }
+    c.restore();
+  }
+
+  /* ---- pass 2: lineage curves ---- */
+  if (sel) {
+    drawLineage(c, sel.edges, now, sel.t0, sel.animLen, false);
+  } else if (S.releasing) {
+    const fadeP = clamp((now - S.releasing.t0) / (REDUCED ? 200 : 300), 0, 1);
+    if (fadeP < 1) {
+      c.save();
+      c.globalAlpha = REDUCED ? 1 - fadeP : 1 - easeExit(fadeP);
+      drawLineage(c, S.releasing.edges, now, 0, 0, true);
+      c.restore();
+    } else {
+      S.releasing = null;
+    }
+  }
+
+  /* ---- pass 3: selected ring + halo ---- */
+  if (sel) {
+    const w = S.byId.get(sel.id);
+    if (w) {
+      const [x, y] = toScreen(w.x, w.y);
+      const R = glyphRadiusFor(w);
+      const ringP = REDUCED ? clamp((now - sel.t0) / 200, 0, 1) : easeOut(clamp((now - sel.t0) / 240, 0, 1));
+      const rr = (R + 6) * (REDUCED ? 1 : lerp(0.8, 1, ringP));
+      c.save();
+      c.globalAlpha = ringP;
+      /* halo gradient cached on (x,y,R) — not rebuilt while the camera rests */
+      let halo;
+      if (!isExport && haloCache && haloCache.x === x && haloCache.y === y && haloCache.R === R) {
+        halo = haloCache.grad;
+      } else {
+        halo = c.createRadialGradient(x, y, R, x, y, R + 20);
+        halo.addColorStop(0, LUME_GLOW_0);
+        halo.addColorStop(1, LUME_GLOW_1);
+        if (!isExport) haloCache = { x, y, R, grad: halo };
+      }
+      c.fillStyle = halo;
+      c.beginPath(); c.arc(x, y, R + 20, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = LUME;
+      c.lineWidth = 1;
+      c.beginPath(); c.arc(snap(x), snap(y), rr, 0, Math.PI * 2); c.stroke();
+      c.restore();
+    }
+  }
+
+  /* ---- pass 4: family labels, collision-culled by population ---- */
+  if (famA > 0.01) {
+    c.save();
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    setType(c, 11, 500, false, 0.18);
+    const activeFamId = S.familyView ? S.familyView.id : null;
+    const famJobs = [];
+    for (const fam of S.families) {
+      const [x, y] = toScreen(fam.x, fam.y);
+      if (x < -160 || x > w_ + 160 || y < -60 || y > h_ + 60) continue;
+      /* a family exists only once its first member does */
+      let fA = 1;
+      if (timeOn) {
+        fA = clamp((TY - ((fam._minYear ?? S.yearMin) - 0.6)) / 0.6, 0, 1);
+        if (fA <= 0.01) continue;
+      }
+      const lines = wrapFamily(fam.label || familyLabel(fam.id));
+      let lw = 0;
+      for (const ln of lines) lw = Math.max(lw, c.measureText(ln).width);
+      famJobs.push({ fam, x, y, lines, fA, count: fam.count || 0, w: lw + 20, h: lines.length * 15 + 10 });
+    }
+    /* larger families win the space — a culled label returns as you zoom */
+    famJobs.sort((a, b) => b.count - a.count);
+    const famPlaced = [];
+    for (const j of famJobs) {
+      const rect = { x: j.x - j.w / 2, y: j.y - j.h / 2, w: j.w, h: j.h };
+      let clash = false;
+      for (const p of famPlaced) {
+        if (rect.x < p.x + p.w && rect.x + rect.w > p.x && rect.y < p.y + p.h && rect.y + rect.h > p.y) { clash = true; break; }
+      }
+      if (clash) continue;
+      famPlaced.push(rect);
+      /* winners are the only doors — persist for hit-testing */
+      if (!isExport) S.famLabelRects.push({ id: j.fam.id, label: j.fam.label, x: rect.x, y: rect.y, w: rect.w, h: rect.h, fA: j.fA });
+      /* hover wakes the label text-3 → text-2; the open family's holds text-2
+         (through the same 160/220ms ramp — no snap when opened via search)
+         and stays exempt from the field dim — everyone else's recedes */
+      const isActive = j.fam.id === activeFamId;
+      const hp = Math.max(famHoverProgress(j.fam.id, now), famActiveProgress(j.fam.id, now));
+      c.fillStyle = hp <= 0 ? TEXT_3 : hp >= 1 ? TEXT_2 : rgbStr([
+        lerp(TEXT_3_RGB[0], TEXT_2_RGB[0], hp),
+        lerp(TEXT_3_RGB[1], TEXT_2_RGB[1], hp),
+        lerp(TEXT_3_RGB[2], TEXT_2_RGB[2], hp)
+      ]);
+      c.globalAlpha = famA * j.fA * (isActive ? 1 : dimVal);
+      let ty = snap(j.y - (j.lines.length - 1) * 7.5);
+      for (const ln of j.lines) { c.fillText(ln, snap(j.x), ty); ty += 15; }
+    }
+    c.restore();
+  }
+
+  /* label hover cannot outlive its label — wheel zoom past the tier, a scrub
+     that unbirths the family, a collision cull, or a flight sliding the label
+     out from under a stationary pointer all land here for re-validation */
+  if (!isExport && S.famHoverId != null) {
+    let still = false;
+    for (const r of S.famLabelRects) {
+      if (r.id === S.famHoverId && r.fA >= 0.5 &&
+          lastPtrX >= r.x && lastPtrX <= r.x + r.w &&
+          lastPtrY >= r.y && lastPtrY <= r.y + r.h) { still = true; break; }
+    }
+    if (!still) setFamHover(null);
+  }
+
+  /* ---- pass 5: watch labels, collision-culled by influence ---- */
+  labelJobs.sort((a, b) => b.pri - a.pri);
+  const placed = [];
+  for (const j of labelJobs) {
+    const bw = 120, bh = j.yr ? 46 : 32;
+    const rect = { x: j.x - bw / 2, y: j.y + j.R + 6, w: bw, h: bh };
+    let clash = false;
+    for (const p of placed) {
+      if (rect.x < p.x + p.w && rect.x + rect.w > p.x && rect.y < p.y + p.h && rect.y + rect.h > p.y) { clash = true; break; }
+    }
+    if (clash) continue;   /* loser keeps glyph, drops label */
+    placed.push(rect);
+    drawWatchLabel(c, j.w, j.x, j.y, j.R, j.a, j.yr);
+  }
+}
+
+function paintVignette(c, w_, h_) {
+  const R = Math.hypot(w_, h_) / 2;
+  const r0 = Math.min(w_, h_) * 0.325;   /* outer 35% of min(w,h) */
+  const g = c.createRadialGradient(w_ / 2, h_ / 2, r0, w_ / 2, h_ / 2, R);
+  g.addColorStop(0, rgbaStr(VIGNETTE_RGB, 0));
+  g.addColorStop(1, rgbaStr(VIGNETTE_RGB, 1));
+  c.fillStyle = g;
+  c.fillRect(0, 0, w_, h_);
+}
+function rebuildVignette() {
+  vignetteCanvas = document.createElement('canvas');
+  vignetteCanvas.width = Math.max(1, Math.round(W * dpr));
+  vignetteCanvas.height = Math.max(1, Math.round(H * dpr));
+  const vc = vignetteCanvas.getContext('2d');
+  vc.scale(dpr, dpr);
+  paintVignette(vc, W, H);
+}
+
+/* ======================================================================
+   15 · EXPORT — the Plate
+   ====================================================================== */
+
+function doExport() {
+  if (!S.loaded) return;
+  closeLensPanel();
+  S.exportMode = true;
+  body.classList.add('export');
+  elCartouche.hidden = false;
+
+  const scale = 2;
+  const oc = document.createElement('canvas');
+  oc.width = W * scale; oc.height = H * scale;
+  const octx = oc.getContext('2d');
+  octx.scale(scale, scale);
+  const savedDpr = dpr; dpr = scale;
+  draw(octx, W, H, performance.now(), true);
+  dpr = savedDpr;
+
+  /* cartouche, bottom-right, 24px inset, 12px padding, 1px keyline */
+  octx.save();
+  octx.textAlign = 'left';
+  octx.textBaseline = 'alphabetic';
+  setType(octx, 10, 500, false, 0.22);
+  const l1 = 'THE HOROLOGICAL ATLAS';
+  const l2 = elCart2.textContent;
+  const w1 = octx.measureText(l1).width;
+  setType(octx, 9, 400, true, 0);
+  const w2 = octx.measureText(l2).width;
+  const cw = Math.max(w1, w2) + 24, ch = 12 + 10 + 8 + 9 + 12;
+  const cx = W - 24 - cw, cy = H - 24 - ch;
+  octx.strokeStyle = 'rgba(233,237,242,0.08)';
+  octx.lineWidth = 1;
+  octx.strokeRect(cx + 0.5, cy + 0.5, cw, ch);
+  octx.fillStyle = rgbaStr(INK_RGB, 0.92);
+  setType(octx, 10, 500, false, 0.22);
+  octx.fillText(l1, cx + 12, cy + 12 + 9);
+  octx.fillStyle = TEXT_3;
+  setType(octx, 9, 400, true, 0);
+  octx.fillText(l2, cx + 12, cy + 12 + 10 + 8 + 8);
+  octx.restore();
+
+  oc.toBlob(blob => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = curTY < S.time.max - 1e-6
+      ? `horological-atlas-${Math.round(curTY)}.png`
+      : 'horological-atlas.png';
+    a.click();
+    elLive.textContent = 'Plate exported — horological-atlas.png';
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }, 'image/png');
+}
+function exitExport() {
+  S.exportMode = false;
+  elCartouche.hidden = true;
+  body.classList.remove('export');
+  invalidate();
+}
+
+/* ======================================================================
+   15b · OVERTURE — the first thirty seconds
+   Three unmistakable first moves. Any real engagement dismisses it;
+   it never returns within the session.
+   ====================================================================== */
+
+let overtureDone = false;
+try { overtureDone = sessionStorage.getItem('atlas.overture') === '1'; } catch (e) { /* private mode */ }
+
+function showOverture() {
+  if (overtureDone || S.failed || !S.loaded) return;
+  elOverture.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => elOverture.classList.add('on')));
+}
+function dismissOverture() {
+  if (overtureDone) return;
+  overtureDone = true;
+  try { sessionStorage.setItem('atlas.overture', '1'); } catch (e) { /* private mode */ }
+  if (elOverture.hidden) return;
+  elOverture.classList.remove('on');
+  setTimeout(() => { elOverture.hidden = true; }, REDUCED ? 90 : 500);
+}
+elOvPlay.addEventListener('click', () => { dismissOverture(); togglePlay(); });
+elOvVisit.addEventListener('click', () => { dismissOverture(); if (S.heroId != null) selectWatch(S.heroId); });
+elOvDismiss.addEventListener('click', dismissOverture);
+
+/* ======================================================================
+   15c · LIGHTBOX — the print room
+   One image at full size on the dark field. Owns the keyboard while open;
+   sits above every other layer and above the Esc ladder.
+   ====================================================================== */
+
+let lbItems = [], lbIdx = 0, lbPrevFocus = null, lbHideTimer = null;
+
+function photoCredit(ph) {
+  return `Photo ${ph.credit || 'Wikimedia Commons'}${ph.license ? ' · ' + ph.license : ''}`;
+}
+
+function lightboxOpen(items, idx) {
+  if (!items || !items.length) return;
+  hideFamPreview();
+  lbItems = items;
+  lbIdx = clamp(idx || 0, 0, items.length - 1);
+  lbPrevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  clearTimeout(lbHideTimer);
+  elLightbox.hidden = false;
+  lbRender(false);
+  requestAnimationFrame(() => requestAnimationFrame(() => elLightbox.classList.add('on')));
+  elLbClose.focus({ preventScroll: true });
+}
+function lbRender(swap) {
+  const it = lbItems[lbIdx];
+  if (!it) return;
+  const apply = () => {
+    elLbImg.src = it.src;
+    elLbImg.alt = it.title || '';
+    elLbTitle.textContent = it.title || '';
+    elLbCredit.textContent = it.credit || '';
+    const many = lbItems.length > 1;
+    elLbCount.textContent = many ? `${lbIdx + 1} / ${lbItems.length}` : '';
+    elLbPrev.hidden = !many;
+    elLbNext.hidden = !many;
+  };
+  if (swap && !REDUCED) {
+    elLbImg.classList.add('swap');
+    setTimeout(() => { apply(); elLbImg.classList.remove('swap'); }, 120);
+  } else apply();
+}
+function lbStep(d) {
+  if (lbItems.length < 2) return;
+  lbIdx = (lbIdx + d + lbItems.length) % lbItems.length;
+  lbRender(true);
+}
+function lightboxClose() {
+  if (elLightbox.hidden) return;
+  elLightbox.classList.remove('on');
+  clearTimeout(lbHideTimer);
+  lbHideTimer = setTimeout(() => {
+    elLightbox.hidden = true;
+    elLbImg.removeAttribute('src');
+    lbItems = [];
+  }, REDUCED ? 90 : 250);
+  if (lbPrevFocus && document.contains(lbPrevFocus)) lbPrevFocus.focus({ preventScroll: true });
+  lbPrevFocus = null;
+}
+elLbClose.addEventListener('click', lightboxClose);
+elLbPrev.addEventListener('click', () => lbStep(-1));
+elLbNext.addEventListener('click', () => lbStep(1));
+elLightbox.addEventListener('click', e => { if (e.target === elLightbox) lightboxClose(); });
+
+/* ======================================================================
+   16 · INPUT
+   ====================================================================== */
+
+function markHinted() {
+  if (S.hinted) return;
+  S.hinted = true;
+  try { sessionStorage.setItem('atlas.hinted', '1'); } catch (e) { /* private mode */ }
+  setTimeout(() => { elHint.classList.add('gone'); elHHint.classList.add('gone'); }, 600);
+}
+
+function anyInput() {
+  skipReveal();
+  dismissOverture();   /* engagement is the dismissal — no lingering card */
+  hideFamPreview();    /* a preview never outlives the gesture that raised it */
+  resetIdleTimer();
+}
+
+const pointers = new Map();
+let dragState = null;      /* {sx, sy, camX, camY, moved} */
+let pinchState = null;     /* {d0, z0, mx, my} */
+let lastPtrX = -1, lastPtrY = -1;   /* last known pointer position over the canvas —
+                                       lets draw() re-validate label hover when zoom,
+                                       scrub, cull, or a flight moves the label away */
+
+canvas.addEventListener('pointerdown', e => {
+  anyInput();
+  cancelFlight();
+  canvas.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) {
+    dragState = { sx: e.clientX, sy: e.clientY, camX: S.cam.x, camY: S.cam.y, moved: false };
+  } else if (pointers.size === 2) {
+    dragState = null;
+    const pts = [...pointers.values()];
+    pinchState = {
+      d0: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
+      z0: S.cam.z,
+      px: (pts[0].x + pts[1].x) / 2,
+      py: (pts[0].y + pts[1].y) / 2
+    };
+  }
+});
+canvas.addEventListener('pointermove', e => {
+  lastPtrX = e.clientX; lastPtrY = e.clientY;
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (pinchState && pointers.size === 2) {
+    const pts = [...pointers.values()];
+    const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    const mx = (pts[0].x + pts[1].x) / 2, my = (pts[0].y + pts[1].y) / 2;
+    /* two-finger pan: translate with the midpoint, then zoom about it (map convention) */
+    S.cam.x -= (mx - pinchState.px) / S.cam.z;
+    S.cam.y -= (my - pinchState.py) / S.cam.z;
+    pinchState.px = mx; pinchState.py = my;
+    zoomAt(mx, my, (pinchState.z0 * (d / Math.max(pinchState.d0, 1))) / S.cam.z);
+    markHinted();
+    return;
+  }
+  if (dragState && pointers.size === 1) {
+    const dx = e.clientX - dragState.sx, dy = e.clientY - dragState.sy;
+    if (!dragState.moved && Math.hypot(dx, dy) > 4) {
+      dragState.moved = true;
+      S.dragging = true;
+      canvas.classList.add('grabbing');
+      chromeDim(true);
+    }
+    if (dragState.moved) {
+      S.cam.x = dragState.camX - dx / S.cam.z;
+      S.cam.y = dragState.camY - dy / S.cam.z;
+      clampCam();
+      markHinted();
+      invalidate();
+    }
+    return;
+  }
+  /* hover — a star is smaller and more specific than a label; the specific wins */
+  if (!S.dragging && S.loaded) {
+    const hit = hitTest(e.clientX, e.clientY);
+    setHover(hit ? hit.id : null);
+    const famHit = hit ? null : famHitTest(e.clientX, e.clientY);
+    setFamHover(famHit ? famHit.id : null);
+  }
+});
+function endPointer(e) {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchState = null;
+  if (pointers.size === 0) {
+    const wasDrag = dragState && dragState.moved;
+    if (S.dragging) {
+      S.dragging = false;
+      canvas.classList.remove('grabbing');
+      chromeDim(false);
+    }
+    if (!wasDrag && dragState && e.type === 'pointerup') {
+      const hit = hitTest(e.clientX, e.clientY);
+      const famHit = hit ? null : famHitTest(e.clientX, e.clientY);
+      if (hit) selectWatch(hit.id);
+      else if (famHit) openFamily(famHit.id);
+      /* empty field keeps its meaning: let go of whatever you're holding */
+      else if (S.selection) { releaseFamActive(); S.familyView = null; deselect(); }
+      else closeFamily();
+    }
+    dragState = null;
+  }
+}
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('pointerleave', () => {
+  lastPtrX = -1; lastPtrY = -1;
+  if (!S.dragging) { setHover(null); setFamHover(null); }
+});
+
+canvas.addEventListener('dblclick', e => {
+  anyInput();
+  /* a double-click on a family label already opened the family — no zoom-reset */
+  if (!hitTest(e.clientX, e.clientY) && !famHitTest(e.clientX, e.clientY)) fitAll();
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  anyInput();
+  cancelFlight();
+  const k = e.ctrlKey ? 0.011 : 0.0024;   /* trackpad pinch arrives as ctrl+wheel */
+  const factor = Math.exp(-e.deltaY * k);
+  zoomAt(e.clientX, e.clientY, factor);
+  markHinted();
+  chromeDim(true); chromeDim(false);
+}, { passive: false });
+
+function zoomAt(sx, sy, factor) {
+  const [wx, wy] = toWorld(sx, sy);
+  S.cam.z = clamp(S.cam.z * factor, S.fitZ, Z_MAX);
+  /* keep the world point under the pointer fixed */
+  S.cam.x = wx - (sx - W / 2) / S.cam.z - S.drift.x / S.cam.z;
+  S.cam.y = wy - (sy - H / 2) / S.cam.z - S.drift.y / S.cam.z;
+  clampCam();
+  invalidate();
+}
+
+function zoomStep(dir) {
+  /* compound from any pending reduced-motion cut, not the stale camera */
+  const b = pendingCam || S.cam;
+  const target = clamp(b.z * (dir > 0 ? 1.6 : 1 / 1.6), S.fitZ, Z_MAX);
+  markHinted();
+  flyTo(b.x, b.y, target, 240, easeOut);
+}
+function panStep(dx, dy) {
+  const b = pendingCam || S.cam;
+  markHinted();
+  flyTo(b.x + dx / b.z, b.y + dy / b.z, b.z, 240, easeOut);
+}
+
+elFitChip.addEventListener('click', () => { anyInput(); fitAll(); });
+elPanelClose.addEventListener('click', () => {
+  anyInput();
+  /* the close button closes the panel outright — chain and all */
+  if (S.selection) { releaseFamActive(); S.familyView = null; deselect(); }
+  else closeFamily();
+});
+
+window.addEventListener('keydown', e => {
+  const t = e.target;
+  const inInput = t === elSearchInput || /^(input|textarea|select)$/i.test((t && t.tagName) || '');
+  /* single-letter shortcuts never fire from a focused control — no surprise
+     mode changes while tabbed onto the fit chip, panel close, or lineage rows */
+  const inControl = t instanceof Element &&
+    (t.isContentEditable || /^(input|textarea|select|button)$/i.test(t.tagName || ''));
+  /* arrows belong to the panel's scroll/focus when focus is inside chrome */
+  const inChrome = t instanceof Element &&
+    (elPanel.contains(t) || elSearch.contains(t) || elTimeline.contains(t) || elLensPanel.contains(t));
+  anyInput();
+
+  /* the lightbox owns the keyboard while open — above the whole ladder */
+  if (!elLightbox.hidden) {
+    if (e.key === 'Escape') { e.preventDefault(); lightboxClose(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); lbStep(-1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); lbStep(1); }
+    return;
+  }
+
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    searchOpen ? closeSearch() : openSearch();
+    return;
+  }
+  if (inInput) return;   /* search input handles its own keys */
+  if (e.metaKey || e.ctrlKey || e.altKey) return;   /* never shadow browser shortcuts */
+
+  switch (e.key) {
+    case '/':
+      if (inControl) break;
+      e.preventDefault(); openSearch(); break;
+    case 'Escape':
+      /* layered: export → lens panel → search → watch (→ family if chained) → family → lens → time */
+      if (S.exportMode) exitExport();
+      else if (lensOpen) closeLensPanel();
+      else if (searchOpen) closeSearch();
+      else if (S.selection) (S.familyView && S.familyView.chained) ? returnToFamily() : deselect();
+      else if (S.familyView) closeFamily();
+      else if (lensActive()) lensClear();
+      else if (S.loaded && timeEngaged()) returnToPresent();
+      break;
+    case ' ':
+      if (inControl || inChrome) break;
+      e.preventDefault();
+      togglePlay();
+      break;
+    case 'f': case 'F': case '0':
+      if (inControl) break;
+      fitAll(); break;
+    case '+': case '=':
+      if (inControl) break;
+      zoomStep(1); break;
+    case '-': case '_':
+      if (inControl) break;
+      zoomStep(-1); break;
+    case 'h': case 'H':
+      if (inControl) break;
+      toggleObservatory(); break;
+    case 'e': case 'E':
+      if (inControl) break;
+      S.exportMode ? exitExport() : doExport(); break;
+    case 'ArrowLeft': if (inControl || inChrome) break; e.preventDefault(); panStep(-64, 0); break;
+    case 'ArrowRight': if (inControl || inChrome) break; e.preventDefault(); panStep(64, 0); break;
+    case 'ArrowUp': if (inControl || inChrome) break; e.preventDefault(); panStep(0, -64); break;
+    case 'ArrowDown': if (inControl || inChrome) break; e.preventDefault(); panStep(0, 64); break;
+  }
+});
+
+for (const evt of ['pointerdown', 'wheel', 'keydown', 'touchstart']) {
+  window.addEventListener(evt, resetIdleTimer, { passive: true });
+}
+
+/* ======================================================================
+   17 · RESIZE + BOOT
+   ====================================================================== */
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.max(1, Math.round(W * dpr));
+  canvas.height = Math.max(1, Math.round(H * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  rebuildVignette();
+  sizeRuler();
+  if (S.loaded) {
+    const prevFit = S.fitZ;
+    computeFit();
+    if (Math.abs(S.cam.z - prevFit) < 1e-6) S.cam.z = S.fitZ;
+    clampCam();
+  }
+  for (const w of S.watches) w._glow = null;   /* dpr may have changed */
+  invalidate();
+}
+window.addEventListener('resize', resize);
+
+resize();
+invalidate();      /* field renders immediately */
+loadData();

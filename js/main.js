@@ -211,6 +211,8 @@ let haloCache = null;            /* {x,y,R,grad} — selection halo, invalidates
 const S = {
   loaded: false,
   failed: false,
+  mode: 'sky',                   /* 'sky' | 'descent' — one dataset, two projections (§18) */
+  morph: null,                   /* {t0, dir:1|-1, fromS} — the showpiece transition (§18b) */
   watches: [],
   families: [],
   byId: new Map(),
@@ -276,6 +278,13 @@ function invalidate() {
 }
 function animating() {
   const now = performance.now();
+  if (S.morph) return true;                       /* incl. the 200ms reduced-motion crossfade */
+  if (S.mode === 'descent') {
+    if (DS.phase !== 'rest') return true;
+    if (DS.cxA || DS.cyA) return true;
+    if (now < DS.rampUntil) return true;          /* image alpha-ramps over glyph plates */
+    if (DS.hintT0 && now < DS.hintT0 + 400) return true;   /* wheel-affordance fade-out */
+  }
   if (S.flight) return true;
   if (S.drift.on || S.drift.release) return true;
   if (S.reveal && !S.revealDone) return true;
@@ -294,6 +303,7 @@ function animating() {
 }
 /* idle drift is the only continuous animation — 8px/min cannot justify 60fps */
 function driftOnly(now) {
+  if (S.morph || S.mode !== 'sky') return false;
   if (!S.drift.on || S.flight || S.drift.release) return false;
   if (S.reveal && !S.revealDone) return false;
   if (S.weave && !S.weaveDone) return false;
@@ -313,6 +323,7 @@ function frame(now) {
   rafId = null;
   stepFlight(now);
   stepDrift(now);
+  stepDescent(now);
   if (S.loaded) {
     curTY = timeYear(now);
     positionThumb(curTY);
@@ -333,6 +344,8 @@ function frame(now) {
     }
   }
   draw(ctx, W, H, now, false);
+  /* (the reduced-motion crossfade veil is drawn inside draw(), at the tail
+     of whichever scene is incoming — see drawReducedMorphVeil) */
   if (animating()) {
     if (driftOnly(performance.now())) setTimeout(invalidate, 100);   /* ~10fps is plenty for drift */
     else invalidate();
@@ -499,6 +512,9 @@ function initData(data) {
   S.cam.x = (minX + maxX) / 2;
   S.cam.y = (minY + maxY) / 2;
   S.cam.z = S.fitZ;
+
+  /* the Descent — depth ordering, strata, sprite plumbing (§18) */
+  initDescent();
 
   S.loaded = true;
   startReveal();
@@ -674,6 +690,7 @@ function resetIdleTimer() {
   if (REDUCED || !S.loaded) return;
   idleTimer = setTimeout(() => {
     if (S.exportMode || S.observatoryManual) return;
+    if (S.mode !== 'sky' || S.morph) return;   /* the Cousteau drift is a sky ritual (v1) */
     S.observatoryIdle = true;
     S.drift.on = true;
     S.drift.last = performance.now();
@@ -990,6 +1007,9 @@ function drawRuler(TY) {
   }
 }
 function maybeTimeChrome(TY) {
+  /* in descent the footer belongs to the depth gauge, the cartouche to the
+     strata — release the memo so the sky copy re-derives on surfacing */
+  if (descentChromeOn) { lastTlYear = null; return; }
   const yr = Math.round(TY);
   const engaged = TY < S.time.max - 1e-6;
   const lsig = lensSigStr();
@@ -1050,6 +1070,9 @@ elTlTrack.addEventListener('pointerup', endTlDrag);
 elTlTrack.addEventListener('pointercancel', endTlDrag);
 elTlTrack.addEventListener('keydown', e => {
   if (!S.loaded) return;
+  /* chrome hidden by mode (descent/export/morph) must not keep keyboard
+     operability — an invisible slider scrubbing the century is a lie */
+  if (S.mode !== 'sky' || S.morph || S.exportMode) return;
   const T = S.time;
   const cur = Math.round(T.anim ? T.anim.to : T.playing ? timeYear(performance.now()) : T.y);
   let y = null;
@@ -1475,7 +1498,11 @@ function closeLensPanel() {
   setTimeout(() => { elLensPanel.hidden = true; }, REDUCED ? 90 : 250);
   if (elLensPanel.contains(document.activeElement)) elLensChip.focus({ preventScroll: true });
 }
-elLensChip.addEventListener('click', () => { anyInput(); lensOpen ? closeLensPanel() : openLensPanel(); });
+elLensChip.addEventListener('click', () => {
+  /* the Lens is a sky instrument — inert while its chrome is hidden */
+  if (S.mode !== 'sky' || S.morph || S.exportMode) return;
+  anyInput(); lensOpen ? closeLensPanel() : openLensPanel();
+});
 elLensClear.addEventListener('click', () => { anyInput(); lensClear(); });
 document.addEventListener('pointerdown', e => {
   if (!lensOpen) return;
@@ -1565,7 +1592,16 @@ function releaseFamActive() {
 }
 
 function hitTest(sx, sy) {
-  if (!S.loaded) return null;
+  if (!S.loaded || S.morph) return null;
+  /* descent: the front-most card under the point — rects are pushed rear→front
+     by drawDescent (depth > 0.15 only), so the last containing rect wins */
+  if (S.mode === 'descent') {
+    for (let k = DS.rects.length - 1; k >= 0; k--) {
+      const r = DS.rects[k];
+      if (sx >= r.x && sx <= r.x + r.w && sy >= r.y && sy <= r.y + r.h) return S.byId.get(r.id);
+    }
+    return null;
+  }
   let best = null, bd = Infinity;
   for (const w of S.watches) {
     /* the unborn cannot be pointed at */
@@ -1583,7 +1619,7 @@ function hitTest(sx, sy) {
 
 /* family-label hit test — winning pass-4 rects only; a culled label is not a door */
 function famHitTest(sx, sy) {
-  if (!S.loaded) return null;
+  if (!S.loaded || S.morph || S.mode !== 'sky') return null;   /* families are a sky concept */
   /* visibility gate — must mirror the paint gate exactly */
   if (tierAlphas(S.cam.z).fam * revealFamAlpha(performance.now()) <= 0.01) return null;
   for (const r of S.famLabelRects) {
@@ -1776,7 +1812,7 @@ function wpGlyphFallback(w) {
 function queueWatchPreview(id) {
   clearTimeout(wpShowTimer);
   if (S.selection && S.selection.id === id) return;   /* the panel already tells this story */
-  if (S.exportMode || body.classList.contains('observatory')) return;
+  if (S.exportMode || S.morph || body.classList.contains('observatory')) return;
   wpShowTimer = setTimeout(() => {
     if (S.hoverId !== id || S.dragging) return;
     const w = S.byId.get(id);
@@ -1800,15 +1836,26 @@ function queueWatchPreview(id) {
       ? `${fmtShortUsd(w.priceBandUsd[0])}–${fmtShortUsd(w.priceBandUsd[1])}` : '';
     elWpMeta.textContent = [w.year, isFinite(w.diameterMm) ? `Ø ${w.diameterMm} mm` : null, price]
       .filter(Boolean).join(' · ');
-    /* above the star, clamped; below when cramped */
-    const [sx, sy] = toScreen(w.x, w.y);
+    /* above the star (or the helix card), clamped; below when cramped —
+       one card, one contract, mode decides only the anchor geometry */
+    let sx, aTop, aBottom;
+    if (S.mode === 'descent') {
+      let rect = null;
+      for (const r of DS.rects) if (r.id === id) { rect = r; break; }
+      if (!rect) return;
+      sx = rect.x + rect.w / 2;
+      aTop = rect.y; aBottom = rect.y + rect.h;
+    } else {
+      const [wx, wy] = toScreen(w.x, w.y);
+      const r = glyphRadiusFor(w);
+      sx = wx; aTop = wy - r; aBottom = wy + r;
+    }
     elWatchPreview.style.visibility = 'hidden';
     elWatchPreview.hidden = false;
     const cw = elWatchPreview.offsetWidth, chh = elWatchPreview.offsetHeight;
-    const r = glyphRadiusFor(w);
     const px = clamp(sx - cw / 2, 16, W - cw - 16);
-    let py = sy - r - chh - 14;
-    if (py < 16) py = sy + r + 14;
+    let py = aTop - chh - 14;
+    if (py < 16) py = aBottom + 14;
     py = clamp(py, 16, H - chh - 16);
     elWatchPreview.style.left = px + 'px';
     elWatchPreview.style.top = py + 'px';
@@ -1915,12 +1962,23 @@ function selectWatch(id, opts = {}) {
   setHover(null);
   showPanel(w, lin, wasOpen);
   announce(w, lin);
-  if (opts.fly !== false) flyToWatch(w);
+  /* in descent the camera is parked — the helix flies instead. Mid-morph
+     (panel lineage rows and the search blur window stay reachable) both
+     camera and helix belong to the showpiece: defer the travel and decide
+     by where the morph actually lands — S.mode still names the OLD mode,
+     and a sky camera flight under a descending morph would corrupt the
+     surfacing endpoints. */
+  if (opts.fly !== false) {
+    if (S.morph) morphFlyW = w;
+    else if (S.mode === 'descent') descentFlyToWatch(w);
+    else flyToWatch(w);
+  }
   invalidate();
 }
 
 function deselect() {
   if (!S.selection) return;
+  morphFlyW = null;   /* a deferred morph-landing flight dies with its selection */
   S.releasing = { edges: S.selection.edges, related: S.selection.related, t0: performance.now() };
   S.selection = null;
   S.panelHoverId = null;
@@ -2472,8 +2530,21 @@ function commitSearch(i) {
   const r = searchResults[i];
   if (!r) return;
   closeSearch();
-  if (r.type === 'family') openFamily(r.item.id);
-  else selectWatch(r.item.id);
+  if (r.type === 'family') {
+    /* a family is a sky concept — in descent, surface first, then open (§18b).
+       Queue ownership is explicit: reversing a descending morph (new dir −1)
+       never clears the queue, so set-then-reverse is safe; a morph already
+       surfacing is simply joined, never reversed back onto itself. */
+    if (S.morph) {
+      morphQueued = () => openFamily(r.item.id);
+      if (S.morph.dir === 1) reverseMorph();
+    } else if (S.mode === 'descent') {
+      morphQueued = () => openFamily(r.item.id);
+      startMorph(-1);
+    } else {
+      openFamily(r.item.id);
+    }
+  } else selectWatch(r.item.id);
 }
 
 elSearchToggle.addEventListener('click', openSearch);
@@ -3008,6 +3079,18 @@ function draw(c, w_, h_, now, isExport) {
     paintVignette(c, w_, h_);
   }
   if (!S.loaded) return;
+
+  /* §18 — one world, two projections; field + vignette are shared above.
+     The morph owns the frame while it runs; descent owns it while engaged.
+     Reduced motion: the mode has already flipped — the incoming scene draws
+     below at full strength and the snapshot veil fades over it. */
+  if (S.morph && !morphFinished(now) && !S.morph.reduced) { drawMorph(c, w_, h_, now, isExport); return; }
+  if (S.mode === 'descent') {
+    drawDescent(c, w_, h_, now, isExport);
+    drawReducedMorphVeil(c, w_, h_, now, isExport);
+    return;
+  }
+
   /* winning label rects are re-earned every frame — nothing painted, nothing hittable */
   if (!isExport) S.famLabelRects = [];
 
@@ -3251,6 +3334,8 @@ function draw(c, w_, h_, now, isExport) {
     placed.push(rect);
     drawWatchLabel(c, j.w, j.x, j.y, j.R, j.a, j.yr);
   }
+
+  drawReducedMorphVeil(c, w_, h_, now, isExport);
 }
 
 function paintVignette(c, w_, h_) {
@@ -3288,7 +3373,12 @@ function doExport() {
   const octx = oc.getContext('2d');
   octx.scale(scale, scale);
   const savedDpr = dpr; dpr = scale;
+  /* the plate composes about the true center — the on-screen panel offset
+     is screen furniture, not part of the print */
+  const savedCx = DS.cx, savedCy = DS.cy;
+  if (S.mode === 'descent') { DS.cx = W / 2; DS.cy = H / 2; }
   draw(octx, W, H, performance.now(), true);
+  if (S.mode === 'descent') { DS.cx = savedCx; DS.cy = savedCy; }
   dpr = savedDpr;
 
   /* cartouche, bottom-right, 24px inset, 12px padding, 1px keyline */
@@ -3318,11 +3408,14 @@ function doExport() {
     if (!blob) return;
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = curTY < S.time.max - 1e-6
-      ? `horological-atlas-${Math.round(curTY)}.png`
-      : 'horological-atlas.png';
+    const fname = S.mode === 'descent'
+      ? 'horological-atlas-descent.png'
+      : curTY < S.time.max - 1e-6
+        ? `horological-atlas-${Math.round(curTY)}.png`
+        : 'horological-atlas.png';
+    a.download = fname;
     a.click();
-    elLive.textContent = 'Plate exported — horological-atlas.png';
+    elLive.textContent = `Plate exported — ${fname}`;
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }, 'image/png');
 }
@@ -3416,7 +3509,17 @@ let lastPtrX = -1, lastPtrY = -1;   /* last known pointer position over the canv
                                        scrub, cull, or a flight moves the label away */
 
 canvas.addEventListener('pointerdown', e => {
+  if (S.morph) return;                 /* input locked mid-morph — Esc and D reverse */
   anyInput();
+  if (S.mode === 'descent') {
+    /* grab the flywheel — the gesture owns s until release */
+    canvas.setPointerCapture(e.pointerId);
+    descDrag = { sy: e.clientY, lastY: e.clientY, lastT: performance.now(), moved: false };
+    DS.phase = 'gesture';
+    DS.v = 0;
+    invalidate();
+    return;
+  }
   cancelFlight();
   canvas.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -3435,6 +3538,39 @@ canvas.addEventListener('pointerdown', e => {
 });
 canvas.addEventListener('pointermove', e => {
   lastPtrX = e.clientX; lastPtrY = e.clientY;
+  if (S.morph) return;
+  if (S.mode === 'descent') {
+    if (descDrag) {
+      const now2 = performance.now();
+      const dy = e.clientY - descDrag.lastY;
+      descDrag.lastY = e.clientY;
+      if (!descDrag.moved && Math.abs(e.clientY - descDrag.sy) > 4) {
+        descDrag.moved = true;
+        S.dragging = true;
+        canvas.classList.add('grabbing');
+        setHover(null);
+      }
+      if (descDrag.moved) {
+        const dt = Math.max((now2 - descDrag.lastT) / 1000, 0.001);
+        const ds = -dy / 64;                       /* 1 card per 64px — the vertical pitch, 1:1 */
+        const s0 = DS.s;
+        DS.s = clamp(s0 + ds, 0, DS.n - 1);
+        /* the EMA reads what actually moved — at the clamp the effective ds
+           is 0, so no phantom velocity (and no ghost blur) builds at the stops */
+        DS.v += 0.25 * ((DS.s - s0) / dt - DS.v);  /* EMA velocity, α = 0.25 per event */
+        dismissDescentHint(now2);
+        refreshFocus();
+        invalidate();
+      }
+      descDrag.lastT = now2;
+      return;
+    }
+    if (!S.dragging && S.loaded) {
+      const hit = hitTest(e.clientX, e.clientY);
+      setHover(hit ? hit.id : null, true);
+    }
+    return;
+  }
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
   if (pinchState && pointers.size === 2) {
@@ -3473,6 +3609,40 @@ canvas.addEventListener('pointermove', e => {
   }
 });
 function endPointer(e) {
+  if (S.mode === 'descent') {
+    pointers.delete(e.pointerId);
+    const dd = descDrag;
+    descDrag = null;
+    if (S.dragging) {
+      S.dragging = false;
+      canvas.classList.remove('grabbing');
+    }
+    if (!dd) return;
+    if (!dd.moved && e.type === 'pointerup') {
+      const hit = hitTest(e.clientX, e.clientY);
+      if (hit) selectWatch(hit.id);
+      /* empty field keeps its meaning: let go of whatever you're holding */
+      else if (S.selection) deselect();
+      /* a tap on a card just started a helix glide (selectWatch →
+         descentFlyToWatch) — never clobber it with settle/rest */
+      if (DS.phase !== 'glide') {
+        DS.glide = null;
+        DS.phase = Math.abs(DS.s - Math.round(DS.s)) > 1e-6 ? 'settle' : 'rest';
+      }
+    } else {
+      /* velocity carries — but only if the finger was still moving. A drag,
+         a hold, then a release must settle in place, not fling off on the
+         EMA frozen at the last movement: decay it by the pointer silence. */
+      const idle = performance.now() - dd.lastT;
+      if (idle > 90) DS.v = 0;
+      else DS.v *= Math.exp(-idle / (D_TAU * 1000));
+      DS.glide = null;
+      DS.phase = 'coast';
+    }
+    DS.lastT = performance.now();
+    invalidate();
+    return;
+  }
   pointers.delete(e.pointerId);
   if (pointers.size < 2) pinchState = null;
   if (pointers.size === 0) {
@@ -3502,6 +3672,7 @@ canvas.addEventListener('pointerleave', () => {
 });
 
 canvas.addEventListener('dblclick', e => {
+  if (S.mode !== 'sky' || S.morph) return;   /* fit is a sky gesture */
   anyInput();
   /* a double-click on a family label already opened the family — no zoom-reset */
   if (!hitTest(e.clientX, e.clientY) && !famHitTest(e.clientX, e.clientY)) fitAll();
@@ -3509,7 +3680,12 @@ canvas.addEventListener('dblclick', e => {
 
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
+  if (S.morph) return;
   anyInput();
+  if (S.mode === 'descent') {             /* wheel is the descent line, not a zoom */
+    descentWheel(e.deltaY);
+    return;
+  }
   cancelFlight();
   const k = e.ctrlKey ? 0.011 : 0.0024;   /* trackpad pinch arrives as ctrl+wheel */
   const factor = Math.exp(-e.deltaY * k);
@@ -3538,7 +3714,11 @@ function panStep(dx, dy) {
   flyTo(b.x + dx / b.z, b.y + dy / b.z, b.z, 240, easeOut);
 }
 
-elFitChip.addEventListener('click', () => { anyInput(); fitAll(); });
+elFitChip.addEventListener('click', () => {
+  /* a hidden chip stays inert — Enter on stale focus must not fly the sky camera under descent/export */
+  if (S.mode !== 'sky' || S.morph || S.exportMode) return;
+  anyInput(); fitAll();
+});
 elPanelClose.addEventListener('click', () => {
   anyInput();
   /* the close button closes the panel outright — chain and all */
@@ -3568,8 +3748,18 @@ window.addEventListener('keydown', e => {
     return;
   }
 
+  /* mid-morph the keyboard holds its breath — Esc and D retrace the flight */
+  if (S.morph) {
+    if (e.key === 'Escape') { e.preventDefault(); reverseMorph(); }
+    else if ((e.key === 'd' || e.key === 'D') && !inInput && !inControl) reverseMorph();
+    return;
+  }
+
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
+    /* search chrome is hidden in export and manual observatory — never open
+       it blind (anyInput above already woke an idle observatory) */
+    if (S.exportMode || body.classList.contains('observatory')) return;
     searchOpen ? closeSearch() : openSearch();
     return;
   }
@@ -3578,10 +3768,18 @@ window.addEventListener('keydown', e => {
 
   switch (e.key) {
     case '/':
-      if (inControl) break;
+      if (inControl || S.exportMode || body.classList.contains('observatory')) break;
       e.preventDefault(); openSearch(); break;
     case 'Escape':
-      /* layered: export → lens panel → search → watch (→ family if chained) → family → lens → time */
+      /* descent ladder: (lightbox above) → export → search → watch panel → surface */
+      if (S.mode === 'descent') {
+        if (S.exportMode) exitExport();
+        else if (searchOpen) closeSearch();
+        else if (S.selection) deselect();
+        else toggleDescent();                    /* Esc surfaces — the reverse morph */
+        break;
+      }
+      /* sky ladder: export → lens panel → search → watch (→ family if chained) → family → lens → time */
       if (S.exportMode) exitExport();
       else if (lensOpen) closeLensPanel();
       else if (searchOpen) closeSearch();
@@ -3591,35 +3789,960 @@ window.addEventListener('keydown', e => {
       else if (S.loaded && timeEngaged()) returnToPresent();
       break;
     case ' ':
-      if (inControl || inChrome) break;
+      if (inControl || inChrome || S.mode !== 'sky') break;
       e.preventDefault();
       togglePlay();
       break;
     case 'f': case 'F': case '0':
-      if (inControl) break;
+      if (inControl || S.mode !== 'sky') break;
       fitAll(); break;
     case '+': case '=':
-      if (inControl) break;
+      if (inControl || S.mode !== 'sky') break;
       zoomStep(1); break;
     case '-': case '_':
-      if (inControl) break;
+      if (inControl || S.mode !== 'sky') break;
       zoomStep(-1); break;
     case 'h': case 'H':
-      if (inControl) break;
+      if (inControl || S.mode !== 'sky') break;
       toggleObservatory(); break;
     case 'e': case 'E':
       if (inControl) break;
       S.exportMode ? exitExport() : doExport(); break;
-    case 'ArrowLeft': if (inControl || inChrome) break; e.preventDefault(); panStep(-64, 0); break;
-    case 'ArrowRight': if (inControl || inChrome) break; e.preventDefault(); panStep(64, 0); break;
-    case 'ArrowUp': if (inControl || inChrome) break; e.preventDefault(); panStep(0, -64); break;
-    case 'ArrowDown': if (inControl || inChrome) break; e.preventDefault(); panStep(0, 64); break;
+    case 'd': case 'D':
+      if (inControl) break;
+      toggleDescent(); break;
+    case 'ArrowLeft':
+      if (inControl || inChrome || S.mode !== 'sky') break;
+      e.preventDefault(); panStep(-64, 0); break;
+    case 'ArrowRight':
+      if (inControl || inChrome || S.mode !== 'sky') break;
+      e.preventDefault(); panStep(64, 0); break;
+    case 'ArrowUp':
+      if (inControl || inChrome) break;
+      e.preventDefault();
+      S.mode === 'descent' ? descentStep(-1) : panStep(0, -64); break;
+    case 'ArrowDown':
+      if (inControl || inChrome) break;
+      e.preventDefault();
+      S.mode === 'descent' ? descentStep(1) : panStep(0, 64); break;
+    case 'PageUp':
+      if (inControl || inChrome || S.mode !== 'descent') break;
+      e.preventDefault(); descentStratumStep(-1); break;
+    case 'PageDown':
+      if (inControl || inChrome || S.mode !== 'descent') break;
+      e.preventDefault(); descentStratumStep(1); break;
+    case 'Home':
+      if (inControl || inChrome || S.mode !== 'descent') break;
+      e.preventDefault(); descentFlyToIndex(0); break;
+    case 'End':
+      if (inControl || inChrome || S.mode !== 'descent') break;
+      e.preventDefault(); descentFlyToIndex(DS.n - 1); break;
   }
 });
 
 for (const evt of ['pointerdown', 'wheel', 'keydown', 'touchstart']) {
   window.addEventListener(evt, resetIdleTimer, { passive: true });
 }
+
+/* ======================================================================
+   18 · THE DESCENT — the same 143 watches, ranked by depth
+   A second projection of the one dataset: a vertical helix ordered by
+   water resistance, shallow first. Scrolling descends through strata the
+   way a dive does; the wheel coasts and settles dead-beat on a card —
+   the Ephemeris detent is the house physics. Cards are specimen plates:
+   catalog render → editorial → drawn glyph, all on one shared ground.
+   ====================================================================== */
+
+const elMtSky = $('mt-sky'), elMtDescent = $('mt-descent');
+const elKeyLegend = $('key-legend');
+const LEGEND_SKY = elKeyLegend.innerHTML;
+const LEGEND_DESCENT = 'D surface · E export · Esc back';
+
+const CARD_W = 168, CARD_H = 112;              /* 3:2 plate at scale 1 */
+const SPRS = 2;   /* sprite resolution — fixed at 2× logical (spec §3: 336×224). The spec's
+                     dpr cap bounds the ceiling, not the floor: flanking cards minify from
+                     0.40–0.90, so a 1× source softens every plate on 1× displays; and a
+                     fixed value never goes stale when the window crosses to another dpr. */
+const HELIX_DTH = Math.PI * 2 / 9;             /* 9 cards per turn */
+const PITCH = 64, SHELF = 56;                  /* vertical pitch; extra shelf at band boundaries */
+const D_TAU = 0.18;                            /* inertia decay time-constant, s */
+const D_OMEGA = 12;                            /* settle spring, rad/s, ζ = 1 — zero overshoot */
+const BLUR_V = 1.5;                            /* cards/s — blur exists only above this */
+
+const DS = {
+  order: [], n: 0,
+  sh: null,                      /* shelves-before per depth index */
+  shelfIdx: [], shelfLabel: [],  /* band boundaries + their ruler copy */
+  wrCount: new Map(),            /* exact-WR population, for the depth gauge */
+  s: 0, v: 0,                    /* scroll position (card units) + velocity (cards/s) */
+  phase: 'rest',                 /* rest | gesture | coast | settle | glide */
+  glide: null,                   /* {from,to,t0,dur,ease} — keyboard/search flights */
+  lastT: 0, emaT: 0, wheelTimer: null,
+  sprites: new Map(),            /* id -> {base, img, imgT0, pending, fail} — LRU */
+  loading: new Set(),
+  built: 0,                      /* morph prebuild cursor */
+  lastFocus: -1,
+  pillText: '', gaugeText: '',
+  rects: [],                     /* hit rects this frame — pooled objects, rear→front */
+  cx: 0, cxA: null, cy: 0, cyA: null,   /* 400ms panel-offset glides */
+  rampUntil: 0,                  /* image alpha-ramp horizon for the scheduler */
+  hintSeen: false, hintT0: 0     /* wheel affordance — whispers until the first dive gesture */
+};
+S.descent = DS;
+
+let descDrag = null;             /* {sy, lastY, lastT, moved} — touch/drag scrub */
+
+/* preallocated draw + hit pools — a scroll frame allocates nothing */
+const dSlots = Array.from({ length: 21 }, () => ({ i: 0, phi: 0, d: 0, sc: 0, al: 0, x: 0, y: 0 }));
+const dRectPool = Array.from({ length: 21 }, () => ({ id: null, x: 0, y: 0, w: 0, h: 0 }));
+
+function initDescent() {
+  /* depth order: WR ascending, year within ties, id for stability */
+  DS.order = [...S.watches].sort((a, b) =>
+    (a.waterResistanceM || 0) - (b.waterResistanceM || 0) ||
+    (a.year || 0) - (b.year || 0) ||
+    String(a.id).localeCompare(String(b.id)));
+  DS.n = DS.order.length;
+  DS.sh = new Uint8Array(DS.n);
+  DS.shelfIdx.length = 0;
+  DS.shelfLabel.length = 0;
+  DS.wrCount.clear();
+  /* strata from the actual distribution: ≤135 · 150–220 · 300 · 500–610 · 1000–1300 · 2000+ */
+  const bandOf = wr => wr <= 135 ? 0 : wr <= 220 ? 1 : wr <= 300 ? 2 : wr <= 610 ? 3 : wr <= 1300 ? 4 : 5;
+  const bandM = [0, 150, 300, 500, 1000, 2000];
+  let prev = 0, shelves = 0;
+  DS.order.forEach((w, i) => {
+    w._di = i;
+    const b = bandOf(w.waterResistanceM || 0);
+    if (i > 0 && b !== prev) {
+      shelves++;
+      DS.shelfIdx.push(i);
+      DS.shelfLabel.push(`— ${bandM[b]} M —`);
+    }
+    prev = b;
+    DS.sh[i] = shelves;
+    DS.wrCount.set(w.waterResistanceM, (DS.wrCount.get(w.waterResistanceM) || 0) + 1);
+  });
+}
+
+/* --- vertical metric — pitch plus shelves, continuous in s ------------- */
+const dYof = i => i * PITCH + DS.sh[i] * SHELF;
+function dYs(x) {
+  x = clamp(x, 0, DS.n - 1);
+  const i0 = Math.floor(x);
+  const i1 = Math.min(i0 + 1, DS.n - 1);
+  return lerp(dYof(i0), dYof(i1), x - i0);
+}
+
+/* --- layout centers — the panel shifts the helix, 400ms ease-glide ----- */
+function descTargetCX() {
+  return (!elPanel.hidden && window.innerWidth > 760) ? (W - 360) / 2 : W / 2;
+}
+function descTargetCY() {
+  return (!elPanel.hidden && window.innerWidth <= 760) ? H * 0.34 : H / 2;
+}
+function axisTick(key, target, now) {
+  const ak = key + 'A';
+  let a = DS[ak];
+  if (!a) {
+    if (Math.abs(DS[key] - target) < 0.5) { DS[key] = target; return target; }
+    a = DS[ak] = { from: DS[key], to: target, t0: now };
+  } else if (Math.abs(a.to - target) > 0.5) {
+    a.from = DS[key]; a.to = target; a.t0 = now;
+  }
+  const p = clamp((now - a.t0) / 400, 0, 1);
+  DS[key] = lerp(a.from, a.to, REDUCED ? 1 : easeGlide(p));
+  if (p >= 1) { DS[key] = a.to; DS[ak] = null; }
+  return DS[key];
+}
+
+/* --- specimen plates — one material for all 143 ------------------------ */
+function roundRectPath(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+function plateBorder(g) {
+  roundRectPath(g, 0.5, 0.5, CARD_W - 1, CARD_H - 1, 7.5);
+  g.strokeStyle = 'rgba(233,237,242,0.08)';
+  g.lineWidth = 1;
+  g.stroke();
+}
+function buildBaseSprite(w) {
+  /* the glyph plate — never an empty state */
+  const c = document.createElement('canvas');
+  c.width = CARD_W * SPRS; c.height = CARD_H * SPRS;
+  const g = c.getContext('2d');
+  g.scale(SPRS, SPRS);
+  roundRectPath(g, 0, 0, CARD_W, CARD_H, 8);
+  g.save();
+  g.clip();
+  g.fillStyle = '#0D1117';                     /* the img-catalog plating tone (--surface-1) */
+  g.fillRect(0, 0, CARD_W, CARD_H);
+  drawGlyph(g, w, CARD_W / 2, CARD_H / 2, 72, 0, performance.now());
+  g.restore();
+  plateBorder(g);
+  return c;
+}
+function buildImgSprite(img, isCatalog) {
+  const c = document.createElement('canvas');
+  c.width = CARD_W * SPRS; c.height = CARD_H * SPRS;
+  const g = c.getContext('2d');
+  g.scale(SPRS, SPRS);
+  roundRectPath(g, 0, 0, CARD_W, CARD_H, 8);
+  g.save();
+  g.clip();
+  g.fillStyle = '#0D1117';
+  g.fillRect(0, 0, CARD_W, CARD_H);
+  const iw = img.naturalWidth || 1, ih = img.naturalHeight || 1;
+  const k = Math.max(CARD_W / iw, CARD_H / ih);   /* cover-fit */
+  g.drawImage(img, (CARD_W - iw * k) / 2, (CARD_H - ih * k) / 2, iw * k, ih * k);
+  /* editorial photography gets a 12% field scrim to pull it onto the plate;
+     catalog renders arrive already dark-plated */
+  if (!isCatalog) {
+    g.fillStyle = 'rgba(6,8,11,0.12)';
+    g.fillRect(0, 0, CARD_W, CARD_H);
+  }
+  g.restore();
+  plateBorder(g);
+  return c;
+}
+function getSprite(w) {
+  let rec = DS.sprites.get(w.id);
+  if (rec) {
+    /* LRU touch */
+    DS.sprites.delete(w.id);
+    DS.sprites.set(w.id, rec);
+    return rec;
+  }
+  rec = { base: buildBaseSprite(w), img: null, imgT0: 0, pending: false, fail: false };
+  DS.sprites.set(w.id, rec);
+  /* cap 160: the morph draws all 143 plates in its final frames, so the whole
+     set must stay resident — a 96 cap would thrash rebuilds mid-showpiece */
+  if (DS.sprites.size > 160) {
+    DS.sprites.delete(DS.sprites.keys().next().value);
+  }
+  return rec;
+}
+let imgSweep = 0;
+function maybeLoadImages() {
+  /* img layers live only near the line — the |i−s| ≤ 24 load window plus
+     hysteresis. Bases stay resident (the morph draws all 143 plates); the
+     photography is evicted once it falls ~2 strata behind, restoring the
+     spirit of the spec's 96-cap without thrashing the showpiece. */
+  if (++imgSweep >= 90) {
+    imgSweep = 0;
+    for (const [id, rec] of DS.sprites) {
+      if (!rec.img) continue;
+      const w = S.byId.get(id);
+      if (w && Math.abs(w._di - DS.s) > 40) { rec.img = null; rec.imgT0 = 0; }
+    }
+  }
+  if (DS.loading.size >= 6) return;             /* max 6 concurrent decodes */
+  const c0 = Math.max(0, Math.round(DS.s) - 24);
+  const c1 = Math.min(DS.n - 1, Math.round(DS.s) + 24);   /* ~2 strata of viewport */
+  for (let i = c0; i <= c1; i++) {
+    if (DS.loading.size >= 6) break;
+    const w = DS.order[i];
+    const rec = getSprite(w);
+    if (rec.img || rec.fail || rec.pending) continue;
+    /* the media rule — identical to the preview cards */
+    const cat = CATALOG[w.id] && CATALOG[w.id].file;
+    const ed = !cat && IMAGES[w.id] && IMAGES[w.id].file;
+    if (!cat && !ed) { rec.fail = true; continue; }
+    rec.pending = true;
+    DS.loading.add(w.id);
+    const img = new Image();
+    img.src = './data/' + (cat || ed);
+    img.decode().then(() => {
+      rec.img = buildImgSprite(img, !!cat);
+      rec.imgT0 = performance.now();            /* 240ms alpha-ramp over the glyph plate */
+      DS.rampUntil = Math.max(DS.rampUntil, rec.imgT0 + 240);
+    }).catch(() => { rec.fail = true; })
+      .finally(() => {
+        rec.pending = false;
+        DS.loading.delete(w.id);
+        invalidate();
+      });
+  }
+}
+function drawCardSprite(c, w, x, y, wd, ht, alpha, now) {
+  if (alpha <= 0.004) return;
+  const rec = getSprite(w);
+  if (rec.img) {
+    const t = REDUCED ? 1 : clamp((now - rec.imgT0) / 240, 0, 1);
+    if (t >= 1) {
+      c.globalAlpha = alpha;
+      c.drawImage(rec.img, x, y, wd, ht);
+      return;
+    }
+    c.globalAlpha = alpha;
+    c.drawImage(rec.base, x, y, wd, ht);
+    c.globalAlpha = alpha * t;
+    c.drawImage(rec.img, x, y, wd, ht);
+    return;
+  }
+  c.globalAlpha = alpha;
+  c.drawImage(rec.base, x, y, wd, ht);
+}
+
+/* --- physics — gesture → coast → dead-beat settle ---------------------- */
+function descentWheel(dy) {
+  const now = performance.now();
+  const dt = clamp((now - (DS.emaT || now - 16)) / 1000, 0.008, 0.2);
+  DS.emaT = now;
+  const ds = dy / 480;                          /* 1/480 cards per px, ctrl+wheel identical */
+  const s0 = DS.s;
+  DS.s = clamp(s0 + ds, 0, DS.n - 1);
+  /* feed the EMA the effective (post-clamp) motion — wheeling against the
+     top/bottom stop must not build phantom velocity and streak static cards */
+  DS.v += 0.25 * ((DS.s - s0) / dt - DS.v);     /* EMA velocity, α = 0.25 */
+  dismissDescentHint(now);
+  DS.phase = 'gesture';
+  DS.glide = null;
+  DS.lastT = now;
+  setHover(null);
+  clearTimeout(DS.wheelTimer);
+  DS.wheelTimer = setTimeout(() => {
+    if (DS.phase === 'gesture' && S.mode === 'descent' && !S.morph) {
+      DS.phase = 'coast';
+      DS.lastT = performance.now();
+      invalidate();
+    }
+  }, 120);                                       /* 120ms wheel silence hands off to inertia */
+  refreshFocus();
+  invalidate();
+}
+function stepDescent(now) {
+  if (S.mode !== 'descent' || S.morph) return;
+  const dt = Math.min((now - (DS.lastT || now)) / 1000, 0.05);
+  DS.lastT = now;
+  if (DS.phase === 'rest' || DS.phase === 'gesture') return;
+  if (DS.phase === 'glide') {
+    const g = DS.glide;
+    const p = clamp((now - g.t0) / g.dur, 0, 1);
+    const prev = DS.s;
+    DS.s = lerp(g.from, g.to, g.ease(p));
+    DS.v = dt > 0 ? (DS.s - prev) / dt : 0;      /* blur reads real velocity, even scripted */
+    if (p >= 1) { DS.s = g.to; descentSettled(); }
+  } else if (DS.phase === 'coast') {
+    DS.v *= Math.exp(-dt / D_TAU);               /* τ = 180ms — 3τ ≈ 540ms coast */
+    DS.s += DS.v * dt;
+    if (DS.s <= 0 || DS.s >= DS.n - 1) {
+      DS.s = clamp(DS.s, 0, DS.n - 1);
+      DS.v = 0;
+    }
+    if (Math.abs(DS.v) < 0.5) DS.phase = 'settle';   /* the detent engages */
+  } else if (DS.phase === 'settle') {
+    /* critically damped to the nearest card — lands ~400ms, zero overshoot */
+    const nT = clamp(Math.round(DS.s), 0, DS.n - 1);
+    DS.v += (-D_OMEGA * D_OMEGA * (DS.s - nT) - 2 * D_OMEGA * DS.v) * dt;
+    DS.s += DS.v * dt;
+    if (Math.abs(DS.s - nT) < 0.002 && Math.abs(DS.v) < 0.02) {
+      DS.s = nT;
+      descentSettled();
+    }
+  }
+  refreshFocus();
+}
+function descentSettled() {
+  DS.v = 0;
+  DS.phase = 'rest';
+  DS.glide = null;
+  refreshFocus();
+  const w = DS.order[clamp(Math.round(DS.s), 0, DS.n - 1)];
+  if (w) elLive.textContent = `${w.brand} ${w.model}, ${w.waterResistanceM} metres.`;
+}
+function refreshFocus() {
+  const n = clamp(Math.round(DS.s), 0, DS.n - 1);
+  if (n === DS.lastFocus) return;               /* strings rebuilt only on focus change */
+  DS.lastFocus = n;
+  const w = DS.order[n];
+  DS.pillText = `${String(w.brand || '').toUpperCase()} ${String(w.model || '').toUpperCase()} · ${w.waterResistanceM} M`;
+  const cnt = DS.wrCount.get(w.waterResistanceM) || 1;
+  DS.gaugeText = `−${w.waterResistanceM} M · ${cnt} ${cnt === 1 ? 'watch' : 'watches'} at this depth`;
+  if (descentChromeOn) elFooterLeft.textContent = DS.gaugeText;
+}
+
+/* --- scripted flights — keyboard steps, strata jumps, search ------------ */
+function descentGlideTo(i, dur, ease) {
+  i = clamp(i, 0, DS.n - 1);
+  dismissDescentHint(performance.now());   /* any navigation retires the whisper */
+  if (REDUCED) {
+    DS.s = i;
+    descentSettled();
+    invalidate();
+    return;
+  }
+  DS.glide = { from: DS.s, to: i, t0: performance.now(), dur: Math.max(dur, 1), ease: ease || easeGlide };
+  DS.phase = 'glide';
+  DS.lastT = performance.now();
+  invalidate();
+}
+function descentStep(d) {
+  const base = DS.phase === 'glide' && DS.glide ? DS.glide.to : DS.s;
+  descentGlideTo(Math.round(base) + d, 240, easeOut);
+}
+function descentStratumStep(d) {
+  const n = clamp(Math.round(DS.s), 0, DS.n - 1);
+  const k = clamp(DS.sh[n] + d, 0, DS.shelfIdx.length);
+  const target = k <= 0 ? 0 : DS.shelfIdx[k - 1];
+  descentFlyToIndex(target);
+}
+function descentFlyToIndex(i) {
+  descentGlideTo(i, Math.min(600 + 40 * Math.abs(i - DS.s), 1400), easeGlide);
+}
+function descentFlyToWatch(w) {
+  if (isFinite(w._di)) descentFlyToIndex(w._di);
+}
+
+/* --- the strata rulers — the Ephemeris ruler's language, laid on its side */
+function drawDescentRulers(c, w_, h_, cy, Y0, alpha) {
+  if (alpha <= 0.01 || !DS.shelfIdx.length) return;
+  c.save();
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  setType(c, 10, 500, false, 0.18);
+  for (let k = 0; k < DS.shelfIdx.length; k++) {
+    const b = DS.shelfIdx[k];
+    const ry = snap(cy + (dYof(b - 1) + dYof(b)) / 2 - Y0);
+    if (ry < -30 || ry > h_ + 30) continue;
+    const label = DS.shelfLabel[k];
+    const tw = c.measureText(label).width;
+    c.globalAlpha = alpha;
+    c.strokeStyle = 'rgba(233,237,242,0.08)';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(0, ry + 0.5);
+    c.lineTo(w_, ry + 0.5);
+    c.stroke();
+    /* knockout — the depth reads as engraved in the line, not laid over it */
+    c.globalAlpha = 1;
+    c.fillStyle = FIELD_HEX;
+    c.fillRect(w_ / 2 - tw / 2 - 16, ry - 8, tw + 32, 17);
+    c.globalAlpha = alpha;
+    c.fillStyle = TEXT_3;
+    c.fillText(label, w_ / 2, ry + 0.5);
+  }
+  c.restore();
+}
+
+/* --- the caption pill — a quiet plate label under the focused card ------ */
+function drawDescentPill(c, cx, py, alpha) {
+  if (alpha <= 0.01 || !DS.pillText) return;
+  c.save();
+  setType(c, 10, 500, false, 0.14);
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  const tw = c.measureText(DS.pillText).width;
+  const pw = tw + 28, ph = 22;
+  c.globalAlpha = alpha;
+  roundRectPath(c, cx - pw / 2, py, pw, ph, 11);
+  c.fillStyle = 'rgba(13,17,23,0.88)';
+  c.fill();
+  c.strokeStyle = 'rgba(233,237,242,0.08)';
+  c.lineWidth = 1;
+  c.stroke();
+  c.fillStyle = TEXT_2;
+  c.fillText(DS.pillText, cx, py + ph / 2 + 0.5);
+  c.restore();
+}
+
+/* --- the wheel affordance (§4) — arrives with the rulers on the 820–1120ms
+   envelope, whispers below the pill, and retires for good on the first dive
+   gesture. Discoverability of the primary verb rests on this line. */
+function dismissDescentHint(now) {
+  if (!DS.hintSeen) { DS.hintSeen = true; DS.hintT0 = now; invalidate(); }
+}
+function descentHintAlpha(now) {
+  if (!DS.hintSeen) return 1;
+  return 1 - clamp((now - DS.hintT0) / 400, 0, 1);
+}
+function drawDescentHint(c, cx, py, alpha) {
+  if (alpha <= 0.01) return;
+  c.save();
+  setType(c, 10, 500, false, 0.18);
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.globalAlpha = alpha;
+  c.fillStyle = TEXT_3;
+  c.fillText('SCROLL TO DESCEND', cx, py);
+  c.restore();
+}
+
+/* --- selection lume — glow baked once, never a per-frame shadowBlur ------ */
+let lumeRingSprite = null;   /* stroke+glow at scale 1; drawImage'd at card scale */
+const LUME_PAD = 28;         /* room for the 20px outer glow */
+function getLumeRingSprite() {
+  if (lumeRingSprite) return lumeRingSprite;
+  const c = document.createElement('canvas');
+  c.width = (CARD_W + LUME_PAD * 2) * SPRS;
+  c.height = (CARD_H + LUME_PAD * 2) * SPRS;
+  const g = c.getContext('2d');
+  g.scale(SPRS, SPRS);
+  g.shadowColor = LUME_GLOW_0;
+  g.shadowBlur = 20;
+  g.strokeStyle = LUME;
+  g.lineWidth = 1;
+  roundRectPath(g, LUME_PAD + 0.5, LUME_PAD + 0.5, CARD_W - 1, CARD_H - 1, 8);
+  g.stroke();
+  g.stroke();   /* second pass deepens the glow to match the live 20px look */
+  lumeRingSprite = c;
+  return lumeRingSprite;
+}
+
+/* --- the frame — helix projection, flat sprites, no warp ---------------- */
+function drawDescent(c, w_, h_, now, isExport) {
+  if (!isExport) maybeLoadImages();
+  const cx = isExport ? DS.cx : axisTick('cx', descTargetCX(), now);
+  const cy = isExport ? DS.cy : axisTick('cy', descTargetCY(), now);
+  const R = clamp(w_ * 0.30, 260, 420);
+  const s = DS.s;
+  const Y0 = dYs(s);
+  const n = clamp(Math.round(s), 0, DS.n - 1);
+  const speed = Math.abs(DS.v);
+  /* the caption breathes out during motion — a label for a card not yet
+     focused encodes nothing */
+  const pillA = speed > BLUR_V ? 0 : clamp(1 - Math.abs(s - n) * 3, 0, 1);
+
+  if (!isExport) DS.rects.length = 0;
+
+  drawDescentRulers(c, w_, h_, cy, Y0, 1);
+
+  /* window |i−s| ≤ 10 into preallocated slots, insertion-sorted rear→front */
+  const i0 = Math.max(0, Math.ceil(s - 10)), i1 = Math.min(DS.n - 1, Math.floor(s + 10));
+  let m = 0;
+  for (let i = i0; i <= i1; i++) {
+    const phi = (i - s) * HELIX_DTH;
+    const d = (1 + Math.cos(phi)) / 2;
+    const o = dSlots[m++];
+    o.i = i; o.phi = phi; o.d = d;
+    o.sc = 0.40 + 0.60 * Math.pow(d, 1.5);
+    o.al = 0.08 + 0.92 * d * d;
+    o.x = cx + R * Math.sin(phi);
+    o.y = cy + dYof(i) - Y0;
+  }
+  for (let a = 1; a < m; a++) {
+    const o = dSlots[a];
+    let b = a - 1;
+    while (b >= 0 && dSlots[b].d > o.d) { dSlots[b + 1] = dSlots[b]; b--; }
+    dSlots[b + 1] = o;
+  }
+
+  const ghostA = REDUCED ? 0 : clamp((speed - BLUR_V) / 6, 0, 0.35);
+  const vy = -(dYs(s + 0.01) - dYs(s - 0.01)) / 0.02;   /* screen-px per card unit, shared */
+  let scFocus = 1, rectN = 0;
+
+  c.save();
+  for (let k = 0; k < m; k++) {
+    const o = dSlots[k];
+    const w = DS.order[o.i];
+    const wd = CARD_W * o.sc, ht = CARD_H * o.sc;
+    const x0 = o.x - wd / 2, y0 = o.y - ht / 2;
+    if (y0 > h_ + 40 || y0 + ht < -40) continue;
+    let mainA = o.al;
+    if (ghostA > 0.003) {
+      /* motion blur at speed only: two ghosts at ±v·6ms along the numeric
+         motion vector, energy conserved out of the main draw */
+      const vx = -R * HELIX_DTH * Math.cos(o.phi);
+      let gx = vx * DS.v * 0.006, gy = vy * DS.v * 0.006;
+      const gl = Math.hypot(gx, gy);
+      if (gl > 24) { gx *= 24 / gl; gy *= 24 / gl; }
+      const ga = ghostA * o.al;
+      drawCardSprite(c, w, x0 + gx, y0 + gy, wd, ht, ga, now);
+      drawCardSprite(c, w, x0 - gx, y0 - gy, wd, ht, ga, now);
+      mainA = Math.max(o.al - ga, 0);
+    }
+    drawCardSprite(c, w, x0, y0, wd, ht, mainA, now);
+
+    const rr = 8 * o.sc;
+    if (S.selection && S.selection.id === w.id) {
+      /* lume stays reserved for selection — same grammar as the sky ring.
+         Glow comes from a baked sprite (glowSprite discipline: no shadowBlur
+         per frame); the 1px stroke stays live so the hairline never softens. */
+      c.globalAlpha = o.al;
+      const lr = getLumeRingSprite();
+      c.drawImage(lr, x0 - LUME_PAD * o.sc, y0 - LUME_PAD * o.sc,
+        (CARD_W + LUME_PAD * 2) * o.sc, (CARD_H + LUME_PAD * 2) * o.sc);
+      c.strokeStyle = LUME;
+      c.lineWidth = 1;
+      roundRectPath(c, x0 + 0.5, y0 + 0.5, wd - 1, ht - 1, rr);
+      c.stroke();
+    } else {
+      const hov = hoverProgress(w.id, now);
+      const live = o.i === n ? pillA : 0;
+      const ba = Math.max(hov * 0.7, live) * o.al;
+      if (ba > 0.01) {
+        c.globalAlpha = ba;
+        c.strokeStyle = 'rgba(233,237,242,0.16)';
+        c.lineWidth = 1;
+        roundRectPath(c, x0 + 0.5, y0 + 0.5, wd - 1, ht - 1, rr);
+        c.stroke();
+      }
+    }
+    if (o.i === n) scFocus = o.sc;
+    if (!isExport && o.d > 0.15 && rectN < dRectPool.length) {
+      const r = dRectPool[rectN++];
+      r.id = w.id; r.x = x0; r.y = y0; r.w = wd; r.h = ht;
+      DS.rects.push(r);
+    }
+  }
+  c.restore();
+
+  drawDescentPill(c, cx, cy + 56 * scFocus + 18, pillA);
+  /* the whisper is a screen affordance — a print cannot scroll */
+  if (!isExport) drawDescentHint(c, cx, cy + 56 * scFocus + 18 + 40, descentHintAlpha(now));
+}
+
+/* ======================================================================
+   18b · THE MORPH — the showpiece
+   Toggling projections flies every star between its constellation position
+   and its helix card along eased paths — 900ms flight, 220ms stagger by
+   depth order, shallowest first. One continuous world; the transition IS
+   the argument. Esc or D mid-flight retraces from exactly where it is.
+   ====================================================================== */
+
+const MORPH_MS = 1120, MORPH_FLY = 900, MORPH_STAG = 220;
+let morphData = null;            /* {x0,y0,x1,y1,sc,al: Float32Array, famJobs} */
+let morphQueued = null;          /* deferred action for after surfacing (family from search) */
+let morphFlyW = null;            /* watch selected mid-morph — flown at landing, by final dir */
+let descentChromeOn = false, descentChromeTimer = null;
+
+function applyDescentChrome(on) {
+  descentChromeOn = on;
+  if (on) {
+    elKeyLegend.innerHTML = LEGEND_DESCENT;
+    elFooterLeft.textContent = DS.gaugeText || '';
+    elCart2.textContent = `BY WATER RESISTANCE · ${S.watches.length} WATCHES`;
+  } else {
+    elKeyLegend.innerHTML = LEGEND_SKY;
+    lastTlYear = null;           /* force the sky footer/cartouche to re-derive */
+    if (S.loaded) maybeTimeChrome(curTY === Infinity ? S.time.max : curTY);
+  }
+}
+
+function captureFamJobs() {
+  /* the last sky frame's winning labels — the camera is frozen, so they
+     fade in place rather than being re-fought every morph frame */
+  return S.famLabelRects.map(r => ({
+    x: r.x + r.w / 2,
+    y: r.y + r.h / 2,
+    lines: wrapFamily(r.label || familyLabel(r.id))
+  }));
+}
+
+function startMorph(dir) {
+  if (!S.loaded || S.morph) return;
+  const now = performance.now();
+  cancelFlight();
+  stopPlay();
+  if (dir === 1 && timeEngaged()) returnToPresent();
+  closeLensPanel();              /* lens filters sleep in descent — all 143 fly */
+  hideWatchPreview();
+  hideFamPreview();
+  setHover(null);
+  setFamHover(null);
+  /* park the drift where it is — captured positions must hold still */
+  S.observatoryIdle = false;
+  S.drift.on = false; S.drift.release = null; S.drift.x = 0; S.drift.y = 0;
+  dismissCousteau();
+  /* a manual observatory carried into descent would hide the gauge, legend
+     and mode toggle with no way back (H is sky-gated) — surface it here */
+  if (dir === 1) S.observatoryManual = false;
+  if (!S.observatoryManual && !S.exportMode) body.classList.remove('observatory');
+  if (S.familyView) {            /* the family index is a sky instrument (v1) */
+    releaseFamActive();
+    const keepPanel = !!S.selection;
+    S.familyView = null;
+    if (!keepPanel) hidePanel();
+  }
+  if (REDUCED) {
+    /* §4 reduced motion: a 200ms full-scene crossfade — the outgoing frame
+       (still on the canvas) fades over the incoming scene, which draws live
+       underneath: both scenes present, alpha-lerped. S.morph stays set for
+       the window so the input lockout holds and D cannot re-enter; no
+       per-star flight, no stagger. */
+    const snap = document.createElement('canvas');
+    snap.width = canvas.width;
+    snap.height = canvas.height;
+    snap.getContext('2d').drawImage(canvas, 0, 0);
+    if (dir === 1) {
+      DS.cxA = DS.cyA = null;
+      DS.cx = descTargetCX();
+      DS.cy = descTargetCY();
+      DS.phase = 'rest';
+      DS.v = 0;
+      DS.glide = null;
+      DS.lastFocus = -1;
+      refreshFocus();
+    }
+    S.mode = dir === 1 ? 'descent' : 'sky';   /* the incoming scene draws live */
+    S.morph = { t0: now, dir, fromS: DS.s, reduced: true, snap };
+    body.classList.add('morphing');
+    body.classList.toggle('descent', dir === 1);
+    clearTimeout(descentChromeTimer);
+    syncToggle();
+    invalidate();
+    return;
+  }
+
+  /* both endpoints captured once — the flight is pure evaluation */
+  DS.cxA = DS.cyA = null;
+  DS.cx = descTargetCX();
+  DS.cy = descTargetCY();
+  DS.lastFocus = -1;
+  refreshFocus();
+  const N = DS.n;
+  const md = morphData = {
+    x0: new Float32Array(N), y0: new Float32Array(N),
+    x1: new Float32Array(N), y1: new Float32Array(N),
+    sc: new Float32Array(N), al: new Float32Array(N),
+    /* each watch's ACTUAL sky render state — the dot launches from (and, in
+       reverse, lands on) what the sky truly showed: reveal/born alpha, the
+       selection/lens dim, and the rendered radius at the current tier.
+       The field never pops, it resolves — in its flagship transition too. */
+    a0: new Float32Array(N), r0: new Float32Array(N), gt: new Float32Array(N),
+    famJobs: captureFamJobs()
+  };
+  const R = clamp(W * 0.30, 260, 420);
+  const Y0 = dYs(DS.s);
+  const zC = S.cam.z;
+  const AC = tierAlphas(zC);
+  const gd = glyphDiameter(zC);
+  const dimVal0 = lerp(1, DIM_FIELD, currentDimT(now));
+  const sel0 = S.selection;
+  const relSet0 = sel0 ? sel0.related
+    : S.familyView ? S.familyView.members
+    : S.releasing ? S.releasing.related : null;
+  const timeOn0 = curTY < S.time.max - 1e-6;
+  for (let i = 0; i < N; i++) {
+    const w = DS.order[i];
+    const [sx, sy] = toScreen(w.x, w.y);
+    md.x0[i] = sx; md.y0[i] = sy;
+    const phi = (i - DS.s) * HELIX_DTH;
+    const d = (1 + Math.cos(phi)) / 2;
+    md.x1[i] = DS.cx + R * Math.sin(phi);
+    md.y1[i] = DS.cy + dYof(i) - Y0;
+    md.sc[i] = 0.40 + 0.60 * Math.pow(d, 1.5);
+    md.al[i] = 0.08 + 0.92 * d * d;
+    const rv = revealState(w, now);
+    let bornA = 1, magScale = 1;
+    if (timeOn0) {
+      bornA = bornAlphaOf(w, curTY);
+      const dY = descAt(w, curTY);
+      if (dY < w._desc) magScale = magR(dY) / w._r;
+    }
+    const isRel0 = relSet0 ? relSet0.has(w.id) : false;
+    const selFactor = isRel0 || !relSet0 ? 1 : dimVal0;
+    md.a0[i] = rv.a * bornA * Math.min(selFactor, lensFactorOf(w, now));
+    const relFull = sel0 && sel0.related.has(w.id);
+    if (relFull) { md.r0[i] = Math.max(gd, 28) / 2; md.gt[i] = 1; }
+    else if (AC.glyph > 0.5) { md.r0[i] = gd / 2; md.gt[i] = AC.t3; }
+    else { md.r0[i] = w._r * magScale; md.gt[i] = -1; }
+  }
+  DS.built = 0;                  /* plate prebuild — chunks of 48/frame */
+  DS.phase = 'rest';
+  DS.v = 0;
+  DS.glide = null;
+  S.morph = { t0: now, dir, fromS: DS.s };
+  body.classList.add('morphing');
+  clearTimeout(descentChromeTimer);
+  if (dir === 1) {
+    body.classList.add('descent');
+    descentChromeTimer = setTimeout(() => applyDescentChrome(true), 450);
+  } else {
+    body.classList.remove('descent');
+    descentChromeTimer = setTimeout(() => applyDescentChrome(false), 450);
+  }
+  syncToggle();
+  invalidate();
+}
+
+function reverseMorph() {
+  const M = S.morph;
+  if (!M) return;
+  /* the reduced crossfade is 200ms and directionless — there is no flight
+     to retrace, and reversing it would only jump the veil. Let it land. */
+  if (M.reduced) return;
+  const now = performance.now();
+  M.dir *= -1;
+  M.t0 = now - (MORPH_MS - (now - M.t0));   /* every star retraces from exactly here */
+  clearTimeout(descentChromeTimer);
+  if (M.dir === 1) {
+    /* reversing back to descent cancels the surfacing the queue was riding —
+       a queued family open must die with the reversal, or it survives as a
+       stale closure and fires on some unrelated surfacing minutes later */
+    morphQueued = null;
+    body.classList.add('descent');
+    descentChromeTimer = setTimeout(() => applyDescentChrome(true), 450);
+  } else {
+    body.classList.remove('descent');
+    descentChromeTimer = setTimeout(() => applyDescentChrome(false), 450);
+  }
+  syncToggle();
+  invalidate();
+}
+
+function morphFinished(now) {
+  const M = S.morph;
+  if (now - M.t0 < (M.reduced ? 200 : MORPH_MS)) return false;
+  finishMorph(M.dir);
+  return true;
+}
+function finishMorph(dir) {
+  S.morph = null;
+  morphData = null;
+  body.classList.remove('morphing');
+  clearTimeout(descentChromeTimer);
+  if (dir === 1) {
+    S.mode = 'descent';
+    DS.phase = 'rest';
+    DS.v = 0;
+    DS.lastT = performance.now();
+    applyDescentChrome(true);
+    elLive.textContent = `The descent — ${DS.n} watches ranked by water resistance.`;
+    if (morphFlyW) { descentFlyToWatch(morphFlyW); morphFlyW = null; }
+    /* a family queued during a non-reversible (reduced) descent morph:
+       honor it by surfacing at once — never hold a stale closure */
+    if (morphQueued) { syncToggle(); invalidate(); startMorph(-1); return; }
+  } else {
+    S.mode = 'sky';
+    body.classList.remove('descent');
+    applyDescentChrome(false);
+    if (morphFlyW) { flyToWatch(morphFlyW); morphFlyW = null; }
+    if (morphQueued) {
+      const q = morphQueued;
+      morphQueued = null;
+      q();
+    }
+  }
+  syncToggle();
+  invalidate();
+}
+
+function drawMorph(c, w_, h_, now, isExport) {
+  const M = S.morph, md = morphData;
+  if (!md) return;
+  /* one clock, two directions — reverse runs the same envelope backward */
+  const eff = clamp(M.dir === 1 ? now - M.t0 : MORPH_MS - (now - M.t0), 0, MORPH_MS);
+
+  /* plate prebuild — sprites are always ready before cards materialize */
+  let built = 0;
+  while (DS.built < DS.n && built < 48) { getSprite(DS.order[DS.built++]); built++; }
+
+  const skyA = 1 - easeExit(clamp(eff / 300, 0, 1));
+  const descA = easeOut(clamp((eff - 820) / 300, 0, 1));
+  const timeOn = curTY < S.time.max - 1e-6;
+
+  /* the sky letting go — threads + family labels out over 0–300ms. The dim
+     floor is the LIVE field dim: with a selection or lens engaged the threads
+     were already receded, and frame one must not flash them bright. */
+  if (skyA > 0.05) drawThreads(c, w_, h_, now, S.cam.z, Math.max(currentDimT(now), 1 - skyA), curTY, timeOn);
+  if (skyA > 0.01 && md.famJobs.length) {
+    c.save();
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    setType(c, 11, 500, false, 0.18);
+    c.fillStyle = TEXT_3;
+    c.globalAlpha = skyA * tierAlphas(S.cam.z).fam;
+    for (const j of md.famJobs) {
+      let ty = snap(j.y - (j.lines.length - 1) * 7.5);
+      for (const ln of j.lines) { c.fillText(ln, snap(j.x), ty); ty += 15; }
+    }
+    c.restore();
+  }
+
+  /* the strata arriving — rulers + pill in over 820–1120ms */
+  if (descA > 0.01) {
+    const Y0 = dYs(DS.s);
+    drawDescentRulers(c, w_, h_, DS.cy, Y0, descA);
+    drawDescentPill(c, DS.cx, DS.cy + 56 + 18, descA);
+    /* the wheel affordance arrives on the same 820–1120ms envelope (§4) */
+    drawDescentHint(c, DS.cx, DS.cy + 56 + 18 + 40, descA * descentHintAlpha(now));
+  }
+
+  /* 143 flights — shallowest launches first (delay by depth rank); the point
+     of light travels, the plate materializes over the final 35% */
+  const N = DS.n;
+  c.save();
+  for (let i = 0; i < N; i++) {
+    const delay = (i / (N - 1)) * MORPH_STAG;
+    const p = clamp((eff - delay) / MORPH_FLY, 0, 1);
+    const e = easeGlide(p);
+    const x = lerp(md.x0[i], md.x1[i], e);
+    const y = lerp(md.y0[i], md.y1[i], e);
+    if (x < -220 || x > w_ + 220 || y < -160 || y > h_ + 160) continue;
+    const w = DS.order[i];
+    const cardT = clamp((p - 0.65) / 0.35, 0, 1);
+    if (cardT < 1) {
+      /* the dot launches from (and, in reverse, lands on) the watch's ACTUAL
+         sky frame — captured alpha (reveal/born × selection/lens dim) and the
+         rendered radius at the current tier. At glyph tiers the dial drawing
+         dissolves into its travelling dot over the first 35%; a dimmed or
+         unborn star brightens along the flight. Never pops — resolves. */
+      const t35 = clamp(p / 0.35, 0, 1);
+      if (md.gt[i] >= 0 && t35 < 1 && md.a0[i] > 0.004) {
+        c.globalAlpha = md.a0[i] * (1 - t35);
+        drawGlyph(c, w, x, y, md.r0[i] * 2, md.gt[i], now);
+      }
+      const dotA = lerp(md.a0[i], 1, t35) * (1 - cardT) * (md.gt[i] >= 0 ? t35 : 1);
+      if (dotA > 0.004) {
+        c.globalAlpha = dotA;
+        c.fillStyle = mixed('star', w.dialColor);
+        c.beginPath();
+        c.arc(x, y, Math.max(lerp(md.r0[i], w._r, t35), 0.75), 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+    if (cardT > 0) {
+      const sc = md.sc[i] * lerp(0.85, 1, cardT);
+      const wd = CARD_W * sc, ht = CARD_H * sc;
+      drawCardSprite(c, w, x - wd / 2, y - ht / 2, wd, ht, md.al[i] * cardT, now);
+    }
+  }
+  c.restore();
+}
+
+/* reduced motion: the crossfade veil — the outgoing frame, snapshotted at
+   startMorph, lies over the live incoming scene and fades out over 200ms.
+   Drawn at the tail of both scene paths in draw(); finishMorph closes it. */
+function drawReducedMorphVeil(c, w_, h_, now, isExport) {
+  const M = S.morph;
+  if (!M || !M.reduced || !M.snap || isExport) return;
+  const p = clamp((now - M.t0) / 200, 0, 1);
+  if (p >= 1) return;
+  c.save();
+  c.globalAlpha = 1 - p;
+  c.drawImage(M.snap, 0, 0, w_, h_);
+  c.restore();
+}
+
+function toggleDescent() {
+  if (!S.loaded) return;
+  if (S.morph) { reverseMorph(); return; }
+  startMorph(S.mode === 'sky' ? 1 : -1);
+}
+
+function syncToggle() {
+  const target = S.morph ? (S.morph.dir === 1 ? 'descent' : 'sky') : S.mode;
+  elMtSky.setAttribute('aria-pressed', target === 'sky' ? 'true' : 'false');
+  elMtDescent.setAttribute('aria-pressed', target === 'descent' ? 'true' : 'false');
+}
+
+elMtSky.addEventListener('click', () => {
+  anyInput();
+  if (S.morph || S.mode === 'sky') return;
+  toggleDescent();
+});
+elMtDescent.addEventListener('click', () => {
+  anyInput();
+  if (S.morph || S.mode === 'descent') return;
+  toggleDescent();
+});
 
 /* ======================================================================
    17 · RESIZE + BOOT

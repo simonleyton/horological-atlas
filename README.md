@@ -4,6 +4,12 @@ An interactive map of dive-watch design history, 1932–2026. A night sky in whi
 a watch's brightness is its historical gravity — zoom in and the stars resolve
 into instrument drawings that tell the real time.
 
+Two projections of the same 143 watches: **SKY** (the constellation map) and
+**THE DESCENT** (a vertical helix ranked by water resistance) — toggled
+top-center or with `D`. Switching morphs every star between its constellation
+position and its specimen-plate card; the transition is the argument that it
+is one world.
+
 ## Run
 
 Serve the project root statically (the app fetches `data/atlas.json` over HTTP):
@@ -35,13 +41,37 @@ node build/layout.mjs
 | Enter / ↑ ↓ | Select result / move in results |
 | Click a family label | Open the Family Index — that family's chronology in the panel |
 | LENS (footer) | Attribute lenses — price band, dial color, movement, case size, origin; matches hold magnitude, the rest recede |
-| Escape | Close export → lens panel → search → watch detail (→ its family, if opened from one) → family index → clear lens → return to the present → nothing |
+| Escape (sky) | Close export → lens panel → search → watch detail (→ its family, if opened from one) → family index → clear lens → return to the present → nothing |
 | F or 0, double-click empty field | Fit to full extent |
 | + / − | Zoom one step |
 | Arrow keys | Pan |
 | Space | Play / pause the century |
+| D | Toggle SKY · DESCENT (also the top-center toggle); mid-morph, D or Esc reverses the flight in place |
 | H | Hide the interface (the Observatory) |
-| E | Export the current view as a 2× PNG plate (year-stamped when time-scrubbed) |
+| E | Export the current view as a 2× PNG plate (year-stamped when time-scrubbed; `-descent` in descent) |
+
+### In the Descent
+
+| Key | Action |
+|---|---|
+| Scroll / drag | Descend or ascend the helix — inertia coasts, then settles dead-beat on the nearest card |
+| ↑ ↓ | Step one card |
+| PgUp / PgDn | Jump one stratum |
+| Home / End | Surface / deepest |
+| Click a card | Open its detail panel (the helix flies it front-center) |
+| Escape (descent) | Close lightbox → export → search → watch panel → **surface** (the reverse morph) |
+
+## The Descent
+
+Press `D` (or the SKY · DESCENT toggle, top-center) and the constellation
+re-projects: all 143 watches on a vertical helix, ranked by water resistance,
+shallow first. Depth bands (≤135 M, 150–220 M, 300 M, 500–610 M, 1000–1300 M,
+2000 M+) are separated by hairline depth rulers; the footer becomes a live
+depth gauge. Cards are specimen plates on one shared ground — catalog render,
+else editorial photograph, else the drawn glyph. The Ephemeris and the Lens
+are sky instruments and yield while below; search still works (a family result
+surfaces first, since families live in the sky). The morph plays on every
+toggle; under reduced motion it becomes a 200 ms cut.
 
 ## The Ephemeris
 

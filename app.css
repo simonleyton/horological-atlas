@@ -111,9 +111,11 @@ body.observatory .chrome,
 body.export .chrome {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 300ms var(--ease-exit);
+  /* invisible chrome leaves the tab order too — visibility flips after the
+     fade so keyboard focus can't operate controls the eye can't see */
+  visibility: hidden;
+  transition: opacity 300ms var(--ease-exit), visibility 0s linear 300ms;
 }
-body.observatory .chrome { transition: opacity 300ms var(--ease-exit); }
 
 /* reveal — chrome enters at 1.5s, 100ms apart (timed from JS by removing .pre-reveal).
    The stagger overrides live only while body.revealing is set (JS removes it when the
@@ -148,6 +150,56 @@ body.revealing footer { transition-duration: 320ms; transition-delay: 200ms; }
 }
 body.dim-chrome #wordmark { opacity: var(--dim-chrome); }
 body.observatory #wordmark, body.export #wordmark { opacity: 0; }
+
+/* ---------- MODE TOGGLE — SKY · DESCENT ----------
+   One world, two projections. Quiet text, top-center; the active word holds
+   text-1 with a hairline underline. No lume — lume encodes data, not chrome. */
+
+#mode-toggle {
+  position: fixed; top: 20px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  z-index: 4;
+  user-select: none;
+}
+#mode-toggle button {
+  position: relative;
+  padding: 4px 2px;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--text-3);
+  transition: color 240ms var(--ease-out);
+}
+#mode-toggle button:hover { color: var(--text-2); }
+#mode-toggle button[aria-pressed="true"] { color: var(--text-1); }
+#mode-toggle button[aria-pressed="true"]::after {
+  content: '';
+  position: absolute; left: 2px; right: 2px; bottom: -4px;
+  height: 1px;
+  background: var(--line-2);
+}
+#mode-toggle .mt-dot { font-size: 10px; color: var(--text-3); }
+body.pre-reveal #mode-toggle { opacity: 0; }
+body.revealing #mode-toggle { transition-duration: 320ms; transition-delay: 100ms; }
+/* the morph owns the transition — the toggle waits its turn */
+body.morphing #mode-toggle { pointer-events: none; }
+
+/* ---------- DESCENT — chrome per mode ----------
+   The Ephemeris and the Lens are sky instruments; in descent they yield.
+   Same grammar as body.observatory: opacity + pointer-events, never display. */
+
+body.descent #timeline,
+body.descent #lens-chip,
+body.descent #lens-panel,
+body.descent #fit-chip {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  /* out of the tab order once faded — an invisible year slider that still
+     scrubs the century, or a hidden FIT chip that still flies the camera,
+     is chrome lying about the mode */
+  visibility: hidden;
+  transition: opacity 400ms var(--ease-out), visibility 0s linear 400ms;
+}
 
 /* ---------- SEARCH ---------- */
 
@@ -832,7 +884,8 @@ footer {
   font-size: 10px; font-weight: 500;
   letter-spacing: 0.08em;
   color: var(--text-3);
-  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out),
+              opacity 400ms var(--ease-out);
 }
 #fit-chip:hover { color: var(--text-2); border-color: var(--line-2); }
 #lens-chip {
@@ -843,7 +896,8 @@ footer {
   font-size: 10px; font-weight: 500;
   letter-spacing: 0.08em;
   color: var(--text-3);
-  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out),
+              opacity 400ms var(--ease-out);
 }
 #lens-chip:hover { color: var(--text-2); border-color: var(--line-2); }
 #lens-chip.active { color: var(--text-1); border-color: var(--lume-dim); }

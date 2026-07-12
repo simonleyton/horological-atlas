@@ -20,6 +20,12 @@
     <span id="tagline">A map of dive-watch design, arranged by kinship — brightness is influence.</span>
   </header>
 
+  <nav id="mode-toggle" class="chrome" aria-label="Projection">
+    <button id="mt-sky" type="button" aria-pressed="true">SKY</button>
+    <span class="mt-dot" aria-hidden="true">&middot;</span>
+    <button id="mt-descent" type="button" aria-pressed="false">DESCENT</button>
+  </nav>
+
   <div id="search" class="chrome">
     <button id="search-toggle" type="button">Search <span class="kbd">⌘K</span></button>
     <input id="search-input" type="text" role="combobox" aria-expanded="false"
@@ -52,7 +58,7 @@
   <footer class="chrome">
     <div id="footer-left"></div>
     <div id="footer-right">
-      <span id="key-legend">H hide&thinsp;&middot;&thinsp;E export&thinsp;&middot;&thinsp;Space play&thinsp;&middot;&thinsp;F fit</span>
+      <span id="key-legend">D descend&thinsp;&middot;&thinsp;H hide&thinsp;&middot;&thinsp;E export&thinsp;&middot;&thinsp;Space play&thinsp;&middot;&thinsp;F fit</span>
       <button id="lens-chip" type="button" aria-expanded="false" aria-controls="lens-panel">LENS</button>
       <button id="fit-chip" type="button" title="Fit the whole field (F)" aria-keyshortcuts="F">FIT</button>
     </div>

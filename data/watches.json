@@ -4497,5 +4497,37 @@
       "lumePlots": "sandwich"
     },
     "watchbase": "https://watchbase.com/panerai/submersible/pam01229"
+  },
+  {
+    "id": "rolex-deepsea-challenge-2022",
+    "brand": "Rolex",
+    "model": "Deepsea Challenge",
+    "reference": "126067",
+    "year": 2022,
+    "country": "CH",
+    "diameterMm": 50,
+    "waterResistanceM": 11000,
+    "bezelType": "rotating",
+    "bezelColor": "#141414",
+    "dialColor": "#0b0b0b",
+    "accentColor": "#cfd6dd",
+    "caseShape": "round",
+    "movement": "automatic",
+    "designFamily": "submariner-lineage",
+    "parents": [
+      "rolex-deepsea-116660-2008"
+    ],
+    "significance": "Rated to the full depth of the Mariana Trench — the production summit of the depth race that James Cameron's 2012 prototype dive began.",
+    "priceBandUsd": [
+      22000,
+      28000
+    ],
+    "features": {
+      "crownGuard": true,
+      "dateWindow": false,
+      "heliumValve": true,
+      "handsStyle": "mercedes",
+      "lumePlots": "mixed"
+    }
   }
 ]

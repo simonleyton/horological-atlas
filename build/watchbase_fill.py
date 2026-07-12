@@ -399,6 +399,12 @@ def redo():
 
 
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--plate" and len(sys.argv) >= 4:
+        # plate a local product image onto the DEEP FIELD specimen ground
+        raw = Path(sys.argv[2]).read_bytes()
+        compose(raw).convert("RGB").save(sys.argv[3], "JPEG", quality=88)
+        print("plated ->", sys.argv[3])
+        return
     if len(sys.argv) > 1 and sys.argv[1] == "--all":
         crawl_all()
         return

@@ -157,6 +157,24 @@ const FAMILY_CHARACTER = {
   'avant-garde': "What happens when the formula is optional: Zenith's faceted Defy and Richard Mille's RM 028, divers built as provocations four decades apart."
 };
 
+/* one flagship per family — the watch the category means; it leads every shelf */
+const FAMILY_FLAGSHIP = {
+  'pioneers': 'omega-marine-1932',
+  'italian-military': 'panerai-luminor-1950',
+  'fifty-fathoms-lineage': 'blancpain-fifty-fathoms-1953',
+  'submariner-lineage': 'rolex-submariner-5513-1962',
+  'vintage-skindiver': 'zodiac-sea-wolf-1953',
+  'tudor-lineage': 'tudor-black-bay-58-2018',
+  'seamaster-lineage': 'omega-seamaster-professional-2531-1993',
+  'super-compressor': 'jlc-memovox-polaris-1968',
+  'japanese-toolwatch': 'seiko-skx007-1996',
+  'doxa-professional': 'doxa-sub-300-1967',
+  'avant-garde': 'richard-mille-rm028-2010',
+  'german-engineering': 'sinn-u1-2005',
+  'modern-heritage': 'oris-divers-sixty-five-2015',
+  'microbrand-modern': 'halios-seaforth-2017'
+};
+
 /* ======================================================================
    2 · DOM
    ====================================================================== */
@@ -1589,8 +1607,9 @@ function familyMedia(famId) {
   /* rows demand uniformity: when the family has ≥2 catalog renders, the row
      is catalog-only — one visual language per surface, never a mixed shelf */
   const members = S.watches.filter(w => w.designFamily === famId);
+  const lead = FAMILY_FLAGSHIP[famId];
   const cats = members.filter(w => CATALOG[w.id] && CATALOG[w.id].file)
-    .sort((a, b) => b._desc - a._desc);
+    .sort((a, b) => (b.id === lead) - (a.id === lead) || b._desc - a._desc);
   if (cats.length >= 2) {
     return cats.slice(0, 5).map(w => ({ w, ...CATALOG[w.id], isCatalog: true }));
   }
@@ -1598,7 +1617,7 @@ function familyMedia(famId) {
   eds.sort((a, b) => {
     const ca = IMAGES[a.id].confidence === 'high' ? 0 : 1;
     const cb = IMAGES[b.id].confidence === 'high' ? 0 : 1;
-    return ca - cb || b._desc - a._desc;
+    return (b.id === lead) - (a.id === lead) || ca - cb || b._desc - a._desc;
   });
   const out = eds.slice(0, 5).map(w => ({ w, ...IMAGES[w.id], isCatalog: false }));
   if (!out.length && cats.length) out.push({ w: cats[0], ...CATALOG[cats[0].id], isCatalog: true });
@@ -1627,9 +1646,10 @@ function fpStopCycle() { clearInterval(fpCycleTimer); fpCycleTimer = null; }
    drawn strip — editorial photography never rides here (mixed slides in
    sequence is where inconsistency reads worst) */
 function catalogMedia(famId) {
+  const lead = FAMILY_FLAGSHIP[famId];
   return S.watches
     .filter(w => w.designFamily === famId && CATALOG[w.id] && CATALOG[w.id].file)
-    .sort((a, b) => b._desc - a._desc)
+    .sort((a, b) => (b.id === lead) - (a.id === lead) || b._desc - a._desc)
     .slice(0, 5)
     .map(w => ({ w, ...CATALOG[w.id], isCatalog: true }));
 }

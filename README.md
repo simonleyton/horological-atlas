@@ -4,7 +4,7 @@ An interactive map of dive-watch design history, 1932–2026. A night sky in whi
 a watch's brightness is its historical gravity — zoom in and the stars resolve
 into instrument drawings that tell the real time.
 
-Two projections of the same 143 watches: **SKY** (the constellation map) and
+Two projections of the same 144 watches: **SKY** (the constellation map) and
 **THE DESCENT** (a vertical helix ranked by water resistance) — toggled
 top-center or with `D`. Switching morphs every star between its constellation
 position and its specimen-plate card; the transition is the argument that it
@@ -64,7 +64,8 @@ node build/layout.mjs
 ## The Descent
 
 Press `D` (or the SKY · DESCENT toggle, top-center) and the constellation
-re-projects: all 143 watches on a vertical helix, ranked by water resistance,
+re-projects: every watch in the atlas on a vertical helix, ranked by water
+resistance,
 shallow first. Depth bands (≤135 M, 150–220 M, 300 M, 500–610 M, 1000–1300 M,
 2000 M+) are separated by hairline depth rulers; the footer becomes a live
 depth gauge. Cards are specimen plates on one shared ground — catalog render,
@@ -72,6 +73,17 @@ else editorial photograph, else the drawn glyph. The Ephemeris and the Lens
 are sky instruments and yield while below; search still works (a family result
 surfaces first, since families live in the sky). The morph plays on every
 toggle; under reduced motion it becomes a 200 ms cut.
+
+The descent obeys the ocean — physics and light, never imagery. The ground
+traverses the real optical zones as you sink (sunlit → twilight → midnight →
+hadal, a few percent of channel at most); a faint ceiling of light hangs above
+the 0 M line; ~28 single-pixel motes of marine snow drift past at whisper
+alpha, thinning to nothing below the midnight zone; the coast's
+time-constant thickens fractionally with depth (180 → 150 ms); and six to
+eight engraved one-line facts — the recreational limit, the deepest
+breath-hold, the Titanic, Challenger Deep — sit at their true depths in the
+strata rulers' own typography. Everything keys off the one continuous depth
+scalar; in the sky, none of it exists.
 
 ## The Ephemeris
 

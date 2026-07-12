@@ -287,6 +287,7 @@ function animating() {
     if (DS.cxA || DS.cyA) return true;
     if (now < DS.rampUntil) return true;          /* image alpha-ramps over glyph plates */
     if (DS.hintT0 && now < DS.hintT0 + 400) return true;   /* wheel-affordance fade-out */
+    if (!REDUCED && now < DS.snowUntil) return true;       /* marine-snow tail (§18c) — 10fps via snowOnly */
   }
   if (S.flight) return true;
   if (S.drift.on || S.drift.release) return true;
@@ -350,7 +351,9 @@ function frame(now) {
   /* (the reduced-motion crossfade veil is drawn inside draw(), at the tail
      of whichever scene is incoming — see drawReducedMorphVeil) */
   if (animating()) {
-    if (driftOnly(performance.now())) setTimeout(invalidate, 100);   /* ~10fps is plenty for drift */
+    const pn = performance.now();
+    /* ~10fps is plenty for sky drift — and for the marine-snow tail (§18c) */
+    if (driftOnly(pn) || snowOnly(pn)) setTimeout(invalidate, 100);
     else invalidate();
   }
 }
@@ -3072,11 +3075,17 @@ function currentDimT(now) {
 /* --- the frame --------------------------------------------------------- */
 function draw(c, w_, h_, now, isExport) {
   c.clearRect(0, 0, w_, h_);
-  c.fillStyle = FIELD_HEX;
+  /* §18c — the water column's master gate, once per frame. In the sky
+     waterT is 0 and GROUND_HEX_NOW is the exact FIELD_HEX string: this
+     path is bit-identical to pre-water-column frames. */
+  const waterT = wcUpdateGround(now);
+  c.fillStyle = GROUND_HEX_NOW;
   c.fillRect(0, 0, w_, h_);
 
-  /* vignette */
-  if (!isExport && vignetteCanvas) {
+  /* vignette — tinted live while any water is on the frame (incl. export) */
+  if (waterT > 0) {
+    paintVignetteWater(c, w_, h_);
+  } else if (!isExport && vignetteCanvas) {
     c.drawImage(vignetteCanvas, 0, 0, w_, h_);
   } else {
     paintVignette(c, w_, h_);
@@ -3638,7 +3647,7 @@ function endPointer(e) {
          EMA frozen at the last movement: decay it by the pointer silence. */
       const idle = performance.now() - dd.lastT;
       if (idle > 90) DS.v = 0;
-      else DS.v *= Math.exp(-idle / (D_TAU * 1000));
+      else DS.v *= Math.exp(-idle / (dTau(dM(DS.s)) * 1000));   /* same water as the coast (§18c) */
       DS.glide = null;
       DS.phase = 'coast';
     }
@@ -3848,7 +3857,7 @@ for (const evt of ['pointerdown', 'wheel', 'keydown', 'touchstart']) {
 }
 
 /* ======================================================================
-   18 · THE DESCENT — the same 143 watches, ranked by depth
+   18 · THE DESCENT — the same watches, ranked by depth
    A second projection of the one dataset: a vertical helix ordered by
    water resistance, shallow first. Scrolling descends through strata the
    way a dive does; the wheel coasts and settles dead-beat on a card —
@@ -3868,7 +3877,9 @@ const SPRS = 2;   /* sprite resolution — fixed at 2× logical (spec §3: 336×
                      fixed value never goes stale when the window crosses to another dpr. */
 const HELIX_DTH = Math.PI * 2 / 9;             /* 9 cards per turn */
 const PITCH = 64, SHELF = 56;                  /* vertical pitch; extra shelf at band boundaries */
-const D_TAU = 0.18;                            /* inertia decay time-constant, s */
+/* inertia decay time-constant is depth-keyed since the water column (§18c):
+   τ = 150 + 30·(1 − (d/11000)^0.35) ms — 174ms at the shallowest card,
+   150ms at the hadal floor. See dTau(). The settle spring is untouched. */
 const D_OMEGA = 12;                            /* settle spring, rad/s, ζ = 1 — zero overshoot */
 const BLUR_V = 1.5;                            /* cards/s — blur exists only above this */
 
@@ -3889,7 +3900,15 @@ const DS = {
   rects: [],                     /* hit rects this frame — pooled objects, rear→front */
   cx: 0, cxA: null, cy: 0, cyA: null,   /* 400ms panel-offset glides */
   rampUntil: 0,                  /* image alpha-ramp horizon for the scheduler */
-  hintSeen: false, hintT0: 0     /* wheel affordance — whispers until the first dive gesture */
+  hintSeen: false, hintT0: 0,    /* wheel affordance — whispers until the first dive gesture */
+  /* §18c — the water column */
+  wrM: null,                     /* Float32Array — metres per depth index, for dM() */
+  annY: null, annLabel: [],      /* depth annotations — world y + copy, placed once */
+  annW: null, shelfW: null,      /* label widths, measured once — no per-frame TextMetrics */
+  snow: null,                    /* Float32Array(28×4) — xFrac, yFrac, alpha, fall px/s */
+  snowClock: 0,                  /* seconds of accumulated drift — never wall-clock */
+  snowUntil: 0,                  /* the 4s post-settle tail the scheduler honors */
+  snowWrap: 0                    /* world wrap height — H + 240, kept by resize() */
 };
 S.descent = DS;
 
@@ -3898,6 +3917,10 @@ let descDrag = null;             /* {sy, lastY, lastT, moved} — touch/drag scr
 /* preallocated draw + hit pools — a scroll frame allocates nothing */
 const dSlots = Array.from({ length: 21 }, () => ({ i: 0, phi: 0, d: 0, sc: 0, al: 0, x: 0, y: 0 }));
 const dRectPool = Array.from({ length: 21 }, () => ({ id: null, x: 0, y: 0, w: 0, h: 0 }));
+
+/* one grouping convention product-wide — 4+ digit metres take the comma, so
+   the shelf ruler, the gauge, the pill, and the annotations all agree */
+const fmtM = m => (m || 0).toLocaleString('en-US');
 
 function initDescent() {
   /* depth order: WR ascending, year within ties, id for stability */
@@ -3920,12 +3943,18 @@ function initDescent() {
     if (i > 0 && b !== prev) {
       shelves++;
       DS.shelfIdx.push(i);
-      DS.shelfLabel.push(`— ${bandM[b]} M —`);
+      DS.shelfLabel.push(`— ${fmtM(bandM[b])} M —`);
     }
     prev = b;
     DS.sh[i] = shelves;
     DS.wrCount.set(w.waterResistanceM, (DS.wrCount.get(w.waterResistanceM) || 0) + 1);
   });
+  /* §18c — the water column: the depth scalar's table, the seeded snow,
+     and the depth annotations, all precomputed once */
+  DS.wrM = new Float32Array(DS.n);
+  for (let i = 0; i < DS.n; i++) DS.wrM[i] = DS.order[i].waterResistanceM || 0;
+  initMarineSnow();
+  initDepthAnnotations();
 }
 
 /* --- vertical metric — pitch plus shelves, continuous in s ------------- */
@@ -3959,7 +3988,7 @@ function axisTick(key, target, now) {
   return DS[key];
 }
 
-/* --- specimen plates — one material for all 143 ------------------------ */
+/* --- specimen plates — one material for the whole census ---------------- */
 function roundRectPath(g, x, y, w, h, r) {
   g.beginPath();
   g.moveTo(x + r, y);
@@ -4024,7 +4053,7 @@ function getSprite(w) {
   }
   rec = { base: buildBaseSprite(w), img: null, imgT0: 0, pending: false, fail: false };
   DS.sprites.set(w.id, rec);
-  /* cap 160: the morph draws all 143 plates in its final frames, so the whole
+  /* cap 160: the morph draws every plate in its final frames, so the whole
      set must stay resident — a 96 cap would thrash rebuilds mid-showpiece */
   if (DS.sprites.size > 160) {
     DS.sprites.delete(DS.sprites.keys().next().value);
@@ -4034,7 +4063,7 @@ function getSprite(w) {
 let imgSweep = 0;
 function maybeLoadImages() {
   /* img layers live only near the line — the |i−s| ≤ 24 load window plus
-     hysteresis. Bases stay resident (the morph draws all 143 plates); the
+     hysteresis. Bases stay resident (the morph draws every plate); the
      photography is evicted once it falls ~2 strata behind, restoring the
      spirit of the spec's 96-cap without thrashing the showpiece. */
   if (++imgSweep >= 90) {
@@ -4123,8 +4152,15 @@ function descentWheel(dy) {
 }
 function stepDescent(now) {
   if (S.mode !== 'descent' || S.morph) return;
-  const dt = Math.min((now - (DS.lastT || now)) / 1000, 0.05);
+  const rawDt = (now - (DS.lastT || now)) / 1000;
+  const dt = Math.min(rawDt, 0.05);                /* the physics clamp */
   DS.lastT = now;
+  /* §18c — marine snow drifts on accumulated dt only (jump-free freeze and
+     resume, no wall-clock in the position formula). Its clamp is looser
+     than the physics one: the 4s tail frames at ~10fps (100ms gaps), and
+     clamping those to 50ms would halve the fall rate exactly when the eye
+     is parked. Reduced motion: static. */
+  if (!REDUCED && DS.snow && (DS.phase !== 'rest' || now < DS.snowUntil)) DS.snowClock += Math.min(rawDt, 0.15);
   if (DS.phase === 'rest' || DS.phase === 'gesture') return;
   if (DS.phase === 'glide') {
     const g = DS.glide;
@@ -4134,7 +4170,9 @@ function stepDescent(now) {
     DS.v = dt > 0 ? (DS.s - prev) / dt : 0;      /* blur reads real velocity, even scripted */
     if (p >= 1) { DS.s = g.to; descentSettled(); }
   } else if (DS.phase === 'coast') {
-    DS.v *= Math.exp(-dt / D_TAU);               /* τ = 180ms — 3τ ≈ 540ms coast */
+    /* §18c pressure in the hand — τ thickens 174→150ms with depth; felt,
+       not seen. Applies under reduced motion too: it is state, not motion. */
+    DS.v *= Math.exp(-dt / dTau(dM(DS.s)));
     DS.s += DS.v * dt;
     if (DS.s <= 0 || DS.s >= DS.n - 1) {
       DS.s = clamp(DS.s, 0, DS.n - 1);
@@ -4157,6 +4195,11 @@ function descentSettled() {
   DS.v = 0;
   DS.phase = 'rest';
   DS.glide = null;
+  /* §18c — the snow keeps falling for 4s after the detent lands, at 10fps,
+     then freezes in place: idle CPU is exactly pre-water-column. Below
+     ~2500m the water is empty (wcSnowK → 0), so no tail is scheduled at
+     all — a hadal rest goes dark on frame one, per acceptance criterion 3. */
+  if (!REDUCED && DS.wrM && wcSnowK(dM(DS.s)) > 0) DS.snowUntil = performance.now() + 4000;
   refreshFocus();
   const w = DS.order[clamp(Math.round(DS.s), 0, DS.n - 1)];
   if (w) elLive.textContent = `${w.brand} ${w.model}, ${w.waterResistanceM} metres.`;
@@ -4166,9 +4209,9 @@ function refreshFocus() {
   if (n === DS.lastFocus) return;               /* strings rebuilt only on focus change */
   DS.lastFocus = n;
   const w = DS.order[n];
-  DS.pillText = `${String(w.brand || '').toUpperCase()} ${String(w.model || '').toUpperCase()} · ${w.waterResistanceM} M`;
+  DS.pillText = `${String(w.brand || '').toUpperCase()} ${String(w.model || '').toUpperCase()} · ${fmtM(w.waterResistanceM)} M`;
   const cnt = DS.wrCount.get(w.waterResistanceM) || 1;
-  DS.gaugeText = `−${w.waterResistanceM} M · ${cnt} ${cnt === 1 ? 'watch' : 'watches'} at this depth`;
+  DS.gaugeText = `−${fmtM(w.waterResistanceM)} M · ${cnt} ${cnt === 1 ? 'watch' : 'watches'} at this depth`;
   if (descentChromeOn) elFooterLeft.textContent = DS.gaugeText;
 }
 
@@ -4216,7 +4259,7 @@ function drawDescentRulers(c, w_, h_, cy, Y0, alpha) {
     const ry = snap(cy + (dYof(b - 1) + dYof(b)) / 2 - Y0);
     if (ry < -30 || ry > h_ + 30) continue;
     const label = DS.shelfLabel[k];
-    const tw = c.measureText(label).width;
+    const tw = DS.shelfW ? DS.shelfW[k] : c.measureText(label).width;
     c.globalAlpha = alpha;
     c.strokeStyle = 'rgba(233,237,242,0.08)';
     c.lineWidth = 1;
@@ -4224,9 +4267,10 @@ function drawDescentRulers(c, w_, h_, cy, Y0, alpha) {
     c.moveTo(0, ry + 0.5);
     c.lineTo(w_, ry + 0.5);
     c.stroke();
-    /* knockout — the depth reads as engraved in the line, not laid over it */
+    /* knockout — the depth reads as engraved in the line, not laid over it.
+       GROUND_HEX_NOW keeps the engraving flush at every depth (§18c). */
     c.globalAlpha = 1;
-    c.fillStyle = FIELD_HEX;
+    c.fillStyle = GROUND_HEX_NOW;
     c.fillRect(w_ / 2 - tw / 2 - 16, ry - 8, tw + 32, 17);
     c.globalAlpha = alpha;
     c.fillStyle = TEXT_3;
@@ -4315,7 +4359,18 @@ function drawDescent(c, w_, h_, now, isExport) {
 
   if (!isExport) DS.rects.length = 0;
 
+  /* §18c — the water column, under the specimen plates: the surface
+     ceiling, the strata rulers, the depth annotations, the marine snow.
+     The focused card's scale is analytic — the annotations' label-yield
+     needs it before the card loop runs. */
+  const phiF = (n - s) * HELIX_DTH;
+  const dF = (1 + Math.cos(phiF)) / 2;
+  const scF = 0.40 + 0.60 * Math.pow(dF, 1.5);
+  const vy = -(dYs(s + 0.01) - dYs(s - 0.01)) / 0.02;   /* screen-px per card unit, shared */
+  drawSurfaceCeiling(c, w_, h_, cy, Y0, 1);
   drawDescentRulers(c, w_, h_, cy, Y0, 1);
+  drawDepthAnnotations(c, w_, h_, cx, cy, Y0, 1, scF, s);
+  drawMarineSnow(c, w_, h_, Y0, 1, vy);
 
   /* window |i−s| ≤ 10 into preallocated slots, insertion-sorted rear→front */
   const i0 = Math.max(0, Math.ceil(s - 10)), i1 = Math.min(DS.n - 1, Math.floor(s + 10));
@@ -4338,7 +4393,6 @@ function drawDescent(c, w_, h_, now, isExport) {
   }
 
   const ghostA = REDUCED ? 0 : clamp((speed - BLUR_V) / 6, 0, 0.35);
-  const vy = -(dYs(s + 0.01) - dYs(s - 0.01)) / 0.02;   /* screen-px per card unit, shared */
   let scFocus = 1, rectN = 0;
 
   c.save();
@@ -4445,7 +4499,7 @@ function startMorph(dir) {
   cancelFlight();
   stopPlay();
   if (dir === 1 && timeEngaged()) returnToPresent();
-  closeLensPanel();              /* lens filters sleep in descent — all 143 fly */
+  closeLensPanel();              /* lens filters sleep in descent — the whole census flies */
   hideWatchPreview();
   hideFamPreview();
   setHover(null);
@@ -4607,6 +4661,8 @@ function finishMorph(dir) {
     DS.phase = 'rest';
     DS.v = 0;
     DS.lastT = performance.now();
+    /* §18c — snow greets the arrival, unless the water here is empty */
+    if (!REDUCED && DS.wrM && wcSnowK(dM(DS.s)) > 0) DS.snowUntil = DS.lastT + 4000;
     applyDescentChrome(true);
     elLive.textContent = `The descent — ${DS.n} watches ranked by water resistance.`;
     if (morphFlyW) { descentFlyToWatch(morphFlyW); morphFlyW = null; }
@@ -4660,16 +4716,24 @@ function drawMorph(c, w_, h_, now, isExport) {
     c.restore();
   }
 
-  /* the strata arriving — rulers + pill in over 820–1120ms */
+  /* the strata arriving — rulers + pill in over 820–1120ms. The water
+     column (§18c) rides the same envelope: descA IS waterT this frame,
+     so the annotation knockouts stay flush with the crossfading ground. */
   if (descA > 0.01) {
     const Y0 = dYs(DS.s);
+    const nF = clamp(Math.round(DS.s), 0, DS.n - 1);
+    const dF = (1 + Math.cos((nF - DS.s) * HELIX_DTH)) / 2;
+    const scF = 0.40 + 0.60 * Math.pow(dF, 1.5);
+    drawSurfaceCeiling(c, w_, h_, DS.cy, Y0, descA);
     drawDescentRulers(c, w_, h_, DS.cy, Y0, descA);
+    drawDepthAnnotations(c, w_, h_, DS.cx, DS.cy, Y0, descA, scF, DS.s);
+    drawMarineSnow(c, w_, h_, Y0, descA, 0);     /* frozen mid-morph — never streaked */
     drawDescentPill(c, DS.cx, DS.cy + 56 + 18, descA);
     /* the wheel affordance arrives on the same 820–1120ms envelope (§4) */
     drawDescentHint(c, DS.cx, DS.cy + 56 + 18 + 40, descA * descentHintAlpha(now));
   }
 
-  /* 143 flights — shallowest launches first (delay by depth rank); the point
+  /* the flights — shallowest launches first (delay by depth rank); the point
      of light travels, the plate materializes over the final 35% */
   const N = DS.n;
   c.save();
@@ -4749,6 +4813,326 @@ elMtDescent.addEventListener('click', () => {
 });
 
 /* ======================================================================
+   18c · THE WATER COLUMN — the ocean is not imagery; it is physics + light
+   Every element below keys off ONE continuous depth scalar, dM(DS.s):
+   light attenuation on the ground and vignette, marine snow density,
+   the coast time-constant, the depth annotations, the surface ceiling.
+   In the sky waterT is 0 and every path short-circuits — bit-identical.
+   ====================================================================== */
+
+/* --- the depth scalar — metres at the current scroll position ---------- */
+function dM(s) {
+  s = clamp(s, 0, DS.n - 1);
+  const i0 = Math.floor(s);
+  return lerp(DS.wrM[i0], DS.wrM[Math.min(i0 + 1, DS.n - 1)], s - i0);
+}
+
+const sstep = t => t * t * (3 - 2 * t);   /* smoothstep — zero-slope at knots */
+
+/* --- light attenuation — the real optical zones, smoothly interpolated.
+   Base FIELD_RGB [6,8,11] sits between the 200m and 1000m anchors: the
+   sky's ground already reads as shallow water, so entry never pops. ------ */
+const WC_ZONE_D = [0, 200, 1000, 4000, 11000];
+const WC_ZONE_RGB = [[9, 12, 14], [7, 9, 12], [5, 7, 10], [4, 5, 8], [3, 4, 6]];
+const wcZoneOut = [0, 0, 0];
+function wcZone(d) {
+  let k = WC_ZONE_D.length - 2;
+  for (let i = 1; i < WC_ZONE_D.length; i++) {
+    if (d < WC_ZONE_D[i]) { k = i - 1; break; }
+  }
+  const a = WC_ZONE_RGB[k], b = WC_ZONE_RGB[k + 1];
+  const t = sstep(clamp((d - WC_ZONE_D[k]) / (WC_ZONE_D[k + 1] - WC_ZONE_D[k]), 0, 1));
+  wcZoneOut[0] = lerp(a[0], b[0], t);
+  wcZoneOut[1] = lerp(a[1], b[1], t);
+  wcZoneOut[2] = lerp(a[2], b[2], t);
+  return wcZoneOut;
+}
+
+/* master gate — 0 in the sky (exact FIELD_HEX, zero diff), 1 in descent,
+   and the strata-ruler 820–1120ms envelope through the morph (both dirs).
+   The reduced morph has already flipped the mode: waterT is 0/1 and the
+   200ms snapshot veil carries the crossfade. */
+function wcComputeWaterT(now) {
+  if (S.morph && !S.morph.reduced) {
+    const eff = clamp(S.morph.dir === 1 ? now - S.morph.t0 : MORPH_MS - (now - S.morph.t0), 0, MORPH_MS);
+    return easeOut(clamp((eff - 820) / 300, 0, 1));
+  }
+  return S.mode === 'descent' ? 1 : 0;
+}
+
+let GROUND_HEX_NOW = FIELD_HEX;     /* ground fill + every knockout, this frame */
+const wcVignRGB = [0, 0, 0];        /* vignette tint = zone + (VIGNETTE − FIELD) */
+const wcHexMemo = new Map();        /* ≤ ~30 entries ever — zone deltas are 6–8 steps */
+function wcUpdateGround(now) {
+  const t = wcComputeWaterT(now);
+  if (t <= 0 || !DS.wrM) { GROUND_HEX_NOW = FIELD_HEX; return 0; }
+  const z = wcZone(dM(DS.s));
+  const r = Math.round(lerp(FIELD_RGB[0], z[0], t));
+  const g = Math.round(lerp(FIELD_RGB[1], z[1], t));
+  const b = Math.round(lerp(FIELD_RGB[2], z[2], t));
+  const key = (r << 16) | (g << 8) | b;
+  let hx = wcHexMemo.get(key);
+  if (!hx) { hx = `rgb(${r},${g},${b})`; wcHexMemo.set(key, hx); }
+  GROUND_HEX_NOW = hx;
+  /* vignette stays darker than its ground at every depth: zone + [−2,−3,−1] */
+  wcVignRGB[0] = Math.round(lerp(VIGNETTE_RGB[0], Math.max(0, z[0] - 2), t));
+  wcVignRGB[1] = Math.round(lerp(VIGNETTE_RGB[1], Math.max(0, z[1] - 3), t));
+  wcVignRGB[2] = Math.round(lerp(VIGNETTE_RGB[2], Math.max(0, z[2] - 1), t));
+  return t;
+}
+
+/* tinted vignette — geometry identical to paintVignette; the gradient is
+   memoized on (tone, w, h) so a gesture rebuilds a handful, never per frame */
+let wcVgKey = -1, wcVgW = 0, wcVgH = 0, wcVgGrad = null;
+function paintVignetteWater(c, w_, h_) {
+  const key = (wcVignRGB[0] << 16) | (wcVignRGB[1] << 8) | wcVignRGB[2];
+  if (!wcVgGrad || wcVgKey !== key || wcVgW !== w_ || wcVgH !== h_) {
+    const R = Math.hypot(w_, h_) / 2;
+    const r0 = Math.min(w_, h_) * 0.325;
+    const g = c.createRadialGradient(w_ / 2, h_ / 2, r0, w_ / 2, h_ / 2, R);
+    g.addColorStop(0, rgbaStr(wcVignRGB, 0));
+    g.addColorStop(1, rgbaStr(wcVignRGB, 1));
+    wcVgKey = key; wcVgW = w_; wcVgH = h_; wcVgGrad = g;
+  }
+  c.fillStyle = wcVgGrad;
+  c.fillRect(0, 0, w_, h_);
+}
+
+/* --- pressure in the hand — the water thickens fractionally with depth.
+   τ: 180→150ms via a 0.35 exponent, so the change spreads across the whole
+   journey instead of hiding below 2000m. Felt, never seen; the detent
+   spring is untouched and a full flick still reaches the floor. */
+function dTau(d) {
+  return 0.150 + 0.030 * (1 - Math.pow(d / 11000, 0.35));
+}
+
+/* --- marine snow — 28 single-pixel motes, whisper alpha, seeded once.
+   Deterministic per session (mulberry32, fixed seed); zero per-frame
+   allocation; parallax 0.35 so descending streams them gently upward. ---- */
+const WC_SNOW_N = 28, WC_SNOW_P = 0.35;
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function initMarineSnow() {
+  const rnd = mulberry32(10911);                 /* fixed seed — same sea every session */
+  const sn = DS.snow = new Float32Array(WC_SNOW_N * 4);
+  for (let j = 0; j < WC_SNOW_N; j++) {
+    sn[j * 4] = 0.02 + 0.96 * rnd();             /* xFrac */
+    sn[j * 4 + 1] = rnd();                       /* yFrac */
+    sn[j * 4 + 2] = 0.04 + 0.06 * rnd();         /* alpha 0.04–0.10 */
+    sn[j * 4 + 3] = 2 + 3 * rnd();               /* fall 2–5 px/s, world, downward */
+  }
+}
+/* density thins with depth — near-none below the midnight line, hadal empty */
+function wcSnowK(d) {
+  if (d <= 200) return 1;
+  if (d <= 1000) return 1 - 0.85 * sstep((d - 200) / 800);
+  if (d <= 2500) return 0.15 * (1 - sstep((d - 1000) / 1500));
+  return 0;
+}
+function drawMarineSnow(c, w_, h_, Y0, aMul, vy) {
+  if (aMul <= 0.004 || !DS.snow) return;
+  const k = wcSnowK(dM(DS.s));
+  if (k <= 0.001) return;                        /* hadal water is empty — skip the loop */
+  const WRAP = DS.snowWrap || h_ + 240;
+  const sn = DS.snow, clockPx = DS.snowClock, par = WC_SNOW_P * Y0;
+  /* fast scroll: the card-ghost grammar, actually honored — the ghosts'
+     energy is taken FROM the main mote (composite alpha stays a through
+     the whole transition) and the ghost share ramps in from the |gy|
+     threshold, so streak onset never steps brightness. vy is the caller's
+     shared derivative — never resampled here. */
+  let gy = 0, gsh = 0;
+  if (!REDUCED && vy && Math.abs(DS.v) > BLUR_V) {
+    gy = clamp(vy * DS.v * 0.006 * WC_SNOW_P, -12, 12);
+    gsh = 0.25 * clamp((Math.abs(gy) - 0.5) / 1.5, 0, 1);
+  }
+  c.save();
+  c.fillStyle = THREAD_INK;
+  for (let j = 0; j < WC_SNOW_N; j++) {
+    const a = sn[j * 4 + 2] * k * aMul;
+    if (a < 0.004) continue;
+    const raw = sn[j * 4 + 1] * WRAP + sn[j * 4 + 3] * clockPx - par;
+    const sy = ((raw % WRAP) + WRAP) % WRAP - 120;
+    const sx = sn[j * 4] * w_;
+    if (gsh > 0.003) {
+      c.globalAlpha = a * (1 - 2 * gsh);         /* main yields what the ghosts take */
+      c.fillRect(sx, sy, 1, 1);
+      c.globalAlpha = a * gsh;
+      c.fillRect(sx, sy + gy, 1, 1);
+      c.fillRect(sx, sy - gy, 1, 1);
+    } else {
+      c.globalAlpha = a;
+      c.fillRect(sx, sy, 1, 1);
+    }
+  }
+  c.restore();
+}
+/* the snow tail is the only reason a settled descent still frames — and it
+   rides the sky-drift 10fps path, then goes fully dark after 4s */
+function snowOnly(now) {
+  if (S.morph || S.mode !== 'descent' || REDUCED) return false;
+  if (now >= DS.snowUntil) return false;
+  if (DS.phase !== 'rest' || DS.cxA || DS.cyA) return false;
+  if (now < DS.rampUntil) return false;
+  if (DS.hintT0 && now < DS.hintT0 + 400) return false;
+  if (S.flight || S.time.anim || S.time.playing) return false;
+  if (lensAnim.from !== lensAnim.to && now - lensAnim.t0 < 420) return false;
+  if (S.minuteAnim && now - S.minuteAnim.t0 < 140) return false;
+  for (const a of S.hoverAnims.values()) if (now - a.t0 < a.dur) return false;
+  for (const a of S.famHoverAnims.values()) if (now - a.t0 < 220) return false;
+  for (const a of famActiveAnims.values()) if (now - a.t0 < a.dur) return false;
+  for (const a of S.panelHoverAnims.values()) if (now - a.t0 < 140) return false;
+  if (S.selection && now - S.selection.t0 < S.selection.animLen + 500) return false;
+  if (S.releasing) return false;
+  return true;
+}
+
+/* --- depth annotations — the only words. True one-line facts, engraved
+   at their real depth in the strata rulers' exact typography — caps, so
+   the mode keeps ONE engraved voice (the 0.18em tracking is calibrated
+   for it). Figures verified: RSTC recreational limit 40m; Nitsch 2007
+   no-limit RECORD 214m — "record", not "dive": the 2012 253m dive went
+   deeper but was never ratified, so the record scoping is what makes the
+   line true; Gabr 2014 scuba 332.35m; aphotic boundary 1000m; Titanic
+   wreck ≈3800m; hadal boundary 6000m (the brief said abyssal — that zone
+   begins at 4000m); Challenger Deep 10,935±6m (2021 survey). ------------- */
+const WC_FACTS = [
+  [0, '0 M — SURFACE'],
+  [40, '−40 M — RECREATIONAL DIVING’S LIMIT'],
+  [214, '−214 M — DEEPEST FREEDIVING RECORD'],
+  [332, '−332 M — DEEPEST SCUBA DIVE'],
+  [1000, '−1,000 M — THE MIDNIGHT ZONE BEGINS'],
+  [3800, '−3,800 M — THE TITANIC'],
+  [6000, '−6,000 M — THE HADAL ZONE BEGINS'],
+  [10935, '−10,935 M — CHALLENGER DEEP']
+];
+const WC_SURFACE_Y = -224;                       /* 3.5 pitches above card 0 */
+function initDepthAnnotations() {
+  /* placement is deterministic, computed once: natural depth position, then
+     card rule (24px), strata rule (28px), sibling rule (20px) — in order */
+  const shelfYs = DS.shelfIdx.map(b => (dYof(b - 1) + dYof(b)) / 2);
+  const ys = [], labels = [];
+  for (const [d, label] of WC_FACTS) {
+    let y;
+    if (d < DS.wrM[0]) {
+      y = WC_SURFACE_Y * (1 - d / DS.wrM[0]);    /* the surface region */
+    } else {
+      let iA = 0;
+      for (let i = 0; i < DS.n; i++) if (DS.wrM[i] < d) iA = i;
+      const i1 = Math.min(iA + 1, DS.n - 1);
+      const span = DS.wrM[i1] - DS.wrM[iA];
+      y = span > 0 ? lerp(dYof(iA), dYof(i1), (d - DS.wrM[iA]) / span) : dYof(iA);
+    }
+    /* card rule — never within 24px of a plate center; an exact landing
+       (t = 1.0) yields to the shallow side */
+    let ni = 0, nd = Infinity;
+    for (let i = 0; i < DS.n; i++) {
+      const dd = Math.abs(y - dYof(i));
+      if (dd < nd) { nd = dd; ni = i; }
+    }
+    if (nd < 24) y = y <= dYof(ni) ? dYof(ni) - 24 : dYof(ni) + 24;
+    /* strata rule — nudge deeper off a shelf ruler */
+    for (const sy of shelfYs) if (Math.abs(y - sy) < 28) y = sy + 28;
+    /* sibling rule — the later fact yields entirely */
+    let clash = false;
+    for (const py of ys) if (Math.abs(y - py) < 20) { clash = true; break; }
+    if (clash) continue;
+    ys.push(Math.round(y));
+    labels.push(label);
+  }
+  DS.annY = Float32Array.from(ys);
+  DS.annLabel = labels;
+  /* widths measured once — labels, font, and tracking are fixed at init
+     (system font stack: no async webfont to wait for), so a scroll frame
+     never allocates a TextMetrics. Export reuses the same CSS-px widths. */
+  ctx.save();
+  setType(ctx, 10, 500, false, 0.18);
+  DS.annW = Float32Array.from(labels, l => ctx.measureText(l).width);
+  DS.shelfW = Float32Array.from(DS.shelfLabel, l => ctx.measureText(l).width);
+  ctx.restore();
+}
+function drawDepthAnnotations(c, w_, h_, cx, cy, Y0, alpha, scFocus, s) {
+  if (alpha <= 0.01 || !DS.annY) return;
+  c.save();
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  setType(c, 10, 500, false, 0.18);
+  /* the eye of the yield is the CONTINUOUS scroll position dYs(s), never
+     dYof(round(s)) — round() flips at half-card boundaries and would snap
+     the slide ~180px in one frame on a slow scrub. dYs(s) and scFocus
+     (cos is even across the round() flip) are both smooth in s. */
+  const ey = dYs(s);
+  for (let k = 0; k < DS.annY.length; k++) {
+    const wy = DS.annY[k];
+    const ry = snap(cy + wy - Y0);
+    if (ry < -30 || ry > h_ + 30) continue;
+    const label = DS.annLabel[k];
+    const tw = DS.annW[k];
+    /* label yield — through the focused card's span the engraving slides
+       left of the specimen instead of dying behind it. At rest it sits on
+       the strata rulers' axis (w_/2) — one engraved centerline; the card
+       lives at cx (they differ when the panel is open), so the dodge is
+       gated on actual horizontal overlap (ov), also continuous. */
+    const u = clamp((96 - Math.abs(wy - ey)) / 40, 0, 1);
+    let lx = w_ / 2;
+    if (u > 0) {
+      const ov = clamp((cx + 84 * scFocus + 8 - (w_ / 2 - tw / 2 - 16)) / 24, 0, 1);
+      if (ov > 0) lx = lerp(w_ / 2, cx - (84 * scFocus + 24 + tw / 2), sstep(u) * ov);
+    }
+    if (lx < 24 + tw / 2) lx = 24 + tw / 2;
+    c.globalAlpha = alpha;
+    c.strokeStyle = 'rgba(233,237,242,0.08)';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(0, ry + 0.5);
+    c.lineTo(w_, ry + 0.5);
+    c.stroke();
+    c.globalAlpha = 1;
+    c.fillStyle = GROUND_HEX_NOW;
+    c.fillRect(lx - tw / 2 - 16, ry - 8, tw + 32, 17);
+    c.globalAlpha = alpha;
+    c.fillStyle = TEXT_3;
+    c.fillText(label, lx, ry + 0.5);
+  }
+  c.restore();
+}
+
+/* --- the surface — light as a ceiling above the 0M line, no animation.
+   A 1×256 strip baked once; ≤ +7.4/255 lift, fading within ~1.5 strata. --- */
+let wcStrip = null;
+function getWcStrip() {
+  if (wcStrip) return wcStrip;
+  const c = document.createElement('canvas');
+  c.width = 1; c.height = 256;
+  const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, 'rgba(168,188,202,0.04)');
+  gr.addColorStop(1, 'rgba(168,188,202,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 1, 256);
+  wcStrip = c;
+  return c;
+}
+function drawSurfaceCeiling(c, w_, h_, cy, Y0, aMul) {
+  if (aMul <= 0.01) return;
+  const lineY = cy + WC_SURFACE_Y - Y0;
+  if (lineY <= -h_ * 0.5) return;                /* the surface is far above — nothing prints */
+  c.save();
+  c.globalAlpha = aMul;
+  c.drawImage(getWcStrip(), 0, lineY - 420, w_, 420);
+  if (lineY - 420 > 0) {
+    c.fillStyle = 'rgba(168,188,202,0.04)';      /* constant above the ramp — brightest at top */
+    c.fillRect(0, 0, w_, lineY - 420);
+  }
+  c.restore();
+}
+
+/* ======================================================================
    17 · RESIZE + BOOT
    ====================================================================== */
 
@@ -4760,6 +5144,7 @@ function resize() {
   canvas.height = Math.max(1, Math.round(H * dpr));
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   rebuildVignette();
+  DS.snowWrap = H + 240;         /* §18c — the marine-snow wrap tracks the viewport */
   sizeRuler();
   if (S.loaded) {
     const prevFit = S.fitZ;

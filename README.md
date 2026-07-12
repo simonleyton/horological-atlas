@@ -55,6 +55,7 @@ node build/layout.mjs
 | Key | Action |
 |---|---|
 | Scroll / drag | Descend or ascend the helix — inertia coasts, then settles dead-beat on the nearest card |
+| Sounding line (left edge) | The whole column in miniature — click to dive to any depth, drag to scrub; strata ticks labeled, annotation depths as knots |
 | ↑ ↓ | Step one card |
 | PgUp / PgDn | Jump one stratum |
 | Home / End | Surface / deepest |

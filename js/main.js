@@ -328,6 +328,7 @@ function frame(now) {
   stepFlight(now);
   stepDrift(now);
   stepDescent(now);
+  if (S.mode === 'descent') syncSounding();
   if (S.loaded) {
     curTY = timeYear(now);
     positionThumb(curTY);
@@ -3955,6 +3956,10 @@ function initDescent() {
   for (let i = 0; i < DS.n; i++) DS.wrM[i] = DS.order[i].waterResistanceM || 0;
   initMarineSnow();
   initDepthAnnotations();
+  /* §18d — the sounding line hangs once the column exists */
+  elSounding.hidden = false;
+  elSounding.setAttribute('aria-valuemax', String(DS.n - 1));
+  sizeSounding();
 }
 
 /* --- vertical metric — pitch plus shelves, continuous in s ------------- */
@@ -4246,6 +4251,143 @@ function descentFlyToIndex(i) {
 function descentFlyToWatch(w) {
   if (isFinite(w._di)) descentFlyToIndex(w._di);
 }
+
+/* ======================================================================
+   18d · THE SOUNDING LINE — the Descent's depth instrument
+   The Ephemeris's vertical sibling: the whole column in miniature. Strata
+   as labeled ticks, the annotation depths as unlabeled knots, position as
+   a lume mark. Click dives, drag scrubs, wheel passes through. The long
+   scroll stays for savoring; the line exists for going.
+   ====================================================================== */
+
+const elSounding = $('sounding'), elSndCanvas = $('snd-canvas'),
+      elSndThumb = $('snd-thumb'), elSndReadout = $('snd-readout');
+const sndCtx = elSndCanvas.getContext('2d');
+const SND_X = 10.5;                    /* the line's x within the rail */
+let sndH = 0, sndDrag = null, sndLastAria = -1;
+
+function sndIdxForMetres(m) {
+  const a = DS.wrM;
+  if (!a || !DS.n) return 0;
+  let lo = 0, hi = DS.n - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (a[mid] < m) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+const sndYFor = i => (i / Math.max(DS.n - 1, 1)) * sndH;
+const sndIdxFor = y => clamp(y / Math.max(sndH, 1), 0, 1) * (DS.n - 1);
+
+function sizeSounding() {
+  if (!DS.n || elSounding.hidden) return;
+  sndH = elSounding.clientHeight || 1;
+  const w = elSounding.clientWidth || 76;
+  elSndCanvas.width = Math.max(1, Math.round(w * dpr));
+  elSndCanvas.height = Math.max(1, Math.round(sndH * dpr));
+  sndCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawSoundingLine();
+}
+function drawSoundingLine() {
+  if (!DS.n || sndH <= 0) return;
+  const c = sndCtx;
+  c.clearRect(0, 0, elSounding.clientWidth || 76, sndH);
+  c.lineWidth = 1;
+  /* the line itself */
+  c.strokeStyle = 'rgba(233,237,242,0.10)';
+  c.beginPath(); c.moveTo(SND_X, 0.5); c.lineTo(SND_X, sndH - 0.5); c.stroke();
+  /* knots — the annotation depths, felt more than read */
+  c.strokeStyle = 'rgba(233,237,242,0.14)';
+  for (const [m] of WC_FACTS) {
+    if (!isFinite(m) || m <= 0) continue;
+    const y = Math.round(sndYFor(sndIdxForMetres(m))) + 0.5;
+    c.beginPath(); c.moveTo(SND_X - 2, y); c.lineTo(SND_X + 2, y); c.stroke();
+  }
+  /* strata — longer ticks, labeled in the ruler's voice */
+  c.textAlign = 'left';
+  c.textBaseline = 'middle';
+  c.font = '400 9px ' + FONT_MONO;
+  for (let k = 0; k < DS.shelfIdx.length; k++) {
+    const y = Math.round(sndYFor(DS.shelfIdx[k])) + 0.5;
+    c.strokeStyle = 'rgba(233,237,242,0.22)';
+    c.beginPath(); c.moveTo(SND_X - 5, y); c.lineTo(SND_X + 5, y); c.stroke();
+    c.fillStyle = TEXT_3;
+    c.fillText(String(DS.shelfLabel[k] || '').replace(/—/g, '').trim(), SND_X + 11, y);
+  }
+}
+function syncSounding() {
+  if (!DS.n || elSounding.hidden) return;
+  elSndThumb.style.top = (sndYFor(DS.s) - 0.5) + 'px';
+  const v = clamp(Math.round(DS.s), 0, DS.n - 1);
+  if (v !== sndLastAria) {
+    sndLastAria = v;
+    elSounding.setAttribute('aria-valuenow', String(v));
+    elSounding.setAttribute('aria-valuetext', `−${fmtM(Math.round(dM(v)))} M`);
+  }
+}
+function sndShowReadout(y) {
+  elSndReadout.textContent = `−${fmtM(Math.round(dM(sndIdxFor(y))))} M`;
+  elSndReadout.style.top = clamp(y, 6, sndH - 6) + 'px';
+  elSndReadout.classList.add('on');
+}
+function sndHideReadout() { elSndReadout.classList.remove('on'); }
+
+elSounding.addEventListener('pointerdown', e => {
+  if (S.mode !== 'descent' || S.morph || !DS.n) return;
+  anyInput();
+  sndDrag = { moved: false, y0: e.clientY };
+  elSounding.setPointerCapture(e.pointerId);
+  sndShowReadout(e.clientY - elSounding.getBoundingClientRect().top);
+  e.preventDefault();
+});
+elSounding.addEventListener('pointermove', e => {
+  if (elSounding.hidden) return;
+  const y = e.clientY - elSounding.getBoundingClientRect().top;
+  if (!sndDrag) { sndShowReadout(y); return; }
+  if (!sndDrag.moved && Math.abs(e.clientY - sndDrag.y0) > 4) sndDrag.moved = true;
+  if (sndDrag.moved) {
+    /* live scrub — the drag owns the column; the detent takes it back on release */
+    DS.s = sndIdxFor(y);
+    DS.v = 0;
+    DS.phase = 'gesture';
+    DS.glide = null;
+    DS.lastT = performance.now();
+    setHover(null);
+    sndShowReadout(y);
+    invalidate();
+  }
+});
+function sndEnd(e) {
+  if (!sndDrag) return;
+  const moved = sndDrag.moved;
+  sndDrag = null;
+  sndHideReadout();
+  if (moved) {
+    DS.phase = 'coast';                     /* v = 0 → the detent settles it */
+    DS.lastT = performance.now();
+    invalidate();
+  } else {
+    const y = e.clientY - elSounding.getBoundingClientRect().top;
+    descentFlyToIndex(Math.round(sndIdxFor(y)));
+  }
+}
+elSounding.addEventListener('pointerup', sndEnd);
+elSounding.addEventListener('pointercancel', () => { sndDrag = null; sndHideReadout(); });
+elSounding.addEventListener('pointerleave', () => { if (!sndDrag) sndHideReadout(); });
+elSounding.addEventListener('wheel', e => {
+  if (S.mode !== 'descent' || S.morph) return;
+  e.preventDefault();
+  descentWheel(e.deltaY);
+}, { passive: false });
+elSounding.addEventListener('keydown', e => {
+  if (S.mode !== 'descent' || S.morph || !DS.n) return;
+  let handled = true;
+  if (e.key === 'ArrowDown') descentStep(1);
+  else if (e.key === 'ArrowUp') descentStep(-1);
+  else if (e.key === 'PageDown') descentStratumStep(1);
+  else if (e.key === 'PageUp') descentStratumStep(-1);
+  else if (e.key === 'Home') descentGlideTo(0, 600, easeGlide);
+  else if (e.key === 'End') descentGlideTo(DS.n - 1, 900, easeGlide);
+  else handled = false;
+  if (handled) { e.preventDefault(); e.stopPropagation(); }
+});
 
 /* --- the strata rulers — the Ephemeris ruler's language, laid on its side */
 function drawDescentRulers(c, w_, h_, cy, Y0, alpha) {
@@ -5146,6 +5288,7 @@ function resize() {
   rebuildVignette();
   DS.snowWrap = H + 240;         /* §18c — the marine-snow wrap tracks the viewport */
   sizeRuler();
+  sizeSounding();                /* §18d — the line re-hangs at the new height */
   if (S.loaded) {
     const prevFit = S.fitZ;
     computeFit();

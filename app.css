@@ -201,6 +201,61 @@ body.descent #fit-chip {
   transition: opacity 400ms var(--ease-out), visibility 0s linear 400ms;
 }
 
+/* ---------- SOUNDING LINE — the Descent's depth instrument ----------
+   The Ephemeris's vertical sibling: the whole column in miniature. Strata
+   as labeled ticks, annotation depths as knots, position as a lume mark.
+   Click dives; drag scrubs. Visible only below the surface. */
+
+#sounding {
+  position: fixed;
+  left: 24px; top: 50%;
+  transform: translateY(-50%);
+  height: 56vh;
+  width: 76px;
+  z-index: 3;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 400ms var(--ease-out), visibility 0s linear 400ms;
+}
+body.descent:not(.morphing) #sounding {
+  opacity: 1; visibility: visible; pointer-events: auto;
+  transition: opacity 400ms var(--ease-out) 160ms, visibility 0s;
+}
+body.export #sounding, body.observatory #sounding {
+  opacity: 0 !important; pointer-events: none !important; visibility: hidden;
+}
+#sounding[hidden] { display: none; }
+#snd-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#snd-thumb {
+  position: absolute; left: 4px;
+  width: 13px; height: 1px;
+  background: var(--lume);
+  pointer-events: none;
+}
+#sounding:focus-visible { box-shadow: none; }
+#sounding:focus-visible #snd-thumb { height: 3px; margin-top: -1px; box-shadow: var(--focus-ring); }
+#snd-readout {
+  position: absolute; left: 24px;
+  transform: translateY(-50%);
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-2);
+  background: var(--surface-1);
+  border: 1px solid var(--line-1);
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 160ms var(--ease-out);
+  pointer-events: none;
+}
+#snd-readout.on { opacity: 1; }
+@media (max-width: 760px) {
+  #sounding { left: 10px; width: 56px; height: 48vh; }
+}
+
 /* ---------- SEARCH ---------- */
 
 #search {
@@ -1063,7 +1118,8 @@ footer {
 
 @media (prefers-reduced-motion: reduce) {
   .chrome, #panel, #panel .sec, #search, #status, #panel-content,
-  #fam-preview, #fp-media img.fp-slide, #lightbox, #lb-img, #lens-panel, #watch-preview {
+  #fam-preview, #fp-media img.fp-slide, #lightbox, #lb-img, #lens-panel, #watch-preview,
+  #sounding, #snd-readout {
     transition-duration: 80ms !important;
     transition-delay: 0ms !important;
     transition-property: opacity, background, color, border-color !important;

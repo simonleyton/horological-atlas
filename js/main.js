@@ -267,6 +267,9 @@ let curTY = Infinity;
    re-plated dark (uniformity). Rows prefer CATALOG; single heroes prefer IMAGES. */
 let IMAGES = {};
 let CATALOG = {};
+/* card surfaces demand dial-forward soldier shots — an editorial photo rides a
+   card only if the pose audit cleared it (no pose field = not yet audited) */
+const frontalOk = e => !e || e.pose !== 'angled';
 
 /* ======================================================================
    4 · SCHEDULING — single rAF loop, idle when settled
@@ -1649,7 +1652,7 @@ function familyMedia(famId) {
   if (cats.length >= 2) {
     return cats.slice(0, 5).map(w => ({ w, ...CATALOG[w.id], isCatalog: true }));
   }
-  const eds = members.filter(w => IMAGES[w.id] && IMAGES[w.id].file);
+  const eds = members.filter(w => IMAGES[w.id] && IMAGES[w.id].file && frontalOk(IMAGES[w.id]));
   eds.sort((a, b) => {
     const ca = IMAGES[a.id].confidence === 'high' ? 0 : 1;
     const cb = IMAGES[b.id].confidence === 'high' ? 0 : 1;
@@ -1820,7 +1823,7 @@ function queueWatchPreview(id) {
     clearTimeout(wpHideTimer);
     elWpMedia.innerHTML = '';
     const pick = (CATALOG[id] && CATALOG[id].file) ? CATALOG[id]
-      : (IMAGES[id] && IMAGES[id].file) ? IMAGES[id] : null;
+      : (IMAGES[id] && IMAGES[id].file && frontalOk(IMAGES[id])) ? IMAGES[id] : null;
     if (pick) {
       const img = document.createElement('img');
       img.src = './data/' + pick.file;
@@ -4050,9 +4053,10 @@ function maybeLoadImages() {
     const w = DS.order[i];
     const rec = getSprite(w);
     if (rec.img || rec.fail || rec.pending) continue;
-    /* the media rule — identical to the preview cards */
+    /* the media rule — identical to the preview cards, frontal-gated */
     const cat = CATALOG[w.id] && CATALOG[w.id].file;
-    const ed = !cat && IMAGES[w.id] && IMAGES[w.id].file;
+    const ed = !cat && IMAGES[w.id] && IMAGES[w.id].file
+      && frontalOk(IMAGES[w.id]) && IMAGES[w.id].file;
     if (!cat && !ed) { rec.fail = true; continue; }
     rec.pending = true;
     DS.loading.add(w.id);

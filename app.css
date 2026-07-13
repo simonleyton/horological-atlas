@@ -250,6 +250,24 @@ body.export #sounding, body.observatory #sounding {
   pointer-events: none;
 }
 #snd-readout.on { opacity: 1; }
+
+/* strata labels — real buttons over the rail: native hover/focus/click,
+   smooth CSS transition; each dives to its depth grade */
+.snd-label {
+  position: absolute; left: 18px;
+  transform: translate(0, -50%);
+  padding: 4px 8px 4px 0;
+  font-family: var(--font-mono);
+  font-size: 9px; letter-spacing: 0.02em;
+  color: var(--text-3);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+.snd-label:hover,
+.snd-label:focus-visible { color: var(--text-1); transform: translate(3px, -50%); }
+.snd-label:focus-visible { box-shadow: var(--focus-ring); border-radius: 3px; }
+
 @media (max-width: 760px) {
   #sounding { left: 10px; width: 56px; height: 48vh; }
 }

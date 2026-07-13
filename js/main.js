@@ -4314,6 +4314,7 @@ function sizeSounding() {
   elSndCanvas.height = Math.max(1, Math.round(sndH * dpr));
   sndCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawSoundingLine();
+  buildSoundingLabels();
 }
 function drawSoundingLine() {
   if (!DS.n || sndH <= 0) return;
@@ -4330,16 +4331,35 @@ function drawSoundingLine() {
     const y = Math.round(sndYFor(sndIdxForMetres(m))) + 0.5;
     c.beginPath(); c.moveTo(SND_X - 2, y); c.lineTo(SND_X + 2, y); c.stroke();
   }
-  /* strata — longer ticks, labeled in the ruler's voice */
-  c.textAlign = 'left';
-  c.textBaseline = 'middle';
-  c.font = '400 9px ' + FONT_MONO;
+  /* strata — longer ticks; the labels themselves are DOM buttons (buildSoundingLabels) */
   for (let k = 0; k < DS.shelfIdx.length; k++) {
     const y = Math.round(sndYFor(DS.shelfIdx[k])) + 0.5;
     c.strokeStyle = 'rgba(233,237,242,0.22)';
     c.beginPath(); c.moveTo(SND_X - 5, y); c.lineTo(SND_X + 5, y); c.stroke();
-    c.fillStyle = TEXT_3;
-    c.fillText(String(DS.shelfLabel[k] || '').replace(/—/g, '').trim(), SND_X + 11, y);
+  }
+}
+
+/* the strata labels as real buttons — hover/focus/click, each glides to its
+   depth grade; rebuilt on size change (positions are absolute in px) */
+function buildSoundingLabels() {
+  for (const el of elSounding.querySelectorAll('.snd-label')) el.remove();
+  for (let k = 0; k < DS.shelfIdx.length; k++) {
+    const idx = DS.shelfIdx[k];
+    const label = String(DS.shelfLabel[k] || '').replace(/—/g, '').trim();
+    if (!label) continue;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'snd-label';
+    b.textContent = label;
+    b.style.top = sndYFor(idx) + 'px';
+    b.setAttribute('aria-label', `Dive to ${label}`);
+    b.addEventListener('pointerdown', e => e.stopPropagation());   /* not a track scrub */
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      anyInput();
+      descentFlyToIndex(idx);
+    });
+    elSounding.appendChild(b);
   }
 }
 function syncSounding() {
@@ -4370,7 +4390,12 @@ elSounding.addEventListener('pointerdown', e => {
 elSounding.addEventListener('pointermove', e => {
   if (elSounding.hidden) return;
   const y = e.clientY - elSounding.getBoundingClientRect().top;
-  if (!sndDrag) { sndShowReadout(y); return; }
+  /* over a label button, the label IS the readout — don't double up */
+  if (!sndDrag) {
+    if (!(e.target instanceof Element && e.target.classList.contains('snd-label'))) sndShowReadout(y);
+    else sndHideReadout();
+    return;
+  }
   if (!sndDrag.moved && Math.abs(e.clientY - sndDrag.y0) > 4) sndDrag.moved = true;
   if (sndDrag.moved) {
     /* live scrub — the drag owns the column; the detent takes it back on release */

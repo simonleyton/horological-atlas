@@ -4332,33 +4332,46 @@ function drawSoundingLine() {
     c.beginPath(); c.moveTo(SND_X - 2, y); c.lineTo(SND_X + 2, y); c.stroke();
   }
   /* strata — longer ticks; the labels themselves are DOM buttons (buildSoundingLabels) */
+  c.strokeStyle = 'rgba(233,237,242,0.22)';
   for (let k = 0; k < DS.shelfIdx.length; k++) {
     const y = Math.round(sndYFor(DS.shelfIdx[k])) + 0.5;
-    c.strokeStyle = 'rgba(233,237,242,0.22)';
     c.beginPath(); c.moveTo(SND_X - 5, y); c.lineTo(SND_X + 5, y); c.stroke();
   }
+  /* the floor — a final tick for the deepest watch */
+  const fy = Math.round(sndYFor(DS.n - 1)) - 0.5;
+  c.beginPath(); c.moveTo(SND_X - 5, fy); c.lineTo(SND_X + 5, fy); c.stroke();
 }
 
 /* the strata labels as real buttons — hover/focus/click, each glides to its
    depth grade; rebuilt on size change (positions are absolute in px) */
 function buildSoundingLabels() {
   for (const el of elSounding.querySelectorAll('.snd-label')) el.remove();
+  /* gather the strata bands + the floor (deepest watch, 11,000 m) */
+  const specs = [];
   for (let k = 0; k < DS.shelfIdx.length; k++) {
-    const idx = DS.shelfIdx[k];
-    const label = String(DS.shelfLabel[k] || '').replace(/—/g, '').trim();
-    if (!label) continue;
+    const text = String(DS.shelfLabel[k] || '').replace(/—/g, '').trim();
+    if (text) specs.push({ idx: DS.shelfIdx[k], text, y: clamp(sndYFor(DS.shelfIdx[k]), 6, sndH - 6) });
+  }
+  const deep = DS.n - 1;
+  const deepM = DS.wrM && DS.wrM[deep] ? Math.round(DS.wrM[deep]) : 0;
+  if (deepM > 0) specs.push({ idx: deep, text: `${fmtM(deepM)} M`, y: clamp(sndYFor(deep), 6, sndH - 6),
+    floor: true, aria: `Dive to the deepest — ${fmtM(deepM)} M` });
+  /* place bottom-up: the floor keeps its slot at the foot; sparse deep watches
+     crowd the rail's end, so a band label within the min gap of a deeper one yields */
+  const GAP = 15;
+  specs.sort((a, b) => b.y - a.y);
+  let lastY = Infinity;
+  for (const s of specs) {
+    if (!s.floor && lastY - s.y < GAP) continue;
+    lastY = s.y;
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'snd-label';
-    b.textContent = label;
-    b.style.top = sndYFor(idx) + 'px';
-    b.setAttribute('aria-label', `Dive to ${label}`);
+    b.textContent = s.text;
+    b.style.top = s.y + 'px';
+    b.setAttribute('aria-label', s.aria || `Dive to ${s.text}`);
     b.addEventListener('pointerdown', e => e.stopPropagation());   /* not a track scrub */
-    b.addEventListener('click', e => {
-      e.stopPropagation();
-      anyInput();
-      descentFlyToIndex(idx);
-    });
+    b.addEventListener('click', e => { e.stopPropagation(); anyInput(); descentFlyToIndex(s.idx); });
     elSounding.appendChild(b);
   }
 }

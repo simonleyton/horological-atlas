@@ -1866,7 +1866,8 @@ function queueWatchPreview(id) {
     elWpName.textContent = w.model || '';
     const price = Array.isArray(w.priceBandUsd) && w.priceBandUsd.length === 2
       ? `${fmtShortUsd(w.priceBandUsd[0])}–${fmtShortUsd(w.priceBandUsd[1])}` : '';
-    elWpMeta.textContent = [w.year, isFinite(w.diameterMm) ? `Ø ${w.diameterMm} mm` : null, price]
+    elWpMeta.textContent = [w.reference ? `Ref. ${w.reference}` : null, w.year,
+      isFinite(w.diameterMm) ? `Ø ${w.diameterMm} mm` : null, price]
       .filter(Boolean).join(' · ');
     /* above the star (or the helix card), clamped; below when cramped —
        one card, one contract, mode decides only the anchor geometry */
@@ -2285,6 +2286,7 @@ function showPanel(w, lin, crossfade) {
 
 function familyMetaLine(w) {
   return [
+    w.reference ? `Ref. ${w.reference}` : null,
     isFinite(w.diameterMm) ? `Ø ${w.diameterMm} mm` : null,
     isFinite(w.waterResistanceM) ? `${w.waterResistanceM} m` : null,
     w.movement ? sentence(w.movement) : null
@@ -4244,7 +4246,8 @@ function refreshFocus() {
   if (n === DS.lastFocus) return;               /* strings rebuilt only on focus change */
   DS.lastFocus = n;
   const w = DS.order[n];
-  DS.pillText = `${String(w.brand || '').toUpperCase()} ${String(w.model || '').toUpperCase()} · ${fmtM(w.waterResistanceM)} M`;
+  const pillRef = w.reference ? ` · REF. ${String(w.reference).toUpperCase()}` : '';
+  DS.pillText = `${String(w.brand || '').toUpperCase()} ${String(w.model || '').toUpperCase()}${pillRef} · ${fmtM(w.waterResistanceM)} M`;
   const cnt = DS.wrCount.get(w.waterResistanceM) || 1;
   DS.gaugeText = `−${fmtM(w.waterResistanceM)} M · ${cnt} ${cnt === 1 ? 'watch' : 'watches'} at this depth`;
   if (descentChromeOn) elFooterLeft.textContent = DS.gaugeText;

@@ -3872,6 +3872,13 @@ const LEGEND_SKY = elKeyLegend.innerHTML;
 const LEGEND_DESCENT = 'D surface · E export · Esc back';
 
 const CARD_W = 168, CARD_H = 112;              /* 3:2 plate at scale 1 */
+/* the focus bloom — the detent's reward. The card nearest the fractional
+   scroll swells so the watch can actually be enjoyed; prox² concentrates
+   the swell at the landing, so scrolling never pops, it breathes. */
+const FOCUS_BLOOM = 0.55;                      /* +55% at perfect center */
+const bloomOf = t => 1 + FOCUS_BLOOM * t * t;  /* t = clamp(1 − |i−s|, 0..1) */
+const SPRS_IMG = 3;  /* photography sprites at 3× — the bloomed hero stays sharp on retina;
+                        glyph plates keep SPRS (linework survives modest upscale, memory doesn't) */
 const SPRS = 2;   /* sprite resolution — fixed at 2× logical (spec §3: 336×224). The spec's
                      dpr cap bounds the ceiling, not the floor: flanking cards minify from
                      0.40–0.90, so a 1× source softens every plate on 1× displays; and a
@@ -4027,9 +4034,9 @@ function buildBaseSprite(w) {
 }
 function buildImgSprite(img, isCatalog) {
   const c = document.createElement('canvas');
-  c.width = CARD_W * SPRS; c.height = CARD_H * SPRS;
+  c.width = CARD_W * SPRS_IMG; c.height = CARD_H * SPRS_IMG;
   const g = c.getContext('2d');
-  g.scale(SPRS, SPRS);
+  g.scale(SPRS_IMG, SPRS_IMG);
   roundRectPath(g, 0, 0, CARD_W, CARD_H, 8);
   g.save();
   g.clip();
@@ -4507,7 +4514,7 @@ function drawDescent(c, w_, h_, now, isExport) {
      needs it before the card loop runs. */
   const phiF = (n - s) * HELIX_DTH;
   const dF = (1 + Math.cos(phiF)) / 2;
-  const scF = 0.40 + 0.60 * Math.pow(dF, 1.5);
+  const scF = (0.40 + 0.60 * Math.pow(dF, 1.5)) * bloomOf(Math.max(0, 1 - Math.abs(n - s)));
   const vy = -(dYs(s + 0.01) - dYs(s - 0.01)) / 0.02;   /* screen-px per card unit, shared */
   drawSurfaceCeiling(c, w_, h_, cy, Y0, 1);
   drawDescentRulers(c, w_, h_, cy, Y0, 1);
@@ -4522,7 +4529,7 @@ function drawDescent(c, w_, h_, now, isExport) {
     const d = (1 + Math.cos(phi)) / 2;
     const o = dSlots[m++];
     o.i = i; o.phi = phi; o.d = d;
-    o.sc = 0.40 + 0.60 * Math.pow(d, 1.5);
+    o.sc = (0.40 + 0.60 * Math.pow(d, 1.5)) * bloomOf(Math.max(0, 1 - Math.abs(i - s)));
     o.al = 0.08 + 0.92 * d * d;
     o.x = cx + R * Math.sin(phi);
     o.y = cy + dYof(i) - Y0;
@@ -4727,7 +4734,7 @@ function startMorph(dir) {
     const d = (1 + Math.cos(phi)) / 2;
     md.x1[i] = DS.cx + R * Math.sin(phi);
     md.y1[i] = DS.cy + dYof(i) - Y0;
-    md.sc[i] = 0.40 + 0.60 * Math.pow(d, 1.5);
+    md.sc[i] = (0.40 + 0.60 * Math.pow(d, 1.5)) * bloomOf(Math.max(0, 1 - Math.abs(i - DS.s)));
     md.al[i] = 0.08 + 0.92 * d * d;
     const rv = revealState(w, now);
     let bornA = 1, magScale = 1;
@@ -4865,7 +4872,7 @@ function drawMorph(c, w_, h_, now, isExport) {
     const Y0 = dYs(DS.s);
     const nF = clamp(Math.round(DS.s), 0, DS.n - 1);
     const dF = (1 + Math.cos((nF - DS.s) * HELIX_DTH)) / 2;
-    const scF = 0.40 + 0.60 * Math.pow(dF, 1.5);
+    const scF = (0.40 + 0.60 * Math.pow(dF, 1.5)) * bloomOf(Math.max(0, 1 - Math.abs(nF - DS.s)));
     drawSurfaceCeiling(c, w_, h_, DS.cy, Y0, descA);
     drawDescentRulers(c, w_, h_, DS.cy, Y0, descA);
     drawDepthAnnotations(c, w_, h_, DS.cx, DS.cy, Y0, descA, scF, DS.s);

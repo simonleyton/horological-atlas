@@ -845,5 +845,68 @@
     "license": "Unlicensed \u2014 personal prototype; clear before publishing",
     "source": "https://grandcaliber.com/products/rolex-submariner-5512",
     "confidence": "frontal"
+  },
+  "blancpain-fifty-fathoms-1953": {
+    "file": "img-catalog/blancpain-fifty-fathoms-1953.jpg",
+    "credit": "Bulang & Sons",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://bulangandsons.com/products/blancpain-fifty-fathoms-rotomatic-incabloc-w2565",
+    "confidence": "frontal"
+  },
+  "jlc-deep-sea-alarm-1959": {
+    "file": "img-catalog/jlc-deep-sea-alarm-1959.jpg",
+    "credit": "Antiquorum / EveryWatch",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://everywatch.com/jaeger-lecoultre/e857/watch-9007278",
+    "confidence": "frontal"
+  },
+  "seiko-monster-skx779-2000": {
+    "file": "img-catalog/seiko-monster-skx779-2000.jpg",
+    "credit": "Long Island Watch",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://longislandwatch.com/seiko-skx779k1-black-monster-watch-skx779k/",
+    "confidence": "frontal"
+  },
+  "vostok-amphibia-1967": {
+    "file": "img-catalog/vostok-amphibia-1967.jpg",
+    "credit": "Soviet Watch Store",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://sovietwatchstore.com/index.php/product/rare-soviet-vostok-amphibia-type-350-eared-watch-stainless-steel-case-3/",
+    "confidence": "frontal"
+  },
+  "doxa-sub-300t-1968": {
+    "file": "img-catalog/doxa-sub-300t-1968.jpg",
+    "credit": "Doxa Watches",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://doxawatches.com/products/sub-300t-professional",
+    "confidence": "frontal"
+  },
+  "lorier-neptune-2018": {
+    "file": "img-catalog/lorier-neptune-2018.jpg",
+    "credit": "Lorier Watches",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://www.lorierwatches.com/products/neptune-siv",
+    "confidence": "frontal"
+  },
+  "breitling-superocean-1957": {
+    "file": "img-catalog/breitling-superocean-1957.jpg",
+    "credit": "Antiquorum",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://catalog.antiquorum.swiss/en/lots/breitling-ref-1004-superocean-lot-360-38",
+    "confidence": "frontal"
+  },
+  "favre-leuba-bathy-50-1968": {
+    "file": "img-catalog/favre-leuba-bathy-50-1968.jpg",
+    "credit": "Bonhams",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://www.bonhams.com/auction/27299/lot/230/favre-leuba-montre-bracelet-de-plongee-en-acier-avec-profondimetre-mouvement-mecanique-favre-leuba-a-stainless-steel-manual-wind-divers-wristwatch-with-depth-gauge-bathy-50-circa-1960/",
+    "confidence": "frontal"
+  },
+  "panerai-radiomir-3646-1940": {
+    "file": "img-catalog/panerai-radiomir-3646-1940.jpg",
+    "credit": "Sotheby's",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://www.sothebys.com/en/buy/auction/2026/important-watches-4/radiomir-reference-3646-type-c-a-stainless-steel",
+    "confidence": "frontal"
   }
 }

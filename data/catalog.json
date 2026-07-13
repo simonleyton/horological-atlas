@@ -698,5 +698,12 @@
     "license": "Unlicensed \u2014 personal prototype; clear before publishing",
     "source": "",
     "confidence": "frontal"
+  },
+  "alsta-nautoscaph-1970": {
+    "file": "img-catalog/alsta-nautoscaph-1970.jpg",
+    "credit": "Second Hand Horology",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://secondhandhorology.com/products/the-original-jaws-watch-alsta-nautoscaph-dive-automatic-wristwatch-999-feet",
+    "confidence": "frontal"
   }
 }

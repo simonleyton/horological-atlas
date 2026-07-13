@@ -524,10 +524,33 @@ function initData(data) {
   initDescent();
 
   S.loaded = true;
-  startReveal();
+  defaultToDescent();            /* THE DESCENT is the default projection — land below the surface */
   scheduleMinuteTick();
   resetIdleTimer();
   invalidate();
+}
+
+/* Land directly in the Descent at boot — the rest-state of a completed dir=1
+   morph, minus the flight. The sky reveal is consumed (never seen from below);
+   toggling up to SKY later just shows the field settled. */
+function defaultToDescent() {
+  const now = performance.now();
+  S.reveal = null; S.revealDone = true; S.weave = null; S.weaveDone = true;
+  try { sessionStorage.setItem('atlas.revealed', '1'); } catch (e) { /* private mode */ }
+  body.classList.remove('pre-reveal', 'revealing');   /* chrome fades in via .chrome, no stagger */
+  S.mode = 'descent';
+  DS.cxA = DS.cyA = null;
+  DS.cx = descTargetCX();
+  DS.cy = descTargetCY();
+  DS.phase = 'rest';
+  DS.v = 0;
+  DS.lastT = now;
+  DS.lastFocus = -1;
+  refreshFocus();
+  applyDescentChrome(true);
+  body.classList.add('descent');
+  if (!REDUCED && DS.wrM && wcSnowK(dM(DS.s)) > 0) DS.snowUntil = now + 4000;
+  syncToggle();
 }
 
 function computeFit() {

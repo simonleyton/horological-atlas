@@ -1826,8 +1826,10 @@ function queueWatchPreview(id) {
     if (!w) return;
     clearTimeout(wpHideTimer);
     elWpMedia.innerHTML = '';
-    const pick = (CATALOG[id] && CATALOG[id].file) ? CATALOG[id]
-      : (IMAGES[id] && IMAGES[id].file && frontalOk(IMAGES[id])) ? IMAGES[id] : null;
+    /* card surfaces render the plated specimen layer only — never raw editorial
+       (a lifestyle/auction shot on stone or wrist can't be knocked out and
+       breaks the one-material rule; the glyph plate is the honest fallback) */
+    const pick = (CATALOG[id] && CATALOG[id].file) ? CATALOG[id] : null;
     if (pick) {
       const img = document.createElement('img');
       img.src = './data/' + pick.file;
@@ -4094,15 +4096,13 @@ function maybeLoadImages() {
     const w = DS.order[i];
     const rec = getSprite(w);
     if (rec.img || rec.fail || rec.pending) continue;
-    /* the media rule — identical to the preview cards, frontal-gated */
+    /* specimen layer only — raw editorial never rides a card (one material) */
     const cat = CATALOG[w.id] && CATALOG[w.id].file;
-    const ed = !cat && IMAGES[w.id] && IMAGES[w.id].file
-      && frontalOk(IMAGES[w.id]) && IMAGES[w.id].file;
-    if (!cat && !ed) { rec.fail = true; continue; }
+    if (!cat) { rec.fail = true; continue; }
     rec.pending = true;
     DS.loading.add(w.id);
     const img = new Image();
-    img.src = './data/' + (cat || ed);
+    img.src = './data/' + cat;
     img.decode().then(() => {
       rec.img = buildImgSprite(img, !!cat);
       rec.imgT0 = performance.now();            /* 240ms alpha-ramp over the glyph plate */

@@ -705,5 +705,26 @@
     "license": "Unlicensed \u2014 personal prototype; clear before publishing",
     "source": "https://secondhandhorology.com/products/the-original-jaws-watch-alsta-nautoscaph-dive-automatic-wristwatch-999-feet",
     "confidence": "frontal"
+  },
+  "seiko-skx007-1996": {
+    "file": "img-catalog/seiko-skx007-1996.jpg",
+    "credit": "Ashley Pomeroy (plated)",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://commons.wikimedia.org/wiki/File:Seiko_SKX007.jpg",
+    "confidence": "frontal"
+  },
+  "jenny-caribbean-1000-1964": {
+    "file": "img-catalog/jenny-caribbean-1000-1964.jpg",
+    "credit": "Hodinkee via PW Project Watch (plated)",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://pwprojectwatch.com/jenny-caribbean-1000/",
+    "confidence": "frontal"
+  },
+  "blancpain-fifty-fathoms-milspec-1957": {
+    "file": "img-catalog/blancpain-fifty-fathoms-milspec-1957.jpg",
+    "credit": "Phillips Watches (auction catalogue) (plated)",
+    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
+    "source": "https://www.phillips.com/detail/blancpain/CH080119/135",
+    "confidence": "frontal"
   }
 }

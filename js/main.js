@@ -356,6 +356,8 @@ function frame(now) {
     /* ~10fps is plenty for sky drift — and for the marine-snow tail (§18c) */
     if (driftOnly(pn) || snowOnly(pn)) setTimeout(invalidate, 100);
     else invalidate();
+  } else if (S.loaded) {
+    scheduleURLWrite();          /* §19 — the settled view becomes the URL */
   }
 }
 
@@ -524,7 +526,7 @@ function initData(data) {
   initDescent();
 
   S.loaded = true;
-  defaultToDescent();            /* THE DESCENT is the default projection — land below the surface */
+  if (!applyDeepLink()) defaultToDescent();   /* restore a shared view, else land in the default (descent) */
   scheduleMinuteTick();
   resetIdleTimer();
   invalidate();
@@ -551,6 +553,82 @@ function defaultToDescent() {
   body.classList.add('descent');
   if (!REDUCED && DS.wrM && wcSnowK(dM(DS.s)) > 0) DS.snowUntil = now + 4000;
   syncToggle();
+}
+
+/* ======================================================================
+   19 · DEEP LINKS — every view is a URL
+   mode, selection, descent depth, sky camera, year, family → the hash,
+   restored on load. replaceState only (no history spam), written when the
+   view settles or a selection/mode changes. Lens filters deferred (v1).
+   ====================================================================== */
+
+let urlSig = '', urlTimer = null;
+
+function urlFromState() {
+  const p = ['m=' + S.mode];
+  if (S.selection) p.push('w=' + S.selection.id);
+  else if (S.mode === 'descent') p.push('d=' + Math.round(DS.s));
+  else if (S.familyView) p.push('fam=' + S.familyView.id);
+  else p.push('c=' + Math.round(S.cam.x) + ',' + Math.round(S.cam.y) + ',' + S.cam.z.toFixed(2));
+  if (S.mode === 'sky' && timeEngaged()) p.push('y=' + Math.round(curTY));
+  return '#' + p.join('&');
+}
+function writeURL() {
+  urlTimer = null;
+  if (!S.loaded || S.morph) return;
+  const h = urlFromState();
+  if (h === urlSig) return;
+  urlSig = h;
+  try { history.replaceState(null, '', h); } catch (e) { /* file:// */ }
+}
+function scheduleURLWrite() {
+  if (urlTimer == null) urlTimer = setTimeout(writeURL, 250);
+}
+
+/* land the settled sky directly (deep-link into sky) — the reveal is consumed,
+   the chrome is sky, no morph animation */
+function landSky() {
+  S.reveal = null; S.revealDone = true; S.weave = null; S.weaveDone = true;
+  try { sessionStorage.setItem('atlas.revealed', '1'); } catch (e) { /* private mode */ }
+  body.classList.remove('pre-reveal', 'revealing', 'descent');
+  S.mode = 'sky';
+  applyDescentChrome(false);
+  syncToggle();
+}
+
+/* apply the URL hash at boot; returns false when there's nothing to restore
+   (caller then lands in the default projection, descent) */
+function applyDeepLink() {
+  let h = '';
+  try { h = (location.hash || '').replace(/^#/, ''); } catch (e) { return false; }
+  if (!h) return false;
+  const p = new URLSearchParams(h);
+  const w = p.get('w');
+
+  if (p.get('m') === 'sky') {
+    landSky();
+    const yr = parseInt(p.get('y'), 10);
+    if (isFinite(yr)) { S.time.anim = null; S.time.y = clamp(yr, S.time.min, S.time.max); curTY = S.time.y; }
+    if (w && S.byId.has(w)) selectWatch(w);
+    else if (p.get('fam') && S.families.some(f => f.id === p.get('fam'))) openFamily(p.get('fam'));
+    else if (p.get('c')) {
+      const [cx, cy, cz] = String(p.get('c')).split(',').map(Number);
+      if (isFinite(cx) && isFinite(cy) && isFinite(cz)) { S.cam.x = cx; S.cam.y = cy; S.cam.z = clamp(cz, S.fitZ, Z_MAX); clampCam(); }
+    }
+    return true;
+  }
+
+  /* descent — the default; restore a selection or a depth */
+  defaultToDescent();
+  if (w && S.byId.has(w)) {
+    const ww = S.byId.get(w);
+    if (isFinite(ww._di)) { DS.s = ww._di; DS.lastFocus = -1; refreshFocus(); }
+    selectWatch(w, { fly: false });
+  } else {
+    const d = parseInt(p.get('d'), 10);
+    if (isFinite(d)) { DS.s = clamp(d, 0, DS.n - 1); DS.lastFocus = -1; refreshFocus(); }
+  }
+  return true;
 }
 
 function computeFit() {
@@ -2006,6 +2084,7 @@ function selectWatch(id, opts = {}) {
     else if (S.mode === 'descent') descentFlyToWatch(w);
     else flyToWatch(w);
   }
+  scheduleURLWrite();
   invalidate();
 }
 
@@ -2017,6 +2096,7 @@ function deselect() {
   S.panelHoverId = null;
   S.panelHoverAnims.clear();
   hidePanel();
+  scheduleURLWrite();
   invalidate();
 }
 
@@ -4899,6 +4979,7 @@ function finishMorph(dir) {
     }
   }
   syncToggle();
+  scheduleURLWrite();
   invalidate();
 }
 

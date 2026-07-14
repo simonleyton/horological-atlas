@@ -3895,6 +3895,10 @@ for (const evt of ['pointerdown', 'wheel', 'keydown', 'touchstart']) {
 
 const elMtSky = $('mt-sky'), elMtDescent = $('mt-descent');
 const elKeyLegend = $('key-legend');
+const elTagline = $('tagline');
+/* the masthead is honest to the projection you're standing in (§design-review) */
+const TAGLINE_SKY = 'A map of dive-watch design, arranged by kinship — brightness is influence.';
+const TAGLINE_DESCENT = 'Every dive watch ranked by the depth it survives — the surface to the Mariana floor.';
 const LEGEND_SKY = elKeyLegend.innerHTML;
 const LEGEND_DESCENT = 'D surface · E export · Esc back';
 
@@ -4685,6 +4689,7 @@ let descentChromeOn = false, descentChromeTimer = null;
 
 function applyDescentChrome(on) {
   descentChromeOn = on;
+  if (elTagline) elTagline.textContent = on ? TAGLINE_DESCENT : TAGLINE_SKY;
   if (on) {
     elKeyLegend.innerHTML = LEGEND_DESCENT;
     elFooterLeft.textContent = DS.gaugeText || '';

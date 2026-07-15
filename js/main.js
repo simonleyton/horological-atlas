@@ -1330,8 +1330,7 @@ function lensRetarget() {
 }
 function updateLensChrome() {
   const n = SET_KEYS.reduce((a, k) => a + lensSel[k].size, 0) + (priceEngaged() ? 1 : 0);
-  elLensChip.textContent = n ? `LENS · ${n}` : 'LENS';
-  elLensChip.classList.toggle('active', n > 0);
+  elLensChip.classList.toggle('active', n > 0);   /* the count lives in the footer summary */
   elLensClear.hidden = n === 0;
 }
 function lensToggle(groupKey, value, btn) {

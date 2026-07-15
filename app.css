@@ -130,23 +130,14 @@ body.revealing footer { transition-duration: 320ms; transition-delay: 200ms; }
 /* ---------- WORDMARK ---------- */
 
 #wordmark {
-  position: fixed; top: 24px; left: 24px;
-  font-size: 13px; font-weight: 500;
-  letter-spacing: 0.22em;
-  color: var(--text-1);
-  opacity: 0.92;
+  /* "sixty" — same face/size/weight as the descent · sky nav items */
+  position: fixed; top: 22px; left: 24px;
+  font-size: 18px; font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1;
+  color: #F6935D;
   z-index: 2;
   user-select: none;
-}
-#tagline {
-  display: block;
-  margin-top: 6px;
-  max-width: 320px;
-  font-size: 11px; font-weight: 400;
-  letter-spacing: 0.02em;
-  text-transform: none;
-  line-height: 1.5;
-  color: var(--text-3);
 }
 body.dim-chrome #wordmark { opacity: var(--dim-chrome); }
 body.observatory #wordmark, body.export #wordmark { opacity: 0; }
@@ -1117,36 +1108,52 @@ footer {
   margin-right: 4px;
   user-select: none;
 }
+/* Action buttons, bottom-right — the pacomepertant "sound" / "menu" language:
+   a white circle for the Fit action, a white pill for the labeled Lens. Both
+   persist across sky and descent. */
 #fit-chip {
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid var(--line-1);
-  border-radius: 6px;
-  font-size: 10px; font-weight: 500;
-  letter-spacing: 0.08em;
-  color: var(--text-3);
-  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out),
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: #f4f3ef;
+  color: #0b0b0d;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.30);
+  transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out),
               opacity 400ms var(--ease-out);
 }
-#fit-chip:hover { color: var(--text-2); border-color: var(--line-2); }
+#fit-chip svg { display: block; }
+#fit-chip:hover { transform: translateY(-1.5px); box-shadow: 0 7px 24px rgba(0, 0, 0, 0.40); }
+#fit-chip:active { transform: translateY(0) scale(0.97); }
+
 #lens-chip {
-  height: 24px;
-  padding: 0 10px;
-  border: 1px solid var(--line-1);
-  border-radius: 6px;
-  font-size: 10px; font-weight: 500;
-  letter-spacing: 0.08em;
-  color: var(--text-3);
-  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out),
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: #f4f3ef;
+  color: #0b0b0d;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.30);
+  transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out),
+              background 200ms var(--ease-out), color 200ms var(--ease-out),
               opacity 400ms var(--ease-out);
 }
-#lens-chip:hover { color: var(--text-2); border-color: var(--line-2); }
-#lens-chip.active { color: var(--text-1); border-color: var(--lume-dim); }
+#lens-chip svg { display: block; }
+#lens-chip:hover { transform: translateY(-1.5px); box-shadow: 0 7px 24px rgba(0, 0, 0, 0.40); }
+#lens-chip:active { transform: translateY(0) scale(0.97); }
+#lens-chip.active {                                          /* filters engaged — inverted, lume glyph */
+  background: #0b0b0d; color: var(--lume);
+  box-shadow: 0 0 0 1px rgba(233, 237, 242, 0.22), 0 2px 16px rgba(0, 0, 0, 0.30);
+}
+#fit-chip:focus-visible, #lens-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--lume), 0 2px 16px rgba(0, 0, 0, 0.30);
+}
 
 /* ---------- THE LENS — attribute lenses on the field ---------- */
 
 #lens-panel {
-  position: fixed; right: 24px; bottom: 60px;
+  position: fixed; right: 24px; bottom: 82px;
   width: 304px;
   padding: 16px;
   background: var(--surface-1);

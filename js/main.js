@@ -267,6 +267,12 @@ let curTY = Infinity;
    re-plated dark (uniformity). Rows prefer CATALOG; single heroes prefer IMAGES. */
 let IMAGES = {};
 let CATALOG = {};
+/* LORE = sourced heritage narratives for the field's legends (data/lore.json).
+   Progressive enhancement — a watch without an entry simply shows no heritage. */
+let LORE = {};
+/* MEDIA = heritage image gallery per watch (data/media.json): owners in period,
+   archival ads, the watch in use. Feeds a filmstrip in the panel + the lightbox. */
+let MEDIA = {};
 /* card surfaces demand dial-forward soldier shots — an editorial photo rides a
    card only if the pose audit cleared it (no pose field = not yet audited) */
 const frontalOk = e => !e || e.pose !== 'angled';
@@ -375,6 +381,14 @@ async function loadData() {
     .then(r => r.ok ? r.json() : null)
     .then(j => { if (j && typeof j === 'object') CATALOG = j; })
     .catch(() => { /* no catalog layer yet */ });
+  fetch('./data/lore.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)
+    .then(j => { if (j && typeof j === 'object') { LORE = j; refreshPanelLore(); } })
+    .catch(() => { /* no heritage layer yet */ });
+  fetch('./data/media.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)
+    .then(j => { if (j && typeof j === 'object') { MEDIA = j; refreshPanelLore(); } })
+    .catch(() => { /* no media layer yet */ });
   const t = setTimeout(() => {
     if (!S.loaded && !S.failed) {
       elS1.textContent = 'Charting the atlas…';
@@ -2292,7 +2306,126 @@ function panelHtml(w, lin) {
     </div>${photo}
     <div class="sec"><p class="p-significance">${escapeHtml(w.significance || '')}</p></div>
     <div class="sec"><dl class="p-specs">${rows}</dl></div>
+    ${loreHtml(w.id)}
     <div class="sec">${lineage}</div>`;
+}
+
+/* ---- Heritage: sourced narrative for the field's legends -------------------
+   One '.sec' block. Silent when a watch has no entry. Every passage keeps its
+   attribution; external links open in a new tab. */
+function loreHtml(id) {
+  const L = LORE[id];
+  if (!L || !L.lede) return '';
+  const cite = (label, url) => url
+    ? `<a class="lore-cite" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}<span class="lore-arrow" aria-hidden="true">↗</span></a>`
+    : `<span class="lore-cite lore-cite-plain">${escapeHtml(label)}</span>`;
+
+  const passages = (L.passages || []).map(p =>
+    `<div class="lore-passage"><p class="lore-text">${escapeHtml(p.text)}</p>${cite(p.source, p.url)}</div>`
+  ).join('');
+
+  const quote = L.quote && L.quote.text
+    ? `<figure class="lore-quote"><blockquote>${escapeHtml(L.quote.text)}</blockquote>` +
+      `${L.quote.who ? `<figcaption>${escapeHtml(L.quote.who)}</figcaption>` : ''}</figure>`
+    : '';
+
+  /* sources ride a horizontal rail — publication name only, height preserved */
+  const seen = new Set();
+  const chips = (L.sources || []).filter(s => s && s.url && !seen.has(s.url) && seen.add(s.url)).map(s => {
+    const short = (s.label || '').split('—')[0].trim() || s.label;
+    return `<a class="lore-src-chip" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(s.label)}">${escapeHtml(short)}</a>`;
+  }).join('');
+  const sources = chips
+    ? `<div class="lore-sources"><span class="lore-sources-label">Sources</span><div class="lore-sources-rail">${chips}</div></div>`
+    : '';
+
+  /* collapsed by default — lede + filmstrip are the at-a-glance; the full
+     narrative expands on demand so the panel's IA stays scannable */
+  const hasBody = !!(passages || quote || sources);
+  const chevron = `<svg class="lore-chev" width="9" height="6" viewBox="0 0 9 6" aria-hidden="true"><path d="M1 1 L4.5 4.5 L8 1" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const expand = hasBody
+    ? `<button type="button" class="lore-expand" data-lore-toggle aria-expanded="false"><span class="lore-expand-label">Read the full history</span>${chevron}</button>`
+    : '';
+  const body = hasBody
+    ? `<div class="lore-body"><div class="lore-body-inner">${passages}${quote}${sources}</div></div>`
+    : '';
+
+  return `<div class="sec lore" data-lore>
+    <h3 class="lore-head">Heritage</h3>
+    <p class="lore-lede">${escapeHtml(L.lede)}</p>
+    ${mediaHtml(id)}
+    ${expand}${body}
+  </div>`;
+}
+
+/* the lightbox items for a watch's heritage gallery — the story caption is the
+   title, provenance is the credit. Consistent with the specimen lightbox. */
+function mediaItems(id) {
+  return (MEDIA[id] || []).filter(m => m && m.file).map(m => ({
+    src: './data/' + m.file,
+    title: m.caption || '',
+    credit: [m.credit, m.source && (() => { try { return new URL(m.source).hostname.replace(/^www\./, ''); } catch { return ''; } })()]
+      .filter(Boolean).join(' · ')
+  }));
+}
+
+/* a horizontal filmstrip — Apple's Photos gesture language: momentum scroll,
+   snap, quiet chrome. The images are the content; tap opens the lightbox. */
+function mediaHtml(id) {
+  const items = MEDIA[id] || [];
+  if (!items.length) return '';
+  const thumbs = items.filter(m => m && m.file).map((m, i) =>
+    `<button type="button" class="lm-thumb" data-media="${i}" aria-label="${escapeHtml(m.caption || 'Heritage image')}">` +
+    `<img src="./data/${escapeHtml(m.file)}" alt="${escapeHtml(m.caption || '')}" loading="lazy" draggable="false" onerror="this.closest('.lm-thumb').remove()">` +
+    `</button>`
+  ).join('');
+  return `<div class="lore-media" role="group" aria-label="Heritage gallery">${thumbs}</div>`;
+}
+
+/* tap a filmstrip thumb → the heritage gallery opens in the shared lightbox */
+function wireMediaThumbs(id) {
+  const items = mediaItems(id);
+  for (const b of elPanelContent.querySelectorAll('.lm-thumb[data-media]')) {
+    b.addEventListener('click', () => lightboxOpen(items, +b.dataset.media));
+  }
+}
+
+/* wire the heritage section — the expand/collapse toggle and the filmstrip */
+function wireLore(id) {
+  const sec = elPanelContent.querySelector('[data-lore]');
+  if (sec) {
+    const btn = sec.querySelector('[data-lore-toggle]');
+    if (btn) btn.addEventListener('click', () => {
+      const open = sec.classList.toggle('expanded');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      const lbl = btn.querySelector('.lore-expand-label');
+      if (lbl) lbl.textContent = open ? 'Show less' : 'Read the full history';
+    });
+  }
+  wireMediaThumbs(id);
+}
+
+/* if the heritage/media layers arrive after a panel is already open, slot them in.
+   Handles either layer landing first: rebuild the section, re-wire the strip. */
+function refreshPanelLore() {
+  if (elPanel.hidden || !S.selection) return;
+  const id = S.selection.id;
+  const html = loreHtml(id);
+  if (!html) return;
+  const existing = elPanelContent.querySelector('[data-lore]');
+  if (existing) {
+    /* media may have arrived after lore — refresh only if the strip is now richer */
+    const hasStrip = existing.querySelector('.lore-media');
+    if (hasStrip || !(MEDIA[id] && MEDIA[id].length)) return;
+    existing.outerHTML = html;
+  } else {
+    /* heritage sits after the specs block in the IA */
+    const specs = elPanelContent.querySelector('.p-specs');
+    const anchor = specs ? specs.closest('.sec') : null;
+    if (!anchor) return;
+    anchor.insertAdjacentHTML('afterend', html);
+  }
+  wireLore(id);
 }
 
 let panelHideTimer = null;
@@ -2340,6 +2473,7 @@ function showPanel(w, lin, crossfade) {
     }
     const crumb = elPanelContent.querySelector('[data-crumb]');
     if (crumb) crumb.addEventListener('click', returnToFamily);
+    wireLore(w.id);
     const photo = elPanelContent.querySelector('.p-photo img');
     if (photo) {
       photo.addEventListener('click', () => {
@@ -3609,6 +3743,21 @@ elLbClose.addEventListener('click', lightboxClose);
 elLbPrev.addEventListener('click', () => lbStep(-1));
 elLbNext.addEventListener('click', () => lbStep(1));
 elLightbox.addEventListener('click', e => { if (e.target === elLightbox) lightboxClose(); });
+
+/* Direct manipulation — swipe the image to move through the gallery (touch/trackpad).
+   A horizontal throw steps; anything else is left to tap-to-close. */
+let lbSwipe = null;
+elLbImg.addEventListener('pointerdown', e => {
+  lbSwipe = { x: e.clientX, y: e.clientY };
+  elLbImg.setPointerCapture?.(e.pointerId);
+});
+elLbImg.addEventListener('pointerup', e => {
+  if (!lbSwipe) return;
+  const dx = e.clientX - lbSwipe.x, dy = e.clientY - lbSwipe.y;
+  lbSwipe = null;
+  if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.4) lbStep(dx < 0 ? 1 : -1);
+});
+elLbImg.addEventListener('pointercancel', () => { lbSwipe = null; });
 
 /* ======================================================================
    16 · INPUT

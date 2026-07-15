@@ -551,7 +551,7 @@ function defaultToDescent() {
   refreshFocus();
   applyDescentChrome(true);
   body.classList.add('descent');
-  if (!REDUCED && DS.wrM && wcSnowK(dM(DS.s)) > 0) DS.snowUntil = now + 4000;
+  if (!REDUCED && DS.wrM && (wcSnowK(dM(DS.s)) > 0 || wcBioK(dM(DS.s)) > 0)) DS.snowUntil = now + 4000;
   syncToggle();
 }
 
@@ -4027,7 +4027,9 @@ const DS = {
   snow: null,                    /* Float32Array(28×4) — xFrac, yFrac, alpha, fall px/s */
   snowClock: 0,                  /* seconds of accumulated drift — never wall-clock */
   snowUntil: 0,                  /* the 4s post-settle tail the scheduler honors */
-  snowWrap: 0                    /* world wrap height — H + 240, kept by resize() */
+  snowWrap: 0,                   /* world wrap height — H + 240, kept by resize() */
+  bub: null,                     /* Float32Array(18×5) — xFrac, yFrac, alpha, rise px/s, diameter */
+  bio: null                      /* Float32Array(8×6) — xFrac, yFrac, period, pulsePh, driftPh, peakA */
 };
 S.descent = DS;
 
@@ -4073,6 +4075,8 @@ function initDescent() {
   DS.wrM = new Float32Array(DS.n);
   for (let i = 0; i < DS.n; i++) DS.wrM[i] = DS.order[i].waterResistanceM || 0;
   initMarineSnow();
+  initBubbles();                    /* §18c amendment — the wake, seeded once */
+  initBiolum();                     /* §18c amendment — the deep's own light, seeded once */
   initDepthAnnotations();
   /* §18d — the sounding line hangs once the column exists */
   elSounding.hidden = false;
@@ -4316,11 +4320,12 @@ function descentSettled() {
   DS.v = 0;
   DS.phase = 'rest';
   DS.glide = null;
-  /* §18c — the snow keeps falling for 4s after the detent lands, at 10fps,
-     then freezes in place: idle CPU is exactly pre-water-column. Below
-     ~2500m the water is empty (wcSnowK → 0), so no tail is scheduled at
-     all — a hadal rest goes dark on frame one, per acceptance criterion 3. */
-  if (!REDUCED && DS.wrM && wcSnowK(dM(DS.s)) > 0) DS.snowUntil = performance.now() + 4000;
+  /* §18c — the water keeps living for 4s after the detent lands, at 10fps,
+     then freezes in place: idle CPU is exactly pre-water-column. The tail
+     is scheduled only where something would show: snow above ~2500m
+     (wcSnowK), bioluminescence below 1000m (wcBioK) — the amendment gave
+     the hadal dark its own 4s of life before it, too, goes still. */
+  if (!REDUCED && DS.wrM && (wcSnowK(dM(DS.s)) > 0 || wcBioK(dM(DS.s)) > 0)) DS.snowUntil = performance.now() + 4000;
   refreshFocus();
   const w = DS.order[clamp(Math.round(DS.s), 0, DS.n - 1)];
   if (w) elLive.textContent = `${w.brand} ${w.model}, ${w.waterResistanceM} metres.`;
@@ -4668,6 +4673,7 @@ function drawDescent(c, w_, h_, now, isExport) {
   drawDescentRulers(c, w_, h_, cy, Y0, 1);
   drawDepthAnnotations(c, w_, h_, cx, cy, Y0, 1, scF, s);
   drawMarineSnow(c, w_, h_, Y0, 1, vy);
+  drawBiolum(c, w_, h_, Y0, 1, now);   /* §18c amendment — the dark makes its own light */
 
   /* window |i−s| ≤ 10 into preallocated slots, insertion-sorted rear→front */
   const i0 = Math.max(0, Math.ceil(s - 10)), i1 = Math.min(DS.n - 1, Math.floor(s + 10));
@@ -4747,6 +4753,11 @@ function drawDescent(c, w_, h_, now, isExport) {
     }
   }
   c.restore();
+
+  /* §18c amendment — the wake rides the foreground (parallax 1.4, drawn
+     over the helix): bubbles exist only while there is velocity to encode.
+     Never in export — a print has no velocity. */
+  if (!isExport) drawBubbles(c, w_, h_, Y0, 1, now);
 
   drawDescentPill(c, cx, cy + 56 * scFocus + 18, pillA);
   /* the whisper is a screen affordance — a print cannot scroll */
@@ -4959,8 +4970,9 @@ function finishMorph(dir) {
     DS.phase = 'rest';
     DS.v = 0;
     DS.lastT = performance.now();
-    /* §18c — snow greets the arrival, unless the water here is empty */
-    if (!REDUCED && DS.wrM && wcSnowK(dM(DS.s)) > 0) DS.snowUntil = DS.lastT + 4000;
+    /* §18c — snow (or the deep's own light) greets the arrival, unless
+       the water here is truly empty */
+    if (!REDUCED && DS.wrM && (wcSnowK(dM(DS.s)) > 0 || wcBioK(dM(DS.s)) > 0)) DS.snowUntil = DS.lastT + 4000;
     applyDescentChrome(true);
     elLive.textContent = `The descent — ${DS.n} watches ranked by water resistance.`;
     if (morphFlyW) { descentFlyToWatch(morphFlyW); morphFlyW = null; }
@@ -5116,6 +5128,12 @@ elMtDescent.addEventListener('click', () => {
    Every element below keys off ONE continuous depth scalar, dM(DS.s):
    light attenuation on the ground and vignette, marine snow density,
    the coast time-constant, the depth annotations, the surface ceiling.
+   Amended: bubbles encode velocity in lit water (the diver's wake — gone
+   at rest, gone below 1000m where no light reaches the air); biolumin-
+   escence encodes life where light ends (>1000m — the one place the
+   column makes its own color, because down there light IS data about
+   life). Both deterministic (fixed seeds), both parked when idle.
+   Still refused: waves, creatures, sound — imagery, not physics.
    In the sky waterT is 0 and every path short-circuits — bit-identical.
    ====================================================================== */
 
@@ -5271,6 +5289,145 @@ function drawMarineSnow(c, w_, h_, Y0, aMul, vy) {
   }
   c.restore();
 }
+/* --- bubbles — the diver's wake (§18c amendment): velocity made light.
+   18 baked-rim sprites on foreground parallax 1.4, so they stream past
+   the helix and read as IN FRONT; density ∝ |DS.v| — invisible at rest
+   (still water holds no wake), a stream mid-dive. They wobble as they
+   rise; snow falls dead straight — that contrast is the point. Zero idle
+   cost: the system dies with the velocity, so it never needs the tail. */
+const WC_BUB_N = 18, WC_BUB_P = 1.4;
+function initBubbles() {
+  const rnd = mulberry32(47712);                 /* fixed seed — same wake every session */
+  const bb = DS.bub = new Float32Array(WC_BUB_N * 5);
+  for (let j = 0; j < WC_BUB_N; j++) {
+    bb[j * 5] = 0.03 + 0.94 * rnd();             /* xFrac */
+    bb[j * 5 + 1] = rnd();                       /* yFrac */
+    bb[j * 5 + 2] = 0.06 + 0.06 * rnd();         /* alpha 0.06–0.12 */
+    bb[j * 5 + 3] = 40 + 50 * rnd();             /* rise 40–90 px/s, world, upward */
+    bb[j * 5 + 4] = 4 + 3 * rnd();               /* diameter 4–7 logical px */
+  }
+}
+/* you can't see air where there's no light — full to 200m, gone by 1000m */
+function wcBubK(d) {
+  if (d <= 200) return 1;
+  if (d >= 1000) return 0;
+  return 1 - sstep((d - 200) / 800);
+}
+let bubSprite = null;   /* a bubble is a lit edge, not a dot — rim baked once */
+const BUB_SPR = 12;
+function getBubSprite() {
+  if (bubSprite) return bubSprite;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = BUB_SPR * SPRS;
+  const g = cv.getContext('2d');
+  const r = BUB_SPR * SPRS / 2;
+  const grad = g.createRadialGradient(r, r, 0, r, r, r);
+  grad.addColorStop(0, 'rgba(233,237,242,0)');   /* transparent core — water inside is water */
+  grad.addColorStop(0.62, 'rgba(233,237,242,0)');
+  grad.addColorStop(0.82, 'rgba(233,237,242,1)');/* the thin bright rim */
+  grad.addColorStop(1, 'rgba(233,237,242,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, cv.width, cv.height);
+  bubSprite = cv;
+  return bubSprite;
+}
+function drawBubbles(c, w_, h_, Y0, aMul, now) {
+  if (REDUCED || aMul <= 0.004 || !DS.bub) return;
+  const visK = clamp((Math.abs(DS.v) - 0.3) / 2.0, 0, 1);
+  if (visK <= 0.004) return;                     /* still water holds no wake */
+  const k = wcBubK(dM(DS.s));
+  if (k <= 0.001) return;                        /* below the light, air is invisible */
+  const WRAP = DS.snowWrap || h_ + 240;
+  const bb = DS.bub, clockPx = DS.snowClock, par = WC_BUB_P * Y0;
+  const spr = getBubSprite();
+  c.save();
+  for (let j = 0; j < WC_BUB_N; j++) {
+    const a = bb[j * 5 + 2] * k * visK * aMul;
+    if (a < 0.004) continue;
+    const raw = bb[j * 5 + 1] * WRAP - bb[j * 5 + 3] * clockPx - par;   /* MINUS — bubbles rise */
+    const sy = ((raw % WRAP) + WRAP) % WRAP - 120;
+    const sx = bb[j * 5] * w_ + 5 * Math.sin(sy * 0.03 + j * 2.4);      /* the wobble */
+    const dpx = bb[j * 5 + 4];
+    c.globalAlpha = a;
+    c.drawImage(spr, sx - dpx / 2, sy - dpx / 2, dpx, dpx);
+  }
+  c.restore();
+}
+
+/* --- bioluminescence — where light ends, life makes its own (§18c
+   amendment). 8 cold points below the photic zone — the exact inverse
+   territory of snow and bubbles — pulsing on the shared motion clock,
+   envelope cubed so at any instant only two or three read. They wander,
+   they do not fall. The one place the column emits its own color: down
+   in the dark, light is data about life. */
+const WC_BIO_N = 8, WC_BIO_P = 0.5;
+function initBiolum() {
+  const rnd = mulberry32(88123);                 /* fixed seed — same deep every session */
+  const bo = DS.bio = new Float32Array(WC_BIO_N * 6);
+  for (let j = 0; j < WC_BIO_N; j++) {
+    bo[j * 6] = 0.05 + 0.90 * rnd();             /* xFrac */
+    bo[j * 6 + 1] = rnd();                       /* yFrac */
+    bo[j * 6 + 2] = 2.2 + 1.2 * rnd();           /* pulse period 2.2–3.4s */
+    bo[j * 6 + 3] = rnd() * Math.PI * 2;         /* pulse phase */
+    bo[j * 6 + 4] = rnd() * Math.PI * 2;         /* drift phase */
+    bo[j * 6 + 5] = 0.08 + 0.04 * rnd();         /* peak alpha 0.08–0.12 */
+  }
+}
+/* nothing in lit water; ramps in below 1000m, full by 1800m — the hadal
+   emptiness (wcSnowK = 0) is exactly where this system lives */
+function wcBioK(d) {
+  if (d <= 1000) return 0;
+  if (d >= 1800) return 1;
+  return sstep((d - 1000) / 800);
+}
+let bioSprite = null;   /* soft cold-cyan point — emitted light, never THREAD_INK */
+const BIO_SPR = 10;
+function getBioSprite() {
+  if (bioSprite) return bioSprite;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = BIO_SPR * SPRS;
+  const g = cv.getContext('2d');
+  const r = BIO_SPR * SPRS / 2;
+  const grad = g.createRadialGradient(r, r, 0, r, r, r);
+  grad.addColorStop(0, 'rgba(150,200,220,1)');
+  grad.addColorStop(0.35, 'rgba(150,200,220,0.35)');
+  grad.addColorStop(1, 'rgba(150,200,220,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, cv.width, cv.height);
+  bioSprite = cv;
+  return bioSprite;
+}
+const BIO_TAU = Math.PI * 2;
+function drawBiolum(c, w_, h_, Y0, aMul, now) {
+  if (aMul <= 0.004 || !DS.bio) return;
+  const k = wcBioK(dM(DS.s));
+  if (k <= 0.001) return;                        /* lit water — the deep's light unreadable */
+  const WRAP = DS.snowWrap || h_ + 240;
+  const bo = DS.bio, t = DS.snowClock, par = WC_BIO_P * Y0;
+  const spr = getBioSprite();
+  c.save();
+  for (let j = 0; j < WC_BIO_N; j++) {
+    let a, sx, raw;
+    if (REDUCED) {                               /* designed fallback — a still constellation */
+      a = 0.05 * k * aMul;
+      sx = bo[j * 6] * w_;
+      raw = bo[j * 6 + 1] * WRAP - par;
+    } else {
+      const pulse = Math.max(0, Math.sin(t * BIO_TAU / bo[j * 6 + 2] + bo[j * 6 + 3]));
+      const env = pulse * pulse * pulse;         /* cubed — brief soft blinks, mostly dark */
+      a = bo[j * 6 + 5] * env * k * aMul;
+      const dph = bo[j * 6 + 4];
+      sx = bo[j * 6] * w_ + 14 * Math.sin(t * 0.13 + dph);
+      raw = bo[j * 6 + 1] * WRAP + 8 * Math.sin(t * 0.09 + dph * 1.7) - par;
+    }
+    if (a < 0.004) continue;
+    const sy = ((raw % WRAP) + WRAP) % WRAP - 120;
+    c.globalAlpha = a;
+    c.drawImage(spr, sx - BIO_SPR / 2, sy - BIO_SPR / 2, BIO_SPR, BIO_SPR);
+  }
+  c.restore();
+}
+
 /* the snow tail is the only reason a settled descent still frames — and it
    rides the sky-drift 10fps path, then goes fully dark after 4s */
 function snowOnly(now) {

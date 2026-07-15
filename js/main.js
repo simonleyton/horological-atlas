@@ -289,6 +289,7 @@ function animating() {
   const now = performance.now();
   if (S.morph) return true;                       /* incl. the 200ms reduced-motion crossfade */
   if (S.mode === 'descent') {
+    if (DS.reflow) return true;                   /* the Lens narrow/expand reflow */
     if (DS.phase !== 'rest') return true;
     if (DS.cxA || DS.cyA) return true;
     if (now < DS.rampUntil) return true;          /* image alpha-ramps over glyph plates */
@@ -512,7 +513,7 @@ function initData(data) {
         : (cn === 'Gold' || cn === 'Brown') ? 'gilt' : null,
       movement: w.movement || null,
       size: w.diameterMm <= 38 ? 's1' : w.diameterMm <= 42 ? 's2' : 's3',
-      origin: (w.country === 'CH' || w.country === 'JP' || w.country === 'DE') ? w.country : 'XX',
+      origin: w.country || null,
     };
   }
   buildLens();
@@ -1238,7 +1239,8 @@ const LENS_CHIPS = {
   movement: [['automatic', 'Automatic'], ['manual', 'Hand-wound'], ['quartz', 'Quartz'],
              ['digital', 'Digital'], ['solar', 'Solar'], ['spring-drive', 'Spring Drive']],
   size: [['s1', '≤ 38 mm'], ['s2', '39–42 mm'], ['s3', '43 mm +']],
-  origin: [['CH', 'Switzerland'], ['JP', 'Japan'], ['DE', 'Germany'], ['XX', 'Elsewhere']],
+  origin: [['CH', 'Switzerland'], ['DE', 'Germany'], ['JP', 'Japan'], ['FR', 'France'],
+           ['GB', 'United Kingdom'], ['US', 'United States'], ['RU', 'Russia'], ['IT', 'Italy']],
 };
 const SET_KEYS = ['dial', 'movement', 'size', 'origin'];
 const lensSel = { dial: new Set(), movement: new Set(), size: new Set(), origin: new Set() };
@@ -1321,6 +1323,9 @@ function lensRetarget() {
   if (lensActive()) lensGhost = null;
   lastTlYear = null;              /* force the footer/cartouche to re-read */
   updateLensChrome();
+  /* in the Descent the Lens NARROWS: rebuild the view and reflow. In the sky it
+     dims (lensAnim above). Never mid-morph — the census flies whole. */
+  if (S.mode === 'descent' && !S.morph) applyDescentNarrow(true);
   invalidate();
 }
 function updateLensChrome() {
@@ -1621,8 +1626,8 @@ function closeLensPanel() {
   if (elLensPanel.contains(document.activeElement)) elLensChip.focus({ preventScroll: true });
 }
 elLensChip.addEventListener('click', () => {
-  /* the Lens is a sky instrument — inert while its chrome is hidden */
-  if (S.mode !== 'sky' || S.morph || S.exportMode) return;
+  /* the Lens is persistent across sky and descent — only a flight or export locks it */
+  if (S.morph || S.exportMode) return;
   anyInput(); lensOpen ? closeLensPanel() : openLensPanel();
 });
 elLensClear.addEventListener('click', () => { anyInput(); lensClear(); });
@@ -4169,6 +4174,7 @@ const DS = {
   cx: 0, cxA: null, cy: 0, cyA: null,   /* 400ms panel-offset glides */
   rampUntil: 0,                  /* image alpha-ramp horizon for the scheduler */
   hintSeen: false, hintT0: 0,    /* wheel affordance — whispers until the first dive gesture */
+  full: null, reflow: null,      /* full census (Lens narrows a view of it) + FLIP reflow state */
   /* §18c — the water column */
   wrM: null,                     /* Float32Array — metres per depth index, for dM() */
   annY: null, annLabel: [],      /* depth annotations — world y + copy, placed once */
@@ -4193,12 +4199,25 @@ const dRectPool = Array.from({ length: 21 }, () => ({ id: null, x: 0, y: 0, w: 0
 const fmtM = m => (m || 0).toLocaleString('en-US');
 
 function initDescent() {
-  /* depth order: WR ascending, year within ties, id for stability */
-  DS.order = [...S.watches].sort((a, b) =>
+  /* depth order: WR ascending, year within ties, id for stability. The full
+     census is kept; the Lens can narrow the active view to a subset of it. */
+  DS.full = [...S.watches].sort((a, b) =>
     (a.waterResistanceM || 0) - (b.waterResistanceM || 0) ||
     (a.year || 0) - (b.year || 0) ||
     String(a.id).localeCompare(String(b.id)));
-  DS.n = DS.order.length;
+  initMarineSnow();                 /* seeded once — view-independent drift */
+  initBubbles();                    /* §18c amendment — the wake, seeded once */
+  initBiolum();                     /* §18c amendment — the deep's own light, seeded once */
+  descentDerive(DS.full);
+  /* §18d — the sounding line hangs once the column exists */
+  elSounding.hidden = false;
+}
+
+/* rebuild every index-keyed structure for a given order — the full census or a
+   lens-narrowed subset. The Descent's whole geometry keys off this. */
+function descentDerive(order) {
+  DS.order = order;
+  DS.n = order.length;
   DS.sh = new Uint8Array(DS.n);
   DS.shelfIdx.length = 0;
   DS.shelfLabel.length = 0;
@@ -4207,7 +4226,7 @@ function initDescent() {
   const bandOf = wr => wr <= 135 ? 0 : wr <= 220 ? 1 : wr <= 300 ? 2 : wr <= 610 ? 3 : wr <= 1300 ? 4 : 5;
   const bandM = [0, 150, 300, 500, 1000, 2000];
   let prev = 0, shelves = 0;
-  DS.order.forEach((w, i) => {
+  order.forEach((w, i) => {
     w._di = i;
     const b = bandOf(w.waterResistanceM || 0);
     if (i > 0 && b !== prev) {
@@ -4219,23 +4238,73 @@ function initDescent() {
     DS.sh[i] = shelves;
     DS.wrCount.set(w.waterResistanceM, (DS.wrCount.get(w.waterResistanceM) || 0) + 1);
   });
-  /* §18c — the water column: the depth scalar's table, the seeded snow,
-     and the depth annotations, all precomputed once */
+  /* §18c — the water column depth table + the depth annotations, per view */
   DS.wrM = new Float32Array(DS.n);
-  for (let i = 0; i < DS.n; i++) DS.wrM[i] = DS.order[i].waterResistanceM || 0;
-  initMarineSnow();
-  initBubbles();                    /* §18c amendment — the wake, seeded once */
-  initBiolum();                     /* §18c amendment — the deep's own light, seeded once */
+  for (let i = 0; i < DS.n; i++) DS.wrM[i] = order[i].waterResistanceM || 0;
   initDepthAnnotations();
-  /* §18d — the sounding line hangs once the column exists */
-  elSounding.hidden = false;
-  elSounding.setAttribute('aria-valuemax', String(DS.n - 1));
+  elSounding.setAttribute('aria-valuemax', String(Math.max(0, DS.n - 1)));
   sizeSounding();
+}
+
+/* the active Descent view — full census, or the Lens-matching subset */
+function descentView() {
+  return lensActive() ? DS.full.filter(w => lensMatch(w, null)) : DS.full;
+}
+
+/* the Lens NARROWS the Descent: non-matching watches are removed and the
+   survivors close ranks. A FLIP reflow carries every surviving card from its
+   old berth to its new one; the departed sink away and fade. Apple's continuity
+   — objects that persist move, they don't pop. */
+function applyDescentNarrow(animated) {
+  if (!DS.full || !DS.full.length) return;
+  const now = performance.now();
+  const hadN = DS.n;
+  const oldY0 = hadN ? dYs(DS.s) : 0;
+  const focusW = hadN ? DS.order[clamp(Math.round(DS.s), 0, hadN - 1)] : null;
+  const oldFocusId = focusW ? focusW.id : null;
+  const oldPos = new Map(), oldIds = new Set();
+  for (const w of DS.order) {
+    oldPos.set(w.id, { y: dYof(w._di), phi: (w._di - DS.s) * HELIX_DTH });
+    oldIds.add(w.id);
+  }
+
+  const view = descentView();
+  const newIds = new Set();
+  for (const w of view) newIds.add(w.id);
+  descentDerive(view);
+
+  /* keep the focused watch centred; else the kept watch nearest the old gaze */
+  let ns = 0;
+  if (oldFocusId != null && newIds.has(oldFocusId)) {
+    ns = S.byId.get(oldFocusId)._di;
+  } else if (DS.n) {
+    let best = 0, bestD = Infinity;
+    for (const w of view) {
+      const op = oldPos.get(w.id);
+      const oy = op ? op.y : dYof(w._di);
+      const d = Math.abs(oy - oldY0);
+      if (d < bestD) { bestD = d; best = w._di; }
+    }
+    ns = best;
+  }
+  DS.s = clamp(ns, 0, Math.max(0, DS.n - 1));
+  DS.v = 0; DS.phase = 'rest'; DS.glide = null; DS.lastFocus = -1;
+  refreshFocus();
+
+  if (animated && !REDUCED && (oldIds.size || newIds.size)) {
+    DS.reflow = { t0: now, dur: 640, oldY0, oldPos,
+      exit: DS.full.filter(w => oldIds.has(w.id) && !newIds.has(w.id)) };
+  } else {
+    DS.reflow = null;
+  }
+  if (descentChromeOn) elFooterLeft.textContent = DS.gaugeText;
+  invalidate();
 }
 
 /* --- vertical metric — pitch plus shelves, continuous in s ------------- */
 const dYof = i => i * PITCH + DS.sh[i] * SHELF;
 function dYs(x) {
+  if (DS.n <= 0) return 0;
   x = clamp(x, 0, DS.n - 1);
   const i0 = Math.floor(x);
   const i1 = Math.min(i0 + 1, DS.n - 1);
@@ -4480,6 +4549,13 @@ function descentSettled() {
   if (w) elLive.textContent = `${w.brand} ${w.model}, ${w.waterResistanceM} metres.`;
 }
 function refreshFocus() {
+  if (!DS.n) {                                   /* the Lens filtered everything out */
+    DS.pillText = '';
+    DS.gaugeText = 'No watches match — clear a filter';
+    DS.lastFocus = -1;
+    if (descentChromeOn) elFooterLeft.textContent = DS.gaugeText;
+    return;
+  }
   const n = clamp(Math.round(DS.s), 0, DS.n - 1);
   if (n === DS.lastFocus) return;               /* strings rebuilt only on focus change */
   DS.lastFocus = n;
@@ -4520,6 +4596,13 @@ function descentFlyToIndex(i) {
   descentGlideTo(i, Math.min(600 + 40 * Math.abs(i - DS.s), 1400), easeGlide);
 }
 function descentFlyToWatch(w) {
+  /* a watch reached via search may be filtered out of the narrowed view — the
+     search intent wins: clear the Lens and expand so the flight lands true */
+  if (DS.full && DS.order[w._di] !== w) {
+    if (lensActive()) lensClear();
+    descentDerive(DS.full);
+    DS.reflow = null; DS.lastFocus = -1;
+  }
   if (isFinite(w._di)) descentFlyToIndex(w._di);
 }
 
@@ -4824,6 +4907,11 @@ function drawDescent(c, w_, h_, now, isExport) {
   drawMarineSnow(c, w_, h_, Y0, 1, vy);
   drawBiolum(c, w_, h_, Y0, 1, now);   /* §18c amendment — the dark makes its own light */
 
+  /* the Lens reflow — survivors FLIP from their old berth to the new one */
+  if (DS.reflow && now - DS.reflow.t0 >= DS.reflow.dur) DS.reflow = null;
+  const rf = isExport ? null : DS.reflow;
+  const rft = rf ? easeOut(clamp((now - rf.t0) / rf.dur, 0, 1)) : 1;
+
   /* window |i−s| ≤ 10 into preallocated slots, insertion-sorted rear→front */
   const i0 = Math.max(0, Math.ceil(s - 10)), i1 = Math.min(DS.n - 1, Math.floor(s + 10));
   let m = 0;
@@ -4836,6 +4924,17 @@ function drawDescent(c, w_, h_, now, isExport) {
     o.al = 0.08 + 0.92 * d * d;
     o.x = cx + R * Math.sin(phi);
     o.y = cy + dYof(i) - Y0;
+    o.fade = 1;
+    if (rf) {
+      const op = rf.oldPos.get(DS.order[i].id);
+      if (op) {                                   /* survivor — slide from old berth */
+        o.x = lerp(cx + R * Math.sin(op.phi), o.x, rft);
+        o.y = lerp(cy + (op.y - rf.oldY0), o.y, rft);
+      } else {                                    /* arriver (on expand) — rise + fade in */
+        o.fade = rft;
+        o.y += (1 - rft) * 26;
+      }
+    }
   }
   for (let a = 1; a < m; a++) {
     const o = dSlots[a];
@@ -4854,7 +4953,9 @@ function drawDescent(c, w_, h_, now, isExport) {
     const wd = CARD_W * o.sc, ht = CARD_H * o.sc;
     const x0 = o.x - wd / 2, y0 = o.y - ht / 2;
     if (y0 > h_ + 40 || y0 + ht < -40) continue;
-    let mainA = o.al;
+    /* the Lens narrows the Descent (removes non-matches) rather than dimming;
+       o.fade carries the reflow's arrive-in envelope */
+    let mainA = o.al * o.fade;
     if (ghostA > 0.003) {
       /* motion blur at speed only: two ghosts at ±v·6ms along the numeric
          motion vector, energy conserved out of the main draw */
@@ -4862,10 +4963,10 @@ function drawDescent(c, w_, h_, now, isExport) {
       let gx = vx * DS.v * 0.006, gy = vy * DS.v * 0.006;
       const gl = Math.hypot(gx, gy);
       if (gl > 24) { gx *= 24 / gl; gy *= 24 / gl; }
-      const ga = ghostA * o.al;
+      const ga = ghostA * o.al * o.fade;
       drawCardSprite(c, w, x0 + gx, y0 + gy, wd, ht, ga, now);
       drawCardSprite(c, w, x0 - gx, y0 - gy, wd, ht, ga, now);
-      mainA = Math.max(o.al - ga, 0);
+      mainA = Math.max(mainA - ga, 0);
     }
     drawCardSprite(c, w, x0, y0, wd, ht, mainA, now);
 
@@ -4899,6 +5000,23 @@ function drawDescent(c, w_, h_, now, isExport) {
       const r = dRectPool[rectN++];
       r.id = w.id; r.x = x0; r.y = y0; r.w = wd; r.h = ht;
       DS.rects.push(r);
+    }
+  }
+  /* the departed sink away and fade — the deep taking them back */
+  if (rf && rf.exit.length) {
+    const exitA = clamp(1 - rft * 1.5, 0, 1);
+    const sink = rft * 48;
+    for (let e = 0; e < rf.exit.length; e++) {
+      const w = rf.exit[e];
+      const op = rf.oldPos.get(w.id);
+      if (!op) continue;
+      const dd = (1 + Math.cos(op.phi)) / 2;
+      const sc = 0.40 + 0.60 * Math.pow(dd, 1.5);
+      const wd = CARD_W * sc, ht = CARD_H * sc;
+      const ex = cx + R * Math.sin(op.phi) - wd / 2;
+      const ey = cy + (op.y - rf.oldY0) + sink - ht / 2;
+      if (ey > h_ + 40 || ey + ht < -40) continue;
+      drawCardSprite(c, w, ex, ey, wd, ht, exitA * (0.08 + 0.92 * dd * dd), now);
     }
   }
   c.restore();
@@ -4975,6 +5093,15 @@ function startMorph(dir) {
     const keepPanel = !!S.selection;
     S.familyView = null;
     if (!keepPanel) hidePanel();
+  }
+  /* the Lens narrows only the resting Descent — the morph flies the whole
+     census. Expand to full first, keeping the focused watch centred. */
+  if (DS.full && DS.order !== DS.full) {
+    const fid = DS.n ? (DS.order[clamp(Math.round(DS.s), 0, DS.n - 1)] || {}).id : null;
+    descentDerive(DS.full);
+    if (fid && S.byId.get(fid)) DS.s = S.byId.get(fid)._di;
+    DS.s = clamp(DS.s, 0, Math.max(0, DS.n - 1));
+    DS.reflow = null; DS.lastFocus = -1; refreshFocus();
   }
   if (REDUCED) {
     /* §4 reduced motion: a 200ms full-scene crossfade — the outgoing frame
@@ -5123,6 +5250,8 @@ function finishMorph(dir) {
        the water here is truly empty */
     if (!REDUCED && DS.wrM && (wcSnowK(dM(DS.s)) > 0 || wcBioK(dM(DS.s)) > 0)) DS.snowUntil = DS.lastT + 4000;
     applyDescentChrome(true);
+    /* re-narrow to the active Lens now the census has landed whole */
+    if (lensActive()) applyDescentNarrow(!morphFlyW);
     elLive.textContent = `The descent — ${DS.n} watches ranked by water resistance.`;
     if (morphFlyW) { descentFlyToWatch(morphFlyW); morphFlyW = null; }
     /* a family queued during a non-reversible (reduced) descent morph:

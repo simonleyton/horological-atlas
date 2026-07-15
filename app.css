@@ -183,18 +183,15 @@ body.revealing #mode-toggle { transition-duration: 320ms; transition-delay: 100m
 body.morphing #mode-toggle { pointer-events: none; }
 
 /* ---------- DESCENT — chrome per mode ----------
-   The Ephemeris and the Lens are sky instruments; in descent they yield.
+   The Ephemeris is a sky instrument (time is a sky axis); in descent it yields.
+   The Lens is persistent across both modes — it filters the descent too.
    Same grammar as body.observatory: opacity + pointer-events, never display. */
 
-body.descent #timeline,
-body.descent #lens-chip,
-body.descent #lens-panel,
-body.descent #fit-chip {
+body.descent #timeline {
   opacity: 0 !important;
   pointer-events: none !important;
   /* out of the tab order once faded — an invisible year slider that still
-     scrubs the century, or a hidden FIT chip that still flies the camera,
-     is chrome lying about the mode */
+     scrubs the century is chrome lying about the mode */
   visibility: hidden;
   transition: opacity 400ms var(--ease-out), visibility 0s linear 400ms;
 }

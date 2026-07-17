@@ -130,8 +130,9 @@ body.revealing footer { transition-duration: 320ms; transition-delay: 200ms; }
 /* ---------- WORDMARK ---------- */
 
 #wordmark {
-  /* "sixty" — same face/size/weight as the descent · sky nav items */
-  position: fixed; top: 22px; left: 24px;
+  /* "sixty" — same face/size/weight as the descent · sky nav items.
+     top 37px ⇒ 18px text centers on the 46px band-line (= search circle center) */
+  position: fixed; top: 37px; left: 24px;
   font-size: 18px; font-weight: 500;
   letter-spacing: 0;
   line-height: 1;
@@ -147,7 +148,7 @@ body.observatory #wordmark, body.export #wordmark { opacity: 0; }
    text-1 with a hairline underline. No lume — lume encodes data, not chrome. */
 
 #mode-toggle {
-  position: fixed; top: 22px; left: 50%;
+  position: fixed; top: 37px; left: 50%;   /* band-line centered with wordmark + search */
   transform: translateX(-50%);
   display: flex; align-items: center; gap: 14px;
   z-index: 4;
@@ -174,8 +175,9 @@ body.revealing #mode-toggle { transition-duration: 320ms; transition-delay: 100m
 body.morphing #mode-toggle { pointer-events: none; }
 
 /* ---------- DESCENT — chrome per mode ----------
-   The Ephemeris is a sky instrument (time is a sky axis); in descent it yields.
-   The Lens is persistent across both modes — it filters the descent too.
+   The Ephemeris (time is a sky axis) and the FIT/frame action (a sky-camera
+   verb — the helix has no frame to fit) yield in descent. The Lens is
+   persistent across both modes — it filters the descent too.
    Same grammar as body.observatory: opacity + pointer-events, never display. */
 
 body.descent #timeline {
@@ -186,6 +188,9 @@ body.descent #timeline {
   visibility: hidden;
   transition: opacity 400ms var(--ease-out), visibility 0s linear 400ms;
 }
+/* the Fit verb has no meaning in the descent; it leaves entirely so the Lens
+   button falls to the same right edge as Search — corner symmetry holds */
+body.descent #fit-chip { display: none; }
 
 /* ---------- SOUNDING LINE — the Descent's depth instrument ----------
    The Ephemeris's vertical sibling: the whole column in miniature. Strata
@@ -262,51 +267,60 @@ body.export #sounding, body.observatory #sounding {
 
 /* ---------- SEARCH ---------- */
 
+/* search — the same white action language as the filter and frame buttons:
+   a circle at rest, growing into a white pill when it opens */
 #search {
-  position: fixed; top: 24px; right: 24px;
-  height: 32px;
-  border: 1px solid var(--line-1);
-  border-radius: 6px;
-  background: transparent;
+  position: fixed; top: 24px; right: 24px;   /* center on the top band-line (46px), mirroring the footer */
+  width: 44px; height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: #f4f3ef;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.30);
   z-index: 4;
-  transition: width 240ms var(--ease-out), background 240ms var(--ease-out),
-              border-color 240ms var(--ease-out), opacity 400ms var(--ease-out);
+  transition: width 240ms var(--ease-out), box-shadow 220ms var(--ease-out),
+              transform 220ms var(--ease-out), opacity 400ms var(--ease-out);
 }
-#search.open {
-  width: 320px;
-  background: var(--surface-1);
-  -webkit-backdrop-filter: blur(24px) saturate(1.1);
-  backdrop-filter: blur(24px) saturate(1.1);
-  border-color: var(--line-2);
-}
-@supports not (backdrop-filter: blur(24px)) {
-  #search.open { background: #0D1117; }
-}
+#search:not(.open):hover { transform: translateY(-1.5px); box-shadow: 0 7px 24px rgba(0, 0, 0, 0.40); }
+#search.open { width: 320px; }
 
 #search-toggle {
-  height: 30px;
-  padding: 0 12px;
-  font-size: 11px; font-weight: 400;
-  letter-spacing: 0.02em;
-  color: var(--text-3);
-  white-space: nowrap;
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #0b0b0d;
+  border-radius: 999px;
 }
-#search-toggle .kbd { font-family: var(--font-mono); font-size: 11px; margin-left: 6px; }
+#search-toggle svg { display: block; }
 #search.open #search-toggle { display: none; }
 
 #search-input {
-  width: 100%; height: 30px;
-  padding: 0 12px;
+  width: 100%; height: 44px;
+  padding: 0 20px;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 999px;
   font-family: var(--font-ui);
   font-variant-numeric: tabular-nums;
-  font-size: 13px;
-  color: var(--text-1);
-  caret-color: var(--lume);
+  font-size: 14px;
+  color: #0b0b0d;
+  caret-color: #0b0b0d;
 }
-#search-input::placeholder { color: var(--text-3); }
+#search-input::placeholder { color: rgba(11, 11, 13, 0.45); }
+#search.open #search-input { padding-right: 44px; }   /* room for the close button */
+
+/* the search close (×) — appears only when the field is open */
+#search-close {
+  position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px;
+  display: none; align-items: center; justify-content: center;
+  border: none; background: transparent; border-radius: 999px;
+  color: #0b0b0d; cursor: pointer;
+  transition: background 160ms var(--ease-out), transform 140ms var(--ease-out);
+}
+#search.open #search-close { display: inline-flex; }
+#search-close svg { display: block; }
+#search-close:hover { background: rgba(11, 11, 13, 0.08); }
+#search-close:active { transform: translateY(-50%) scale(0.9); }
+#search-close:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(11, 11, 13, 0.4); }
 
 #search-results {
   position: absolute;
@@ -404,12 +418,8 @@ body.export #sounding, body.observatory #sounding {
   border: 1px solid var(--line-1);
   cursor: zoom-in;
 }
-.p-credit {
-  margin-top: 6px;
-  font-size: 9px; font-weight: 400;
-  letter-spacing: 0.02em;
-  color: var(--text-3);
-}
+/* photo credit / license line — recorded in catalog.json, not shown on-site */
+.p-credit { display: none; }
 
 #panel-content { transition: opacity 120ms var(--ease-exit); }
 #panel-content.swap { opacity: 0; }
@@ -925,7 +935,7 @@ canvas.fi-strip {
   backdrop-filter: blur(24px) saturate(1.1);
   border: 1px solid var(--line-2);
   border-radius: 12px;
-  z-index: 6;
+  z-index: 30;
   pointer-events: none;
   user-select: none;
   opacity: 0;
@@ -978,6 +988,76 @@ canvas.fi-strip {
 /* ---------- COUSTEAU — the surfacing, once per session ----------
    Appears only in the idle Observatory drift, when the user has stopped
    doing and is simply beneath the surface. Never during tasks. */
+
+/* ---------- NO-MATCH — the over-filtered dead end, made a destination.
+   A Cousteau submersible, engraved in the field's own line grammar, greets
+   the empty result and points the way out (HIG: turn an error into guidance,
+   Clarity + a designed alternative, never a blank wall). ---------- */
+#no-match {
+  position: fixed;
+  left: 50%; top: 48%;
+  transform: translate(-50%, -50%);
+  width: min(360px, calc(100vw - 48px));
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  z-index: 5;
+  user-select: none;
+  opacity: 0; transition: opacity 320ms var(--ease-out), transform 320ms var(--ease-out);
+}
+#no-match:not(.on) { transform: translate(-50%, calc(-50% + 10px)); }
+#no-match.on { opacity: 1; }
+#no-match[hidden] { display: none; }
+#nm-sub {
+  width: 156px; height: auto;
+  color: var(--text-2);
+  margin-bottom: 30px;
+  overflow: visible;
+}
+.nm-hull { animation: nm-bob 5.2s var(--ease-out) infinite; transform-origin: 50% 50%; }
+.nm-dome { stroke: var(--lume); }
+.nm-bub { fill: var(--lume-dim); stroke: none; opacity: 0; }
+.nm-bub1 { animation: nm-rise 3.4s var(--ease-out) infinite; }
+.nm-bub2 { animation: nm-rise 3.4s var(--ease-out) 0.9s infinite; }
+.nm-bub3 { animation: nm-rise 3.4s var(--ease-out) 1.7s infinite; }
+@keyframes nm-bob {
+  0%, 100% { transform: translateY(0) rotate(-0.6deg); }
+  50%      { transform: translateY(-5px) rotate(0.6deg); }
+}
+@keyframes nm-rise {
+  0%   { opacity: 0; transform: translateY(4px); }
+  25%  { opacity: 0.7; }
+  100% { opacity: 0; transform: translateY(-22px); }
+}
+#nm-title {
+  font-size: 18px; font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+#nm-body {
+  margin-top: 10px;
+  max-width: 296px;
+  font-size: 13px; font-weight: 400;
+  line-height: 1.62;
+  color: var(--text-3);
+  text-wrap: balance;
+}
+#nm-clear {
+  margin-top: 28px;
+  height: 34px;
+  padding: 0 18px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  font-size: 12px; font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-1);
+  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out);
+}
+#nm-clear:hover { border-color: var(--lume-dim); background: var(--surface-2); }
+#nm-clear:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+@media (prefers-reduced-motion: reduce) {
+  .nm-hull, .nm-bub1, .nm-bub2, .nm-bub3 { animation: none; }
+  .nm-bub { opacity: 0.5; }
+  #no-match, #no-match:not(.on) { transition: opacity 200ms var(--ease-out); transform: translate(-50%, -50%); }
+}
 
 #cousteau {
   position: fixed;
@@ -1098,16 +1178,6 @@ footer {
   line-height: 1.5;
 }
 #footer-right { display: flex; align-items: center; gap: 12px; pointer-events: auto; }
-/* the key legend — one quiet line, the only in-product disclosure of the
-   single-letter modes (H, E, Space, F); pan/zoom teach by form, these can't */
-#key-legend {
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  color: var(--text-3);
-  opacity: 0.75;
-  margin-right: 4px;
-  user-select: none;
-}
 /* Action buttons, bottom-right — the pacomepertant "sound" / "menu" language:
    a white circle for the Fit action, a white pill for the labeled Lens. Both
    persist across sky and descent. */
@@ -1141,10 +1211,34 @@ footer {
 #lens-chip svg { display: block; }
 #lens-chip:hover { transform: translateY(-1.5px); box-shadow: 0 7px 24px rgba(0, 0, 0, 0.40); }
 #lens-chip:active { transform: translateY(0) scale(0.97); }
-#lens-chip.active {                                          /* filters engaged — inverted, lume glyph */
-  background: #0b0b0d; color: var(--lume);
-  box-shadow: 0 0 0 1px rgba(233, 237, 242, 0.22), 0 2px 16px rgba(0, 0, 0, 0.30);
+#lens-chip { position: relative; }             /* anchors the gleam count badge */
+/* the gleam — a lume count badge, top-right of the filter button. The active
+   signal is the badge itself, so the button stays in the white action family
+   (no dark inversion competing with search/fit). */
+.lens-count {
+  position: absolute; top: -3px; right: -3px;
+  min-width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--lume);
+  color: #0b0b0d;
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 600; letter-spacing: 0;
+  font-variant-numeric: tabular-nums; line-height: 1;
+  box-shadow: 0 0 0 2px #07090d, 0 0 10px rgba(228, 213, 168, 0.75);   /* ring + the gleam glow */
+  opacity: 0; transform: scale(0.4);
+  transition: opacity 200ms var(--ease-out), transform 260ms var(--ease-out);
+  pointer-events: none;
 }
+#lens-chip.has-count .lens-count { opacity: 1; transform: scale(1); }
+.lens-count.gleam { animation: lens-gleam 620ms var(--ease-out); }
+@keyframes lens-gleam {
+  0%   { box-shadow: 0 0 0 2px #07090d, 0 0 0 rgba(228, 213, 168, 0); }
+  35%  { box-shadow: 0 0 0 2px #07090d, 0 0 16px 3px rgba(228, 213, 168, 0.95); transform: scale(1.18); }
+  100% { box-shadow: 0 0 0 2px #07090d, 0 0 10px rgba(228, 213, 168, 0.75); transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .lens-count.gleam { animation: none; } }
 #fit-chip:focus-visible, #lens-chip:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--lume), 0 2px 16px rgba(0, 0, 0, 0.30);
@@ -1296,15 +1390,22 @@ footer {
   #panel {
     top: auto; left: 0; right: 0; bottom: 0;
     width: auto;
-    height: 62vh; max-height: 62vh;
-    border-radius: 12px 12px 0 0;
+    height: 92vh; max-height: 92vh;          /* full-detent bottom sheet */
+    height: 92dvh; max-height: 92dvh;        /* dvh so mobile browser chrome doesn't clip it */
+    border-radius: 16px 16px 0 0;
     border-left: none; border-right: none; border-bottom: none;
+    padding: 14px 20px 24px;                 /* tighter top — room for the grabber */
     transform: translateY(24px);
+  }
+  /* the grabber — signals a dismissible bottom sheet (Apple HIG) */
+  #panel::before {
+    content: ""; position: sticky; top: 0; z-index: 2;
+    display: block; width: 36px; height: 4px; margin: 2px auto 12px;
+    border-radius: 999px; background: var(--line-2);
   }
   #panel.open { transform: none; }
   #panel.closing { transform: translateY(12px); }
   #search.open { width: calc(100vw - 48px); }
-  #key-legend { display: none; }   /* no keyboard, no legend */
 }
 
 /* ---------- REDUCED MOTION ---------- */
@@ -1318,4 +1419,602 @@ footer {
     transition-property: opacity, background, color, border-color !important;
   }
   #panel, #panel .sec, #fam-preview, #lb-img { transform: none !important; }
+}
+
+/* ======================================================================
+   THE FITTING — quiz + reveal
+   A DOM overlay above the canvas (mirrors #no-match / #lens-panel toggling
+   via .on + [hidden]). Deep-field ground, one accent (lume), system font.
+   ====================================================================== */
+
+/* ---------- ENTRY CHIP — the pacomepertant "menu" pill, 1:1 with the
+   white search (top) and Lens/filter (bottom-right) action language ---------- */
+#fitting-chip {
+  display: inline-flex; align-items: center; gap: 9px;
+  height: 44px; padding: 0 20px;
+  flex: 0 0 auto; white-space: nowrap;
+  border: none;
+  border-radius: 999px;
+  background: #f4f3ef;
+  color: #0b0b0d;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.30);
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 500;
+  letter-spacing: 0.04em;
+  pointer-events: auto;
+  transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out),
+              opacity 400ms var(--ease-out);
+}
+#fitting-chip .fic-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #0b0b0d;
+}
+#fitting-chip:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 7px 24px rgba(0, 0, 0, 0.40);
+}
+#fitting-chip:active { transform: translateY(0) scale(0.97); }
+#fitting-chip:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(11, 11, 13, 0.60), 0 2px 16px rgba(0, 0, 0, 0.30); }
+body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitting-chip { display: none; }
+/* mobile: yield the secondary date label; center the "find your watch" CTA and
+   keep the frame/filter circles right-aligned */
+@media (max-width: 620px) {
+  #footer-left { display: none; }
+  footer { justify-content: flex-end; }   /* push the frame/filter circles to the right */
+  #footer-right { gap: 10px; }
+  #fitting-chip {                          /* the CTA, dead-centered; sized to clear the circles */
+    position: absolute;
+    left: 50%; bottom: 0;
+    transform: translateX(-50%);
+    font-size: 12px; padding: 0 15px; gap: 6px;
+  }
+}
+
+/* ---------- OVERLAY SHELL ---------- */
+#fitting {
+  position: fixed; inset: 0;
+  z-index: 20;                       /* above canvas + all chrome, below nothing */
+  display: flex; align-items: stretch; justify-content: center;
+  background:
+    radial-gradient(150% 130% at 50% 50%, #06080B 52%, #04050A 100%);
+  opacity: 0;
+  transition: opacity 240ms var(--ease-out);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#fitting.on { opacity: 1; }
+#fitting[hidden] { display: none; }
+
+/* ====================================================================
+   THE QUIZ
+   ==================================================================== */
+#fitting { --fq-accent: #F6935D; }   /* per-question accent; renderFitStep overrides */
+#fit-quiz {
+  width: 100%; max-width: 720px;
+  margin: 0 auto;
+  padding: max(28px, env(safe-area-inset-top)) 28px max(40px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+#fitting.reveal-mode #fit-quiz { display: none; }
+
+/* the orange seatime masthead, carried into the questionnaire (matches #wordmark
+   position/face); hidden on the reveal, which carries its own signature */
+#fq-mark {
+  position: fixed; top: 37px; left: 24px;
+  font-family: var(--font-ui);
+  font-size: 18px; font-weight: 500;
+  line-height: 1; letter-spacing: 0;
+  color: #F6935D;
+  z-index: 21;
+  user-select: none; pointer-events: none;
+}
+#fitting.reveal-mode #fq-mark { display: none; }
+
+/* the orange seatime mark on the reveal — top-right, shown only on the reveal */
+#fr-brandmark {
+  position: fixed; top: 37px; right: 24px;
+  font-family: var(--font-ui);
+  font-size: 18px; font-weight: 500;
+  line-height: 1; letter-spacing: 0;
+  color: #F6935D;
+  z-index: 21;
+  user-select: none; pointer-events: none;
+  display: none;
+}
+#fitting.reveal-mode #fr-brandmark { display: block; }
+/* on narrow screens the quiz column runs full-width; drop it below the mark */
+@media (max-width: 760px) { #fit-quiz { padding-top: max(62px, env(safe-area-inset-top)); } }
+
+/* --- top: progress + eyebrow + nav --- */
+#fq-top { flex: 0 0 auto; padding-top: 14px; }
+#fq-progress {
+  height: 3px; border-radius: 3px;
+  background: var(--line-1);
+  overflow: hidden;
+}
+#fq-fill {
+  height: 100%; width: 20%;
+  background: var(--fq-accent);
+  border-radius: 3px;
+  transform-origin: left center;
+  transition: width 420ms var(--ease-glide), background 460ms var(--ease-out);
+}
+#fq-topline {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 16px;
+}
+.fq-eyebrow {
+  font-size: 12px; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-2);
+}
+#fq-nav { display: flex; align-items: center; gap: 6px; }
+#fq-back, #fq-close {
+  width: 34px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-2);
+  border-radius: 50%;
+  transition: color 200ms var(--ease-out), background 200ms var(--ease-out);
+}
+#fq-back:hover, #fq-close:hover { color: var(--text-1); background: var(--surface-2); }
+#fq-back:focus-visible, #fq-close:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+#fq-back[hidden] { display: none; }
+
+/* --- stage: headline + cards --- */
+#fq-stage {
+  flex: 1 1 auto;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 24px 0;
+}
+#fq-headline {
+  font-size: clamp(26px, 5.6vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
+  color: var(--text-1);
+  text-align: center;
+  text-wrap: balance;
+  margin-bottom: 30px;
+}
+
+/* --- VS cards (binary screens) --- */
+#fq-cards {
+  position: relative;
+  display: flex; flex-direction: column; gap: 16px;
+}
+#fq-cards.multi { gap: 10px; }
+
+.fq-card {
+  position: relative;
+  display: flex; align-items: center; gap: 18px;
+  width: 100%;
+  padding: 22px 24px;
+  text-align: left;
+  border: 1px solid var(--line-1);
+  border-radius: 16px;
+  background: var(--surface-1);
+  overflow: hidden;
+  cursor: pointer;
+  color: inherit;
+  transition: border-color 200ms var(--ease-out), background 200ms var(--ease-out),
+              transform 180ms var(--ease-out), box-shadow 220ms var(--ease-out);
+}
+.fq-card::before {          /* whisper-alpha background motif slot */
+  content: ""; position: absolute; inset: 0;
+  background: var(--surface-2);
+  opacity: 0; transition: opacity 200ms var(--ease-out);
+  pointer-events: none;
+}
+.fq-card:hover { border-color: var(--line-2); }
+.fq-card:hover::before { opacity: 0.5; }
+.fq-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.fq-card.chosen {
+  border-color: var(--fq-accent);
+  background: color-mix(in srgb, var(--fq-accent) 9%, var(--surface-1));
+  box-shadow: inset 0 0 0 1px var(--fq-accent);
+  transform: scale(1.01);
+}
+.fq-card-glyph {
+  flex: 0 0 auto;
+  width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fq-accent);
+}
+.fq-card-glyph svg { display: block; width: 100%; height: 100%; }
+.fq-card-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.fq-card-title {
+  display: block;
+  font-size: 18px; font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.fq-card-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px; font-weight: 400;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.fq-card-check {
+  flex: 0 0 auto;
+  width: 22px; height: 22px;
+  align-self: flex-start;
+  color: var(--fq-accent);
+  opacity: 0; transform: scale(0.6);
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+}
+.fq-card.chosen .fq-card-check { opacity: 1; transform: scale(1); }
+
+/* the "vs" pill between the two binary cards */
+#fq-vs {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--field-0);
+  border: 1px solid var(--line-2);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  z-index: 2;
+  pointer-events: none;
+}
+#fq-cards.multi #fq-vs { display: none; }
+
+/* --- multi-select rows --- */
+.fq-chip {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%;
+  padding: 15px 20px;
+  text-align: left;
+  border: 1px solid var(--line-1);
+  border-radius: 13px;
+  background: var(--surface-1);
+  cursor: pointer; color: inherit;
+  transition: border-color 180ms var(--ease-out), background 180ms var(--ease-out);
+}
+.fq-chip:hover { border-color: var(--line-2); }
+.fq-chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.fq-chip.chosen {
+  border-color: var(--fq-accent);
+  background: color-mix(in srgb, var(--fq-accent) 8%, var(--surface-1));
+}
+.fq-chip-box {
+  flex: 0 0 auto;
+  width: 20px; height: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--line-2);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--field-0);
+  transition: background 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.fq-chip.chosen .fq-chip-box { background: var(--fq-accent); border-color: var(--fq-accent); }
+.fq-chip-box svg { opacity: 0; transition: opacity 140ms var(--ease-out); }
+.fq-chip.chosen .fq-chip-box svg { opacity: 1; }
+.fq-chip-title { display: block; font-size: 16px; font-weight: 600; color: var(--text-1); }
+.fq-chip-sub { display: block; font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.fq-chip-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.fq-chip-glyph {
+  flex: 0 0 auto; width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fq-accent);
+}
+.fq-chip-glyph svg { display: block; width: 100%; height: 100%; }
+
+/* --- actions (multi screen) --- */
+#fq-actions {
+  display: flex; align-items: center; justify-content: center; gap: 20px;
+  margin-top: 30px;
+}
+#fq-actions[hidden] { display: none; }
+#fq-continue {
+  height: 42px; padding: 0 30px;
+  border-radius: 999px;
+  background: var(--text-1);
+  color: var(--field-0);
+  font-size: 14px; font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: transform 160ms var(--ease-out), box-shadow 200ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+#fq-continue:hover { transform: translateY(-1px); box-shadow: 0 8px 26px rgba(0,0,0,0.4); }
+#fq-continue:active { transform: translateY(0) scale(0.98); }
+#fq-continue:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+#fq-skip {
+  height: 42px; padding: 0 8px;
+  font-size: 13px; font-weight: 400;
+  color: var(--text-3);
+  transition: color 180ms var(--ease-out);
+}
+#fq-skip:hover { color: var(--text-2); }
+#fq-skip:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 8px; }
+
+/* screen transition — content cross-fade/slide */
+#fq-stage.turning #fq-headline,
+#fq-stage.turning #fq-cards { opacity: 0; transform: translateY(8px); }
+#fq-headline, #fq-cards {
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+
+/* ====================================================================
+   THE REVEAL — the museum-plate poster
+   Authored at 1080×1350; scaled to fit the viewport. The poster DOM is
+   what the 2× offscreen export mirrors.
+   ==================================================================== */
+#fit-reveal {
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 24px 16px 40px;
+  gap: 20px;
+}
+#fit-reveal[hidden] { display: none; }
+
+/* the poster: fixed authored size, scaled down responsively via a CSS var.
+   THE SPECIMEN PLATE — a framed museum object.
+   Layers (outer→in): field ground → passe-partout mat + hairline + corner ticks
+   → plate (top serial · rectangular portrait hero · engraved ledger caption ·
+   single quiet brand signature). */
+#fr-poster {
+  --poster-scale: 1;
+  position: relative;
+  width: 1080px; height: 1350px;
+  flex: 0 0 auto;
+  transform: scale(var(--poster-scale));
+  transform-origin: top center;
+  /* the reveal ground = the poster ground; the poster carries its own so
+     the exported PNG matches exactly */
+  background: radial-gradient(150% 130% at 50% 50%, #06080B 52%, #04050A 100%);
+  box-sizing: border-box;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+/* scaled poster occupies scaled height so the flow below doesn't overlap */
+#fr-poster-wrap { position: relative; }
+
+/* ---- PASSE-PARTOUT / MAT ---- outer margin, then a framed mat plate ---- */
+#fr-mat {
+  position: absolute; left: 56px; top: 56px; right: 56px; bottom: 56px;
+  background: linear-gradient(180deg, rgba(16,21,28,0.55) 0%, rgba(9,12,17,0.80) 100%);
+  border: 1.5px solid rgba(233,237,242,0.30);
+  pointer-events: none;
+}
+/* inner brightened hairline — survives 2160×2700 downscale (must-fix #4) */
+#fr-mat-hair {
+  position: absolute; left: 74px; top: 74px; right: 74px; bottom: 74px;
+  border: 1px solid rgba(233,237,242,0.20);
+  pointer-events: none;
+}
+/* four corner registration ticks (graft B) sitting on the mat frame corners */
+#fr-ticks { position: absolute; inset: 0; pointer-events: none; }
+#fr-ticks .fr-tick { position: absolute; background: rgba(233,237,242,0.34); }
+/* each tick = an L made from one 20px arm; drawn as a small plus via ::before */
+#fr-ticks .fr-tick { width: 22px; height: 1.5px; }
+#fr-ticks .fr-tick::before {
+  content: ""; position: absolute; left: 10.25px; top: -10.25px;
+  width: 1.5px; height: 22px; background: rgba(233,237,242,0.34);
+}
+#fr-ticks .fr-tick-tl { left: 45px; top: 56px; }
+#fr-ticks .fr-tick-tr { right: 45px; top: 56px; }
+#fr-ticks .fr-tick-bl { left: 45px; bottom: 56px; }
+#fr-ticks .fr-tick-br { right: 45px; bottom: 56px; }
+
+/* ---- PLATE — the content column inside the mat ---- */
+#fr-plate {
+  position: absolute; left: 74px; top: 74px; right: 74px; bottom: 74px;
+  display: flex; flex-direction: column;
+  padding: 40px 52px 34px;
+  box-sizing: border-box;
+}
+
+#fr-plate-top {
+  flex: 0 0 auto;
+  display: flex; justify-content: flex-end; align-items: baseline;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line-1);
+}
+#fr-serial { font-size: 13px; letter-spacing: 0.34em; text-transform: uppercase; color: var(--text-3); }
+
+/* ---- HERO — rectangular PORTRAIT window; strap bleeds off top & bottom ---- */
+#fr-stage {
+  position: relative;
+  flex: 0 0 auto;
+  margin-top: 26px;
+  height: 760px;                 /* ~56% of poster height */
+  border: 1px solid var(--line-2);
+  background: #04050A;
+  overflow: hidden;
+}
+#fr-watch {
+  position: absolute; inset: 0;
+}
+#fr-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: 50% 50%;
+}
+/* faint lume light bloom, top-centre — as if the dial lume catches light
+   (must-fix #3: nudged up one notch so the accent reads as intentional light) */
+#fr-lumepool {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(40% 32% at 50% 44%, rgba(228,213,168,0.16) 0%, rgba(228,213,168,0) 70%);
+}
+/* rim-lit emergence vignette (graft C): darken the mat-side corners of the
+   window ~12% for depth — strap stays fully intact */
+#fr-herofade {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(130% 118% at 50% 50%, rgba(4,5,10,0) 58%, rgba(4,5,10,0.42) 100%);
+}
+
+/* ---- CAPTION — engraved plate voice ---- */
+#fr-caption { flex: 1 1 auto; display: flex; flex-direction: column; text-align: center; }
+/* engraved archetype: light weight, wide tracking — plate-engraving voice
+   (replaces the off-brand 56/600 bold) */
+#fr-archetype {
+  margin-top: 30px;
+  font-size: 47px; font-weight: 400;
+  line-height: 1.0; letter-spacing: 0.28em;
+  text-transform: uppercase; color: var(--text-1);
+  padding-left: 0.28em;
+}
+#fr-rule {
+  display: flex; justify-content: center; align-items: center; gap: 14px;
+  margin: 22px 0 24px;
+}
+#fr-rule .fr-hair {
+  width: 40px; height: 1px;
+  background: linear-gradient(90deg, rgba(228,213,168,0) 0%, var(--lume) 100%);
+}
+#fr-rule .fr-hair:last-child {
+  background: linear-gradient(90deg, var(--lume) 0%, rgba(228,213,168,0) 100%);
+}
+#fr-rule .fr-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--lume);
+  box-shadow: 0 0 12px 3px var(--lume-glow);
+}
+/* engraved ledger (graft B): left labels, values flushed right, ledger align */
+#fr-ledger {
+  width: 100%; max-width: 470px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+#fr-ledger .fr-lrow {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 20px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--line-1);
+}
+#fr-ledger .fr-lrow:last-child { border-bottom: none; }
+#fr-ledger dt {
+  font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--text-3); font-weight: 500;
+  text-align: left;
+}
+#fr-ledger dd {
+  font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-1); font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+#fr-name { font-size: 15px !important; letter-spacing: 0.14em !important; }
+/* the insight — "why this watch, right now" (replaces the match-count + convergence) */
+#fr-why {
+  max-width: 500px; margin: 30px auto 0;
+  text-align: center;
+}
+#fr-why-label {
+  display: block;
+  font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--lume);
+  margin-bottom: 12px;
+}
+#fr-why-text {
+  font-size: 16px; line-height: 1.6; letter-spacing: 0.01em;
+  color: var(--text-1);
+  margin: 0;
+}
+
+/* ---- BOTTOM BRAND SIGNATURE — single quiet line ---- */
+#fr-plate-bottom {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding-top: 24px;
+  border-top: 1px solid var(--line-1);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+/* single signature — the "sea time" wordmark, same face as the masthead */
+#fr-brandline {
+  font-family: var(--font-ui);
+  font-size: 16px; font-weight: 500; letter-spacing: 0;
+  color: var(--text-2);
+}
+
+/* the "in another life" line, below the poster (not part of the print) */
+#fr-alt {
+  font-size: 13px; color: var(--text-3);
+  text-align: center; letter-spacing: 0.01em;
+  margin: 4px 0 0;
+}
+#fr-alt em { color: var(--text-2); font-style: normal; }
+/* the runner-up archetype is a live preview trigger */
+#fr-alt em.fr-alt-link {
+  cursor: pointer;
+  border-bottom: 1px solid var(--line-2);
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+#fr-alt em.fr-alt-link:hover,
+#fr-alt em.fr-alt-link:focus-visible {
+  color: var(--text-1); border-color: var(--lume-dim); outline: none;
+}
+
+/* reveal actions */
+#fr-actions {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 12px;
+}
+#fr-actions button {
+  height: 40px; padding: 0 20px;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 500;
+  letter-spacing: 0.01em;
+  border: 1px solid var(--line-2);
+  color: var(--text-1);
+  background: transparent;
+  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out),
+              color 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+#fr-actions button:hover { border-color: var(--lume-dim); background: var(--surface-2); }
+#fr-actions button:active { transform: scale(0.98); }
+#fr-actions button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* Save is the viral action — it carries the filled primary emphasis */
+#fr-save {
+  background: var(--text-1) !important;
+  color: var(--field-0) !important;
+  border-color: var(--text-1) !important;
+}
+#fr-save:hover { background: #fff !important; }
+#fr-restart { color: var(--text-3) !important; border-color: transparent !important; }
+#fr-restart:hover { color: var(--text-2) !important; background: transparent !important; }
+
+/* cinematic bloom-in for the poster (REDUCED = simple fade handled by #fitting.on) */
+#fit-reveal .fr-bloom #fr-watch { animation: fr-bloom-watch 700ms var(--ease-out) both; }
+#fit-reveal .fr-bloom #fr-lumepool { animation: fr-bloom-pool 900ms var(--ease-out) both; }
+#fit-reveal .fr-bloom #fr-caption { animation: fr-bloom-up 640ms var(--ease-out) 180ms both; }
+#fit-reveal .fr-bloom #fr-plate-top,
+#fit-reveal .fr-bloom #fr-plate-bottom { animation: fr-bloom-up 640ms var(--ease-out) 300ms both; }
+@keyframes fr-bloom-watch {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes fr-bloom-pool { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fr-bloom-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 460px) {
+  .fq-card { padding: 18px 18px; gap: 14px; }
+  .fq-card-glyph { width: 38px; height: 38px; }
+  .fq-card-title { font-size: 16px; }
+  #fq-vs { width: 30px; height: 30px; }
+}
+
+/* ---------- REDUCED MOTION ---------- */
+@media (prefers-reduced-motion: reduce) {
+  #fitting { transition-duration: 1ms !important; }
+  #fq-fill { transition-duration: 1ms !important; }
+  #fq-headline, #fq-cards { transition-duration: 1ms !important; transform: none !important; }
+  #fq-stage.turning #fq-headline, #fq-stage.turning #fq-cards { transform: none !important; }
+  .fq-card.chosen { transform: none !important; }
+  #fit-reveal .fr-bloom #fr-watch,
+  #fit-reveal .fr-bloom #fr-lumepool,
+  #fit-reveal .fr-bloom #fr-caption,
+  #fit-reveal .fr-bloom #fr-plate-top,
+  #fit-reveal .fr-bloom #fr-plate-bottom { animation: none !important; }
 }

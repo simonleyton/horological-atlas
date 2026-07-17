@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <title>The Horological Atlas</title>
-  <link rel="stylesheet" href="app.css?v=35">
+  <link rel="stylesheet" href="app.css?v=63">
 </head>
 <body class="pre-reveal">
 
@@ -16,19 +16,29 @@
     <p id="status-2"></p>
   </div>
 
-  <header id="wordmark" class="chrome">seatime</header>
+  <header id="wordmark" class="chrome">sea time</header>
 
   <nav id="mode-toggle" class="chrome" aria-label="Projection">
     <button id="mt-descent" type="button" aria-pressed="true">descent</button>
     <span class="mt-dot" aria-hidden="true"></span>
-    <button id="mt-sky" type="button" aria-pressed="false">sky</button>
+    <button id="mt-sky" type="button" aria-pressed="false">surface</button>
   </nav>
 
   <div id="search" class="chrome">
-    <button id="search-toggle" type="button">Search <span class="kbd">⌘K</span></button>
+    <button id="search-toggle" type="button" aria-label="Search" title="Search (⌘K)" aria-keyshortcuts="Meta+K">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <line x1="10.6" y1="10.6" x2="14.2" y2="14.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
     <input id="search-input" type="text" role="combobox" aria-expanded="false"
            aria-controls="search-results" aria-autocomplete="list" aria-label="Search watches and families"
            autocomplete="off" autocapitalize="off" spellcheck="false" hidden>
+    <button id="search-close" type="button" aria-label="Close search">
+      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+        <path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
     <ul id="search-results" role="listbox" aria-label="Watches and families" hidden></ul>
   </div>
 
@@ -56,7 +66,14 @@
   <footer class="chrome">
     <div id="footer-left"></div>
     <div id="footer-right">
-      <span id="key-legend">D descend&thinsp;&middot;&thinsp;H hide&thinsp;&middot;&thinsp;E export&thinsp;&middot;&thinsp;Space play&thinsp;&middot;&thinsp;F fit</span>
+      <button id="fitting-chip" type="button" aria-label="Find your watch — take the fitting" title="Find your watch">
+        find your watch<span class="fic-dot" aria-hidden="true"></span>
+      </button>
+      <button id="fit-chip" type="button" title="Fit the whole field (F)" aria-label="Fit the whole field" aria-keyshortcuts="F">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M2.4 5.6 V2.4 H5.6 M10.4 2.4 H13.6 V5.6 M13.6 10.4 V13.6 H10.4 M5.6 13.6 H2.4 V10.4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <button id="lens-chip" type="button" aria-expanded="false" aria-controls="lens-panel" aria-label="Filter the field">
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
           <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
@@ -70,11 +87,7 @@
             <circle cx="12.5" cy="8" r="1.85"/>
           </g>
         </svg>
-      </button>
-      <button id="fit-chip" type="button" title="Fit the whole field (F)" aria-label="Fit the whole field" aria-keyshortcuts="F">
-        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-          <path d="M2.4 5.6 V2.4 H5.6 M10.4 2.4 H13.6 V5.6 M13.6 10.4 V13.6 H10.4 M5.6 13.6 H2.4 V10.4" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <span class="lens-count" aria-hidden="true"></span>
       </button>
     </div>
   </footer>
@@ -142,8 +155,107 @@
     <figcaption>Jacques-Yves Cousteau</figcaption>
   </figure>
 
+  <div id="no-match" role="status" aria-live="polite" hidden>
+    <svg id="nm-sub" viewBox="0 0 240 150" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <g class="nm-hull">
+        <path d="M44 92 Q40 74 60 68 L168 62 Q196 62 206 78 Q210 85 206 92 Q192 106 160 106 L74 106 Q48 104 44 92 Z"/>
+        <circle class="nm-dome" cx="66" cy="86" r="11"/>
+        <circle cx="104" cy="84" r="4.6"/><circle cx="126" cy="83" r="4.6"/><circle cx="148" cy="82" r="4.6"/>
+        <path d="M108 66 L112 46 L140 45 L146 63"/>
+        <path d="M126 45 L126 33 L134 33"/>
+        <path d="M196 74 L214 62 L211 80"/>
+        <path d="M206 88 L218 88"/>
+        <ellipse cx="221" cy="88" rx="3.5" ry="11"/>
+        <path d="M84 106 L84 116 M150 106 L150 116 M84 116 L150 116"/>
+      </g>
+      <circle class="nm-bub nm-bub1" cx="128" cy="24" r="2.4"/>
+      <circle class="nm-bub nm-bub2" cx="120" cy="16" r="1.7"/>
+      <circle class="nm-bub nm-bub3" cx="133" cy="10" r="1.2"/>
+    </svg>
+    <h2 id="nm-title">Nothing down here. Yet.</h2>
+    <p id="nm-body">Your filters have narrowed the field to nothing. Loosen one and the watches surface again.</p>
+    <button id="nm-clear" type="button">Clear the filters</button>
+  </div>
+
   <div id="live" aria-live="polite" class="vh"></div>
 
-  <script type="module" src="js/main.js?v=35"></script>
+  <!-- ============================================================
+       THE FITTING — quiz + reveal overlay (mirrors #no-match / #lens-panel:
+       a DOM layer above the canvas, toggled via .on + [hidden])
+       ============================================================ -->
+  <div id="fitting" role="dialog" aria-modal="true" aria-label="The Fitting — find your watch" hidden>
+    <span id="fq-mark" aria-hidden="true">sea time</span>
+    <span id="fr-brandmark" aria-hidden="true">sea time</span>
+    <div id="fit-quiz">
+      <div id="fq-top">
+        <div id="fq-progress" aria-hidden="true"><div id="fq-fill"></div></div>
+        <div id="fq-topline">
+          <span id="fq-round" class="fq-eyebrow"></span>
+          <div id="fq-nav">
+            <button id="fq-back" type="button" aria-label="Previous question" hidden>
+              <svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true"><path d="M6 1 L1 6 L6 11 M1 6 H13" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button id="fq-close" type="button" aria-label="Close the fitting">
+              <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="fq-stage">
+        <h2 id="fq-headline"></h2>
+        <div id="fq-cards"></div>
+        <div id="fq-actions" hidden>
+          <button id="fq-continue" type="button">Continue</button>
+          <button id="fq-skip" type="button">Skip</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- THE REVEAL — the museum-plate poster -->
+    <div id="fit-reveal" hidden>
+      <div id="fr-poster">
+        <div id="fr-mat" aria-hidden="true"></div>
+        <div id="fr-mat-hair" aria-hidden="true"></div>
+        <div id="fr-ticks" aria-hidden="true">
+          <span class="fr-tick fr-tick-tl"></span><span class="fr-tick fr-tick-tr"></span>
+          <span class="fr-tick fr-tick-bl"></span><span class="fr-tick fr-tick-br"></span>
+        </div>
+        <div id="fr-plate">
+          <div id="fr-plate-top">
+            <span id="fr-serial">The Fitting · No.001</span>
+          </div>
+          <div id="fr-stage">
+            <div id="fr-watch"><img id="fr-img" alt=""></div>
+            <div id="fr-lumepool" aria-hidden="true"></div>
+            <div id="fr-herofade" aria-hidden="true"></div>
+          </div>
+          <div id="fr-caption">
+            <div id="fr-archetype"></div>
+            <div id="fr-rule" aria-hidden="true"><span class="fr-hair"></span><span class="fr-dot"></span><span class="fr-hair"></span></div>
+            <dl id="fr-ledger">
+              <div class="fr-lrow"><dt>Reference</dt><dd id="fr-name"></dd></div>
+              <div class="fr-lrow"><dt>Provenance</dt><dd id="fr-ref"></dd></div>
+            </dl>
+            <div id="fr-why">
+              <span id="fr-why-label">Why this watch, right now</span>
+              <p id="fr-why-text"></p>
+            </div>
+          </div>
+          <div id="fr-plate-bottom">
+            <div id="fr-brandline">sea time</div>
+          </div>
+        </div>
+      </div>
+      <p id="fr-alt"></p>
+      <div id="fr-actions">
+        <button id="fr-save" type="button">Save poster</button>
+        <button id="fr-share" type="button">Share</button>
+        <button id="fr-see" type="button">See it in the index</button>
+        <button id="fr-restart" type="button">Start over</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js?v=64"></script>
 </body>
 </html>

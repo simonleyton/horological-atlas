@@ -198,6 +198,25 @@ const elLightbox = $('lightbox'), elLbImg = $('lb-img'), elLbClose = $('lb-close
       elLbTitle = $('lb-title'), elLbCredit = $('lb-credit'), elLbCount = $('lb-count');
 const elLensChip = $('lens-chip'), elLensPanel = $('lens-panel'),
       elLensGroups = $('lens-groups'), elLensClear = $('lens-clear');
+const elNoMatch = $('no-match'), elNmClear = $('nm-clear');
+let nmHideTimer = null;
+/* the over-filtered empty state — a designed destination, not a dead end.
+   Shown only when the Lens has narrowed the resting Descent to nothing. */
+function updateNoMatch() {
+  const show = S.mode === 'descent' && !S.morph && DS.full && DS.n === 0;
+  if (show) {
+    clearTimeout(nmHideTimer);
+    if (elNoMatch.hidden) {
+      elNoMatch.hidden = false;
+      requestAnimationFrame(() => requestAnimationFrame(() => elNoMatch.classList.add('on')));
+    }
+  } else if (!elNoMatch.hidden) {
+    elNoMatch.classList.remove('on');
+    clearTimeout(nmHideTimer);
+    nmHideTimer = setTimeout(() => { elNoMatch.hidden = true; }, REDUCED ? 90 : 320);
+  }
+}
+elNmClear.addEventListener('click', () => { anyInput(); lensClear(); });
 
 const ctx = canvas.getContext('2d');
 let dpr = 1, W = 0, H = 0;
@@ -273,6 +292,10 @@ let LORE = {};
 /* MEDIA = heritage image gallery per watch (data/media.json): owners in period,
    archival ads, the watch in use. Feeds a filmstrip in the panel + the lightbox. */
 let MEDIA = {};
+/* FITTING = per-watch signed weights + archetype + hook for THE FITTING quiz
+   (data/fitting.json). Loaded no-cache; the quiz scores over it. */
+let FITTING = null;
+let pendingFitOpen = false;      /* #fit deep-link fired before fitting.json landed */
 /* card surfaces demand dial-forward soldier shots — an editorial photo rides a
    card only if the pose audit cleared it (no pose field = not yet audited) */
 const frontalOk = e => !e || e.pose !== 'angled';
@@ -390,6 +413,10 @@ async function loadData() {
     .then(r => r.ok ? r.json() : null)
     .then(j => { if (j && typeof j === 'object') { MEDIA = j; refreshPanelLore(); } })
     .catch(() => { /* no media layer yet */ });
+  fetch('./data/fitting.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)
+    .then(j => { if (j && typeof j === 'object') { FITTING = j; if (pendingFitOpen) { pendingFitOpen = false; openFitting(); } } })
+    .catch(() => { /* the fitting is progressive — the atlas stands without it */ });
   const t = setTimeout(() => {
     if (!S.loaded && !S.failed) {
       elS1.textContent = 'Charting the atlas…';
@@ -512,8 +539,9 @@ function initData(data) {
         : (cn === 'White' || cn === 'Cream' || cn === 'Silver' || cn === 'Grey') ? 'light'
         : (cn === 'Gold' || cn === 'Brown') ? 'gilt' : null,
       movement: w.movement || null,
-      size: w.diameterMm <= 38 ? 's1' : w.diameterMm <= 42 ? 's2' : 's3',
+      size: !isFinite(w.diameterMm) ? 's3' : w.diameterMm < 38.5 ? 's1' : w.diameterMm < 39.5 ? 's39' : w.diameterMm < 40.5 ? 's40' : w.diameterMm < 41.5 ? 's41' : w.diameterMm < 42.5 ? 's42' : 's3',
       origin: w.country || null,
+      era: w.year ? String(Math.floor(w.year / 10) * 10) : null,
     };
   }
   buildLens();
@@ -566,7 +594,7 @@ function defaultToDescent() {
   refreshFocus();
   applyDescentChrome(true);
   body.classList.add('descent');
-  if (!REDUCED && DS.wrM && (wcSnowK(dM(DS.s)) > 0 || wcBioK(dM(DS.s)) > 0)) DS.snowUntil = now + 4000;
+  scheduleWaterTail(now);
   syncToggle();
 }
 
@@ -617,6 +645,14 @@ function applyDeepLink() {
   let h = '';
   try { h = (location.hash || '').replace(/^#/, ''); } catch (e) { return false; }
   if (!h) return false;
+  /* #fit — open THE FITTING at boot, over the default projection. Land descent
+     underneath so a close/See-it-in-the-atlas has a world to return to. */
+  if (h === 'fit' || h.indexOf('fit&') === 0 || /(^|&)fit(&|$)/.test(h)) {
+    defaultToDescent();
+    scheduleWaterTail(performance.now());
+    if (FITTING) openFitting(); else pendingFitOpen = true;
+    return true;
+  }
   const p = new URLSearchParams(h);
   const w = p.get('w');
 
@@ -643,13 +679,28 @@ function applyDeepLink() {
     const d = parseInt(p.get('d'), 10);
     if (isFinite(d)) { DS.s = clamp(d, 0, DS.n - 1); DS.lastFocus = -1; refreshFocus(); }
   }
+  /* the tail was scheduled at the surface (defaultToDescent) — re-read it at
+     the restored depth, or a deep-linked hadal arrival sleeps in 4s */
+  scheduleWaterTail(performance.now());
   return true;
 }
 
 function computeFit() {
   const { minX, maxX, minY, maxY } = S.bounds;
   const ew = Math.max(maxX - minX, 1e-6), eh = Math.max(maxY - minY, 1e-6);
-  S.fitZ = Math.min((W - 120) / ew, (H - 120) / eh);
+  const portrait = H > W && W < 620;
+  if (portrait) {
+    /* Mobile portrait: the sky is wide, the screen is tall — fitting to width
+       strands the constellation as a speck in a sea of black. Instead fill the
+       USABLE band (between the top nav and the bottom actions) and let the sky
+       bleed gently past the sides, pannable — immersive, not a distant cluster. */
+    const usableH = Math.max(H - 260, H * 0.6);   /* ~nav (top) + actions (bottom) */
+    const fitH = usableH / eh;
+    const fitW = (W - 24) / ew;
+    S.fitZ = Math.min(fitH, fitW * 1.85);         /* toward filling height; keep edge labels mostly on-screen */
+  } else {
+    S.fitZ = Math.min((W - 120) / ew, (H - 120) / eh);
+  }
   if (!isFinite(S.fitZ) || S.fitZ <= 0) S.fitZ = 1;
 }
 const worldDiag = () => Math.hypot(S.bounds.maxX - S.bounds.minX, S.bounds.maxY - S.bounds.minY);
@@ -1228,6 +1279,7 @@ elTlNow.addEventListener('click', () => { anyInput(); returnToPresent(); });
 
 const LENS_GROUPS = [
   { key: 'price', label: 'PRICE' },
+  { key: 'era', label: 'YEAR' },
   { key: 'dial', label: 'DIAL' },
   { key: 'movement', label: 'MOVEMENT' },
   { key: 'size', label: 'CASE SIZE' },
@@ -1238,12 +1290,17 @@ const LENS_CHIPS = {
          ['warm', 'Orange & red', '#c2632e'], ['light', 'White & silver', '#c9ced4'], ['gilt', 'Gold & brown', '#8a6b45']],
   movement: [['automatic', 'Automatic'], ['manual', 'Hand-wound'], ['quartz', 'Quartz'],
              ['digital', 'Digital'], ['solar', 'Solar'], ['spring-drive', 'Spring Drive']],
-  size: [['s1', '≤ 38 mm'], ['s2', '39–42 mm'], ['s3', '43 mm +']],
+  size: [['s1', '≤ 38 mm'], ['s39', '39 mm'], ['s40', '40 mm'], ['s41', '41 mm'], ['s42', '42 mm'], ['s3', '43 mm +']],
   origin: [['CH', 'Switzerland'], ['DE', 'Germany'], ['JP', 'Japan'], ['FR', 'France'],
            ['GB', 'United Kingdom'], ['US', 'United States'], ['RU', 'Russia'], ['IT', 'Italy']],
+  /* Year as ERA — the meaningful axis for a curated field is the decade, not the
+     exact year; matches the Lens's chip grammar (not a 90-row checkbox wall) */
+  era: [['1930', '1930s'], ['1940', '1940s'], ['1950', '1950s'], ['1960', '1960s'],
+        ['1970', '1970s'], ['1980', '1980s'], ['1990', '1990s'], ['2000', '2000s'],
+        ['2010', '2010s'], ['2020', '2020s']],
 };
-const SET_KEYS = ['dial', 'movement', 'size', 'origin'];
-const lensSel = { dial: new Set(), movement: new Set(), size: new Set(), origin: new Set() };
+const SET_KEYS = ['era', 'dial', 'movement', 'size', 'origin'];
+const lensSel = { era: new Set(), dial: new Set(), movement: new Set(), size: new Set(), origin: new Set() };
 /* price is a continuous range on a log scale — min/max = data domain, lo/hi = handles */
 const lensPrice = { min: 100, max: 1000000, lo: 100, hi: 1000000 };
 let lensGhost = null;             /* outgoing selection, so the release fades rather than pops */
@@ -1330,7 +1387,22 @@ function lensRetarget() {
 }
 function updateLensChrome() {
   const n = SET_KEYS.reduce((a, k) => a + lensSel[k].size, 0) + (priceEngaged() ? 1 : 0);
-  elLensChip.classList.toggle('active', n > 0);   /* the count lives in the footer summary */
+  elLensChip.classList.toggle('active', n > 0);
+  /* the gleam — a lume count badge on the filter button; Feedback (HIG): how
+     many lenses are engaged, legible without opening the panel */
+  const badge = elLensChip.querySelector('.lens-count');
+  if (badge) {
+    if (n > 0 && badge.textContent !== String(n)) {
+      badge.textContent = String(n);
+      badge.classList.remove('gleam');
+      void badge.offsetWidth;                     /* reflow — re-arm the gleam pulse */
+      badge.classList.add('gleam');
+    } else if (n === 0) {
+      badge.textContent = '';
+    }
+  }
+  elLensChip.classList.toggle('has-count', n > 0);
+  elLensChip.setAttribute('aria-label', n > 0 ? `Filter the field — ${n} active` : 'Filter the field');
   elLensClear.hidden = n === 0;
 }
 function lensToggle(groupKey, value, btn) {
@@ -1741,6 +1813,16 @@ function hitTest(sx, sy) {
     if (d < pad && d < bd) { bd = d; best = w; }
   }
   return best;
+}
+
+/* life-ladder hit test — the engraved marks are doors to their stories (§18e) */
+function annHitTest(sx, sy) {
+  if (!S.loaded || S.morph || S.mode !== 'descent') return null;
+  for (let i = 0; i < DS.annRectN; i++) {
+    const r = dAnnPool[i];
+    if (sx >= r.x && sx <= r.x + r.w && sy >= r.y && sy <= r.y + r.h) return r;
+  }
+  return null;
 }
 
 /* family-label hit test — winning pass-4 rects only; a culled label is not a door */
@@ -2492,7 +2574,7 @@ function showPanel(w, lin, crossfade) {
         if (cat && cat.file) items.push({
           src: './data/' + cat.file,
           title: `${w.brand} ${w.model} · ${w.year} — specimen`,
-          credit: 'WatchBase catalog render'
+          credit: (cat && cat.credit) || 'WatchBase catalog render'
         });
         if (items.length) lightboxOpen(items, 0);
       });
@@ -2541,7 +2623,7 @@ function familyHtml(fv) {
   if (media.length) {
     const m = media[0];
     const creditLine = m.isCatalog
-      ? `${m.w.brand} ${m.w.model} · WatchBase catalog render`
+      ? `${m.w.brand} ${m.w.model} · Photo ${(CATALOG[m.w.id] && CATALOG[m.w.id].credit) || 'WatchBase catalog render'}`
       : `${m.w.brand} ${m.w.model} · Photo ${m.credit || 'Wikimedia Commons'}${m.license ? ' · ' + m.license : ''}`;
     hero = `<div class="sec fi-hero">` +
       `<img src="./data/${escapeHtml(m.file)}" alt="${escapeHtml(m.w.brand + ' ' + m.w.model)}"` +
@@ -2602,7 +2684,7 @@ function showFamilyPanel(focusId) {
         const gallery = familyMedia(fv.id).map(m => ({
           src: './data/' + m.file,
           title: `${m.w.brand} ${m.w.model} · ${m.w.year}`,
-          credit: m.isCatalog ? 'WatchBase catalog render' : photoCredit(m)
+          credit: m.isCatalog ? ((CATALOG[m.w.id] && CATALOG[m.w.id].credit) || 'WatchBase catalog render') : photoCredit(m)
         }));
         lightboxOpen(gallery, 0);
       });
@@ -2800,6 +2882,7 @@ function commitSearch(i) {
 }
 
 elSearchToggle.addEventListener('click', openSearch);
+$('search-close').addEventListener('click', closeSearch);
 elSearchInput.addEventListener('input', () => renderResults(rankMatches(elSearchInput.value)));
 elSearchInput.addEventListener('keydown', e => {
   if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
@@ -3715,7 +3798,7 @@ function lbRender(swap) {
     elLbImg.src = it.src;
     elLbImg.alt = it.title || '';
     elLbTitle.textContent = it.title || '';
-    elLbCredit.textContent = it.credit || '';
+    elLbCredit.textContent = '';   /* credit/license recorded in catalog.json, not shown on-site */
     const many = lbItems.length > 1;
     elLbCount.textContent = many ? `${lbIdx + 1} / ${lbItems.length}` : '';
     elLbPrev.hidden = !many;
@@ -3841,6 +3924,13 @@ canvas.addEventListener('pointermove', e => {
     if (!S.dragging && S.loaded) {
       const hit = hitTest(e.clientX, e.clientY);
       setHover(hit ? hit.id : null, true);
+      const ann = hit ? null : annHitTest(e.clientX, e.clientY);
+      const ak = ann ? ann.k : -1;
+      if (ak !== DS.annHover) {
+        DS.annHover = ak;
+        canvas.style.cursor = ann ? 'pointer' : '';
+        invalidate();
+      }
     }
     return;
   }
@@ -3893,7 +3983,10 @@ function endPointer(e) {
     if (!dd) return;
     if (!dd.moved && e.type === 'pointerup') {
       const hit = hitTest(e.clientX, e.clientY);
+      const ann = hit ? null : annHitTest(e.clientX, e.clientY);
       if (hit) selectWatch(hit.id);
+      /* a life-ladder mark opens its story — the one door out of the column */
+      else if (ann) window.open(ann.url, '_blank', 'noopener');
       /* empty field keeps its meaning: let go of whatever you're holding */
       else if (S.selection) deselect();
       /* a tap on a card just started a helix glide (selectWatch →
@@ -3942,6 +4035,7 @@ canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('pointerleave', () => {
   lastPtrX = -1; lastPtrY = -1;
   if (!S.dragging) { setHover(null); setFamHover(null); }
+  if (DS.annHover !== -1) { DS.annHover = -1; canvas.style.cursor = ''; invalidate(); }
 });
 
 canvas.addEventListener('dblclick', e => {
@@ -4127,15 +4221,12 @@ for (const evt of ['pointerdown', 'wheel', 'keydown', 'touchstart']) {
    ====================================================================== */
 
 const elMtSky = $('mt-sky'), elMtDescent = $('mt-descent');
-const elKeyLegend = $('key-legend');
 const elTagline = $('tagline');
 /* the masthead is honest to the projection you're standing in (§design-review) */
 const TAGLINE_SKY = 'A map of dive-watch design, arranged by kinship — brightness is influence.';
 const TAGLINE_DESCENT = 'Every dive watch ranked by the depth it survives — the surface to the Mariana floor.';
-const LEGEND_SKY = elKeyLegend.innerHTML;
-const LEGEND_DESCENT = 'D surface · E export · Esc back';
 
-const CARD_W = 168, CARD_H = 112;              /* 3:2 plate at scale 1 */
+const CARD_W = 244, CARD_H = 163;              /* 3:2 plate at scale 1 — sized so the focused hero fills the frame like a magazine spread (pacomepertant-scale) */
 /* the focus bloom — the detent's reward. The card nearest the fractional
    scroll swells so the watch can actually be enjoyed; prox² concentrates
    the swell at the landing, so scrolling never pops, it breathes. */
@@ -4148,7 +4239,7 @@ const SPRS = 2;   /* sprite resolution — fixed at 2× logical (spec §3: 336×
                      0.40–0.90, so a 1× source softens every plate on 1× displays; and a
                      fixed value never goes stale when the window crosses to another dpr. */
 const HELIX_DTH = Math.PI * 2 / 9;             /* 9 cards per turn */
-const PITCH = 64, SHELF = 56;                  /* vertical pitch; extra shelf at band boundaries */
+const PITCH = 93, SHELF = 80;                  /* vertical pitch; extra shelf at band boundaries — scaled with the larger plates */
 /* inertia decay time-constant is depth-keyed since the water column (§18c):
    τ = 150 + 30·(1 − (d/11000)^0.35) ms — 174ms at the shallowest card,
    150ms at the hadal floor. See dTau(). The settle spring is untouched. */
@@ -4170,6 +4261,7 @@ const DS = {
   lastFocus: -1,
   pillText: '', gaugeText: '',
   rects: [],                     /* hit rects this frame — pooled objects, rear→front */
+  annRectN: 0, annHover: -1,     /* life-ladder marks — clickable engravings (§18e) */
   cx: 0, cxA: null, cy: 0, cyA: null,   /* 400ms panel-offset glides */
   rampUntil: 0,                  /* image alpha-ramp horizon for the scheduler */
   hintSeen: false, hintT0: 0,    /* wheel affordance — whispers until the first dive gesture */
@@ -4180,6 +4272,8 @@ const DS = {
   annW: null, shelfW: null,      /* label widths, measured once — no per-frame TextMetrics */
   snow: null,                    /* Float32Array(28×4) — xFrac, yFrac, alpha, fall px/s */
   snowClock: 0,                  /* seconds of accumulated drift — never wall-clock */
+  bubClock: 0,                   /* §18c — monotonic px of bubble RISE; only ever grows,
+                                    so the wake is always up regardless of scroll direction */
   snowUntil: 0,                  /* the 4s post-settle tail the scheduler honors */
   snowWrap: 0,                   /* world wrap height — H + 240, kept by resize() */
   bub: null,                     /* Float32Array(18×5) — xFrac, yFrac, alpha, rise px/s, diameter */
@@ -4192,6 +4286,8 @@ let descDrag = null;             /* {sy, lastY, lastT, moved} — touch/drag scr
 /* preallocated draw + hit pools — a scroll frame allocates nothing */
 const dSlots = Array.from({ length: 21 }, () => ({ i: 0, phi: 0, d: 0, sc: 0, al: 0, x: 0, y: 0 }));
 const dRectPool = Array.from({ length: 21 }, () => ({ id: null, x: 0, y: 0, w: 0, h: 0 }));
+/* life-ladder marks — at most one rect per silhouette entry per frame */
+const dAnnPool = Array.from({ length: 8 }, () => ({ k: -1, url: '', x: 0, y: 0, w: 0, h: 0 }));
 
 /* one grouping convention product-wide — 4+ digit metres take the comma, so
    the shelf ruler, the gauge, the pill, and the annotations all agree */
@@ -4207,9 +4303,10 @@ function initDescent() {
   initMarineSnow();                 /* seeded once — view-independent drift */
   initBubbles();                    /* §18c amendment — the wake, seeded once */
   initBiolum();                     /* §18c amendment — the deep's own light, seeded once */
-  descentDerive(DS.full);
-  /* §18d — the sounding line hangs once the column exists */
+  /* §18d — the sounding line must be measurable BEFORE descentDerive sizes it:
+     a display:none rail reads 0×0 and the canvas/labels build empty (v35 bug) */
   elSounding.hidden = false;
+  descentDerive(DS.full);
 }
 
 /* rebuild every index-keyed structure for a given order — the full census or a
@@ -4297,6 +4394,7 @@ function applyDescentNarrow(animated) {
     DS.reflow = null;
   }
   if (descentChromeOn) elFooterLeft.textContent = DS.gaugeText;
+  updateNoMatch();
   invalidate();
 }
 
@@ -4502,7 +4600,12 @@ function stepDescent(now) {
      than the physics one: the 4s tail frames at ~10fps (100ms gaps), and
      clamping those to 50ms would halve the fall rate exactly when the eye
      is parked. Reduced motion: static. */
-  if (!REDUCED && DS.snow && (DS.phase !== 'rest' || now < DS.snowUntil)) DS.snowClock += Math.min(rawDt, 0.15);
+  if (!REDUCED && DS.snow && (DS.phase !== 'rest' || DS.reflow || now < DS.snowUntil)) {
+    const dtc = Math.min(rawDt, 0.15);
+    DS.snowClock += dtc;
+    /* the wake rises faster the harder you move through the water — |v|, rectified */
+    DS.bubClock += (BUB_RISE_BASE + BUB_RISE_GUST * Math.min(Math.abs(DS.v), BUB_VCAP)) * dtc;
+  }
   if (DS.phase === 'rest' || DS.phase === 'gesture') return;
   if (DS.phase === 'glide') {
     const g = DS.glide;
@@ -4542,7 +4645,7 @@ function descentSettled() {
      is scheduled only where something would show: snow above ~2500m
      (wcSnowK), bioluminescence below 1000m (wcBioK) — the amendment gave
      the hadal dark its own 4s of life before it, too, goes still. */
-  if (!REDUCED && DS.wrM && (wcSnowK(dM(DS.s)) > 0 || wcBioK(dM(DS.s)) > 0)) DS.snowUntil = performance.now() + 4000;
+  scheduleWaterTail(performance.now());
   refreshFocus();
   const w = DS.order[clamp(Math.round(DS.s), 0, DS.n - 1)];
   if (w) elLive.textContent = `${w.brand} ${w.model}, ${w.waterResistanceM} metres.`;
@@ -4844,7 +4947,7 @@ function descentHintAlpha(now) {
   return 1 - clamp((now - DS.hintT0) / 400, 0, 1);
 }
 function drawDescentHint(c, cx, py, alpha) {
-  if (alpha <= 0.01) return;
+  if (alpha <= 0.01 || !DS.n) return;   /* nothing to descend to when the field is empty */
   c.save();
   setType(c, 10, 500, false, 0.18);
   c.textAlign = 'center';
@@ -4857,7 +4960,7 @@ function drawDescentHint(c, cx, py, alpha) {
 
 /* --- selection lume — glow baked once, never a per-frame shadowBlur ------ */
 let lumeRingSprite = null;   /* stroke+glow at scale 1; drawImage'd at card scale */
-const LUME_PAD = 28;         /* room for the 20px outer glow */
+const LUME_PAD = 40;         /* room for the outer glow — scaled with the larger plates */
 function getLumeRingSprite() {
   if (lumeRingSprite) return lumeRingSprite;
   const c = document.createElement('canvas');
@@ -4881,7 +4984,7 @@ function drawDescent(c, w_, h_, now, isExport) {
   if (!isExport) maybeLoadImages();
   const cx = isExport ? DS.cx : axisTick('cx', descTargetCX(), now);
   const cy = isExport ? DS.cy : axisTick('cy', descTargetCY(), now);
-  const R = clamp(w_ * 0.30, 260, 420);
+  const R = clamp(w_ * 0.33, 320, 500);
   const s = DS.s;
   const Y0 = dYs(s);
   const n = clamp(Math.round(s), 0, DS.n - 1);
@@ -4890,7 +4993,7 @@ function drawDescent(c, w_, h_, now, isExport) {
      focused encodes nothing */
   const pillA = speed > BLUR_V ? 0 : clamp(1 - Math.abs(s - n) * 3, 0, 1);
 
-  if (!isExport) DS.rects.length = 0;
+  if (!isExport) { DS.rects.length = 0; DS.annRectN = 0; }
 
   /* §18c — the water column, under the specimen plates: the surface
      ceiling, the strata rulers, the depth annotations, the marine snow.
@@ -4902,7 +5005,7 @@ function drawDescent(c, w_, h_, now, isExport) {
   const vy = -(dYs(s + 0.01) - dYs(s - 0.01)) / 0.02;   /* screen-px per card unit, shared */
   drawSurfaceCeiling(c, w_, h_, cy, Y0, 1);
   drawDescentRulers(c, w_, h_, cy, Y0, 1);
-  drawDepthAnnotations(c, w_, h_, cx, cy, Y0, 1, scF, s);
+  drawDepthAnnotations(c, w_, h_, cx, cy, Y0, 1, scF, s, !isExport);
   drawMarineSnow(c, w_, h_, Y0, 1, vy);
   drawBiolum(c, w_, h_, Y0, 1, now);   /* §18c amendment — the dark makes its own light */
 
@@ -5046,13 +5149,12 @@ let descentChromeOn = false, descentChromeTimer = null;
 
 function applyDescentChrome(on) {
   descentChromeOn = on;
+  if (typeof updateNoMatch === 'function') updateNoMatch();
   if (elTagline) elTagline.textContent = on ? TAGLINE_DESCENT : TAGLINE_SKY;
   if (on) {
-    elKeyLegend.innerHTML = LEGEND_DESCENT;
     elFooterLeft.textContent = DS.gaugeText || '';
     elCart2.textContent = `BY WATER RESISTANCE · ${S.watches.length} WATCHES`;
   } else {
-    elKeyLegend.innerHTML = LEGEND_SKY;
     lastTlYear = null;           /* force the sky footer/cartouche to re-derive */
     if (S.loaded) maybeTimeChrome(curTY === Infinity ? S.time.max : curTY);
   }
@@ -5073,6 +5175,9 @@ function startMorph(dir) {
   const now = performance.now();
   cancelFlight();
   stopPlay();
+  S.morph = { pending: true };   /* set early so updateNoMatch hides the empty state before the flight */
+  updateNoMatch();
+  S.morph = null;
   if (dir === 1 && timeEngaged()) returnToPresent();
   closeLensPanel();              /* lens filters sleep in descent — the whole census flies */
   hideWatchPreview();
@@ -5150,7 +5255,7 @@ function startMorph(dir) {
     a0: new Float32Array(N), r0: new Float32Array(N), gt: new Float32Array(N),
     famJobs: captureFamJobs()
   };
-  const R = clamp(W * 0.30, 260, 420);
+  const R = clamp(W * 0.33, 320, 500);
   const Y0 = dYs(DS.s);
   const zC = S.cam.z;
   const AC = tierAlphas(zC);
@@ -5247,7 +5352,7 @@ function finishMorph(dir) {
     DS.lastT = performance.now();
     /* §18c — snow (or the deep's own light) greets the arrival, unless
        the water here is truly empty */
-    if (!REDUCED && DS.wrM && (wcSnowK(dM(DS.s)) > 0 || wcBioK(dM(DS.s)) > 0)) DS.snowUntil = DS.lastT + 4000;
+    scheduleWaterTail(DS.lastT);
     applyDescentChrome(true);
     /* re-narrow to the active Lens now the census has landed whole */
     if (lensActive()) applyDescentNarrow(!morphFlyW);
@@ -5572,16 +5677,22 @@ function drawMarineSnow(c, w_, h_, Y0, aMul, vy) {
    (still water holds no wake), a stream mid-dive. They wobble as they
    rise; snow falls dead straight — that contrast is the point. Zero idle
    cost: the system dies with the velocity, so it never needs the tail. */
-const WC_BUB_N = 18, WC_BUB_P = 1.4;
+const WC_BUB_N = 18;
+/* bubbles are WAKE, not a static field the camera passes — released at the diver
+   every moment, so buoyancy is their identity: they ALWAYS rise on screen. The
+   old feel of streaming past the helix isn't position-parallax (which inverts on
+   ascent) — it's SPEED: you stir more wake the faster you move, either direction.
+   rise rate = base + gust·min(|v|, cap), rectified, always upward. */
+const BUB_RISE_BASE = 52, BUB_RISE_GUST = 74, BUB_VCAP = 3.2;
 function initBubbles() {
   const rnd = mulberry32(47712);                 /* fixed seed — same wake every session */
   const bb = DS.bub = new Float32Array(WC_BUB_N * 5);
   for (let j = 0; j < WC_BUB_N; j++) {
     bb[j * 5] = 0.03 + 0.94 * rnd();             /* xFrac */
     bb[j * 5 + 1] = rnd();                       /* yFrac */
-    bb[j * 5 + 2] = 0.06 + 0.06 * rnd();         /* alpha 0.06–0.12 */
-    bb[j * 5 + 3] = 40 + 50 * rnd();             /* rise 40–90 px/s, world, upward */
-    bb[j * 5 + 4] = 4 + 3 * rnd();               /* diameter 4–7 logical px */
+    bb[j * 5 + 2] = 0.16 + 0.14 * rnd();         /* alpha 0.16–0.30 — present, not loud */
+    bb[j * 5 + 3] = 0.78 + 0.44 * rnd();         /* rise multiplier 0.78–1.22 — depth layering */
+    bb[j * 5 + 4] = 5 + 4 * rnd();               /* diameter 5–9 logical px */
   }
 }
 /* you can't see air where there's no light — full to 200m, gone by 1000m */
@@ -5600,8 +5711,9 @@ function getBubSprite() {
   const r = BUB_SPR * SPRS / 2;
   const grad = g.createRadialGradient(r, r, 0, r, r, r);
   grad.addColorStop(0, 'rgba(233,237,242,0)');   /* transparent core — water inside is water */
-  grad.addColorStop(0.62, 'rgba(233,237,242,0)');
-  grad.addColorStop(0.82, 'rgba(233,237,242,1)');/* the thin bright rim */
+  grad.addColorStop(0.52, 'rgba(233,237,242,0)');
+  grad.addColorStop(0.72, 'rgba(233,237,242,1)');/* the rim — wide enough to survive downscale */
+  grad.addColorStop(0.94, 'rgba(233,237,242,0.9)');
   grad.addColorStop(1, 'rgba(233,237,242,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, cv.width, cv.height);
@@ -5610,18 +5722,28 @@ function getBubSprite() {
 }
 function drawBubbles(c, w_, h_, Y0, aMul, now) {
   if (REDUCED || aMul <= 0.004 || !DS.bub) return;
-  const visK = clamp((Math.abs(DS.v) - 0.3) / 2.0, 0, 1);
+  /* onset at a gentle scroll, full presence by ~1.4 cards/s — a deliberate
+     human dive must SEE its wake, not just a flung wheel */
+  let visK = clamp((Math.abs(DS.v) - 0.2) / 1.2, 0, 1);
+  /* the Lens reflow stirs the water too: turbulence ∝ card speed, which for
+     an eased FLIP is exactly 1 − progress — the burst blooms the instant the
+     filter lands and decays along the same curve the cards ride. Capped at
+     0.85: a filter click reads softer than a deliberate dive. */
+  if (DS.reflow) {
+    const p = clamp((now - DS.reflow.t0) / DS.reflow.dur, 0, 1);
+    visK = Math.max(visK, 0.85 * (1 - easeOut(p)));
+  }
   if (visK <= 0.004) return;                     /* still water holds no wake */
   const k = wcBubK(dM(DS.s));
   if (k <= 0.001) return;                        /* below the light, air is invisible */
   const WRAP = DS.snowWrap || h_ + 240;
-  const bb = DS.bub, clockPx = DS.snowClock, par = WC_BUB_P * Y0;
+  const bb = DS.bub, rise = DS.bubClock;
   const spr = getBubSprite();
   c.save();
   for (let j = 0; j < WC_BUB_N; j++) {
     const a = bb[j * 5 + 2] * k * visK * aMul;
     if (a < 0.004) continue;
-    const raw = bb[j * 5 + 1] * WRAP - bb[j * 5 + 3] * clockPx - par;   /* MINUS — bubbles rise */
+    const raw = bb[j * 5 + 1] * WRAP - bb[j * 5 + 3] * rise;   /* MINUS·monotonic — always rises */
     const sy = ((raw % WRAP) + WRAP) % WRAP - 120;
     const sx = bb[j * 5] * w_ + 5 * Math.sin(sy * 0.03 + j * 2.4);      /* the wobble */
     const dpx = bb[j * 5 + 4];
@@ -5647,7 +5769,7 @@ function initBiolum() {
     bo[j * 6 + 2] = 2.2 + 1.2 * rnd();           /* pulse period 2.2–3.4s */
     bo[j * 6 + 3] = rnd() * Math.PI * 2;         /* pulse phase */
     bo[j * 6 + 4] = rnd() * Math.PI * 2;         /* drift phase */
-    bo[j * 6 + 5] = 0.08 + 0.04 * rnd();         /* peak alpha 0.08–0.12 */
+    bo[j * 6 + 5] = 0.22 + 0.12 * rnd();         /* peak alpha 0.22–0.34 — readable in the dark */
   }
 }
 /* nothing in lit water; ramps in below 1000m, full by 1800m — the hadal
@@ -5691,7 +5813,7 @@ function drawBiolum(c, w_, h_, Y0, aMul, now) {
       raw = bo[j * 6 + 1] * WRAP - par;
     } else {
       const pulse = Math.max(0, Math.sin(t * BIO_TAU / bo[j * 6 + 2] + bo[j * 6 + 3]));
-      const env = pulse * pulse * pulse;         /* cubed — brief soft blinks, mostly dark */
+      const env = pulse * pulse;                 /* squared — soft blinks with real dwell time */
       a = bo[j * 6 + 5] * env * k * aMul;
       const dph = bo[j * 6 + 4];
       sx = bo[j * 6] * w_ + 14 * Math.sin(t * 0.13 + dph);
@@ -5700,13 +5822,25 @@ function drawBiolum(c, w_, h_, Y0, aMul, now) {
     if (a < 0.004) continue;
     const sy = ((raw % WRAP) + WRAP) % WRAP - 120;
     c.globalAlpha = a;
-    c.drawImage(spr, sx - BIO_SPR / 2, sy - BIO_SPR / 2, BIO_SPR, BIO_SPR);
+    c.drawImage(spr, sx - 7, sy - 7, 14, 14);    /* 14px — a glow, not a speck */
   }
   c.restore();
 }
 
+/* the water tail — how long a settled descent keeps living. Lit water gets
+   4s of drifting snow, then parks (the house law). But below the photic
+   zone the ONLY thing visible is the life — so the deep never sleeps: the
+   blinks ride the 10fps idle path for as long as the viewer stays down. */
+function scheduleWaterTail(now) {
+  if (REDUCED || !DS.wrM) return;
+  const d = dM(DS.s);
+  if (wcBioK(d) > 0) DS.snowUntil = Infinity;
+  else if (wcSnowK(d) > 0) DS.snowUntil = now + 4000;
+}
+
 /* the snow tail is the only reason a settled descent still frames — and it
-   rides the sky-drift 10fps path, then goes fully dark after 4s */
+   rides the sky-drift 10fps path, then goes fully dark after 4s (except the
+   deep — see scheduleWaterTail) */
 function snowOnly(now) {
   if (S.morph || S.mode !== 'descent' || REDUCED) return false;
   if (now >= DS.snowUntil) return false;
@@ -5737,20 +5871,59 @@ function snowOnly(now) {
 const WC_FACTS = [
   [0, '0 M — SURFACE'],
   [40, '−40 M — RECREATIONAL DIVING’S LIMIT'],
-  [214, '−214 M — DEEPEST FREEDIVING RECORD'],
-  [332, '−332 M — DEEPEST SCUBA DIVE'],
+  [253, '−253 M — DEEPEST FREEDIVING RECORD', 'freediver'],
+  [332, '−332 M — DEEPEST SCUBA DIVE', 'scuba'],
+  [564, '−564 M — EMPEROR PENGUIN, DEEPEST DIVE', 'penguin'],
   [1000, '−1,000 M — THE MIDNIGHT ZONE BEGINS'],
+  [1280, '−1,280 M — LEATHERBACK TURTLE, DEEPEST DIVE', 'leatherback'],
+  [2992, '−2,992 M — CUVIER’S BEAKED WHALE, DEEPEST DIVE', 'whale'],
   [3800, '−3,800 M — THE TITANIC'],
   [6000, '−6,000 M — THE HADAL ZONE BEGINS'],
+  [8336, '−8,336 M — HADAL SNAILFISH, DEEPEST FISH', 'snailfish', 'BELOW THIS LINE, NOTHING SWIMS'],
   [10935, '−10,935 M — CHALLENGER DEEP']
 ];
 const WC_SURFACE_Y = -224;                       /* 3.5 pitches above card 0 */
+
+/* --- the ladder of life — silhouettes of the deepest divers, engraved at
+   their verified depths beside the annotation captions. Every path lives in
+   a viewBox exactly 4× its logical render size (so the coords carry sub-pixel
+   fidelity that survives downscale); baked ONCE into a TEXT_3-ink sprite,
+   drawImage per frame — no per-frame Path2D fill (§3). All five face LEFT.
+   Order here IS the sprite-table index that DS.annSil stores. ------------- */
+const WC_SILS = [
+  { key: 'freediver',   w: 16, h: 34, url: 'https://en.wikipedia.org/wiki/Herbert_Nitsch', d: 'M 28 134 C 27 126 27 118 27 110 C 22 107 20 101 21 95 C 22 91 24 89 25 87 C 24 79 24 71 25 64 C 26 61 27 59 27 56 C 28 48 28 40 29 32 C 29 29 29 27 29 25 C 24 19 18 12 12 4 C 20 8 26 9 32 9 C 38 9 44 8 52 4 C 47 11 41 18 37 25 C 37 31 37 37 38 43 C 39 49 40 55 40 61 C 40 69 40 77 39 85 C 39 87 39 89 40 91 C 44 94 45 104 40 110 C 37 112 35 114 34 116 C 33 122 32 128 32 134 C 31 136 29 136 28 134 Z' },
+  { key: 'penguin',     w: 24, h: 12, url: 'https://en.wikipedia.org/wiki/Emperor_penguin', d: 'M 2 14 C 7 13 12 12 17 11 C 24 6 32 5 40 8 C 56 12 72 16 86 21 C 91 23 93 25 89 27 C 80 30 70 31 62 31 C 57 32 52 33 48 33 C 54 36 59 40 63 45 C 55 45 46 39 39 34 C 31 33 26 29 21 25 C 17 21 12 17 7 16 C 5 15 3 14 2 14 Z' },
+  { key: 'leatherback', w: 30, h: 16, url: 'https://en.wikipedia.org/wiki/Leatherback_sea_turtle', d: 'M 3 25 C 6 21 10 19 15 19 C 19 19 22 18 25 16 C 31 8 41 4 53 4 C 74 6 94 14 109 24 C 114 27 117 30 118 33 C 113 37 108 40 103 41 C 97 40 91 38 86 36 C 75 36 64 36 53 35 C 56 44 60 53 62 61 C 55 56 48 46 42 36 C 34 35 26 33 19 30 C 13 29 8 28 3 25 Z' },
+  { key: 'whale',       w: 48, h: 14, url: 'https://en.wikipedia.org/wiki/Cuvier%27s_beaked_whale', d: 'M 2 27 C 4 23 7 20 10 18 C 13 11 24 8 42 7 C 72 5 102 6 124 11 C 129 10 134 6 139 3 C 138 7 140 11 146 13 C 158 15 168 17 176 20 C 181 15 184 11 188 6 C 184 14 182 18 181 22 C 185 27 188 33 190 39 C 184 34 178 31 172 29 C 152 36 124 41 100 43 C 88 43 76 44 66 43 C 68 47 70 50 72 53 C 65 52 59 47 54 43 C 40 40 27 36 15 32 C 10 31 5 29 2 27 Z' },
+  { key: 'scuba',       w: 34, h: 14, url: 'https://en.wikipedia.org/wiki/Ahmed_Gabr', d: 'M 9 33 C 9 27 13 23 18 23 C 22 23 25 25 26 28 C 28 27 30 26 32 26 C 37 25 42 24 46 24 C 47 17 51 14 56 14 L 73 14 C 78 14 81 17 81 21 C 88 21 95 21 102 20 C 105 20 108 21 110 22 C 118 21 126 19 132 16 L 134 19 C 128 23 120 26 112 27 C 120 28 127 28 133 27 L 133 30 C 126 32 118 33 110 31 C 104 33 97 34 90 34 C 78 35 66 36 56 37 C 50 38 45 40 41 44 C 39 47 36 50 33 52 L 30 49 C 32 45 34 41 37 38 C 34 38 30 38 27 37 C 20 37 13 36 9 33 Z' },
+  { key: 'snailfish',   w: 26, h: 12, url: 'https://en.wikipedia.org/wiki/Pseudoliparis_belyaevi', d: 'M 3 19 C 4 10 13 5 26 5 C 40 6 54 10 66 14 C 76 16 88 12 101 4 C 92 13 84 18 74 20 C 65 23 57 25 50 26 C 53 33 51 41 44 46 C 35 44 29 37 28 29 C 20 30 12 29 6 25 C 4 23 3 21 3 19 Z' }
+];
+const WC_SIL_IDX = {};
+for (let i = 0; i < WC_SILS.length; i++) WC_SIL_IDX[WC_SILS[i].key] = i;
+const wcSilSprites = new Array(WC_SILS.length).fill(null);   /* lazy baked; drawImage per frame */
+function getSilSprite(idx) {
+  if (wcSilSprites[idx]) return wcSilSprites[idx];
+  const s = WC_SILS[idx];
+  const cv = document.createElement('canvas');
+  cv.width = s.w * SPRS; cv.height = s.h * SPRS;
+  const g = cv.getContext('2d');
+  g.scale(SPRS / 4, SPRS / 4);                    /* viewBox (4×) → logical, then SPRS oversample */
+  g.fillStyle = TEXT_3;                           /* one ink — silhouette and caption read as one engraving */
+  g.fill(new Path2D(s.d));
+  wcSilSprites[idx] = cv;
+  return cv;
+}
 function initDepthAnnotations() {
   /* placement is deterministic, computed once: natural depth position, then
      card rule (24px), strata rule (28px), sibling rule (20px) — in order */
   const shelfYs = DS.shelfIdx.map(b => (dYof(b - 1) + dYof(b)) / 2);
-  const ys = [], labels = [];
-  for (const [d, label] of WC_FACTS) {
+  const ys = [], labels = [], sils = [], l2s = [];
+  for (const [d, label, silKey, line2] of WC_FACTS) {
+    const silIdx = silKey ? WC_SIL_IDX[silKey] : -1;
+    const hasSil = silIdx >= 0;
+    /* silhouette entries need more air — the figure rides above the caption,
+       so its whole stack (card / strata / sibling clearance) grows */
+    const cardR = hasSil ? 40 : 24, strataR = hasSil ? 44 : 28, sibR = hasSil ? 52 : 20;
     let y;
     if (d < DS.wrM[0]) {
       y = WC_SURFACE_Y * (1 - d / DS.wrM[0]);    /* the surface region */
@@ -5761,45 +5934,45 @@ function initDepthAnnotations() {
       const span = DS.wrM[i1] - DS.wrM[iA];
       y = span > 0 ? lerp(dYof(iA), dYof(i1), (d - DS.wrM[iA]) / span) : dYof(iA);
     }
-    /* card rule — never within 24px of a plate center; an exact landing
+    /* card rule — never within cardR of a plate center; an exact landing
        (t = 1.0) yields to the shallow side */
     let ni = 0, nd = Infinity;
     for (let i = 0; i < DS.n; i++) {
       const dd = Math.abs(y - dYof(i));
       if (dd < nd) { nd = dd; ni = i; }
     }
-    if (nd < 24) y = y <= dYof(ni) ? dYof(ni) - 24 : dYof(ni) + 24;
+    if (nd < cardR) y = y <= dYof(ni) ? dYof(ni) - cardR : dYof(ni) + cardR;
     /* strata rule — nudge deeper off a shelf ruler */
-    for (const sy of shelfYs) if (Math.abs(y - sy) < 28) y = sy + 28;
+    for (const sy of shelfYs) if (Math.abs(y - sy) < strataR) y = sy + strataR;
     /* sibling rule — the later fact yields entirely */
     let clash = false;
-    for (const py of ys) if (Math.abs(y - py) < 20) { clash = true; break; }
+    for (const py of ys) if (Math.abs(y - py) < sibR) { clash = true; break; }
     if (clash) continue;
     ys.push(Math.round(y));
     labels.push(label);
+    sils.push(silIdx);
+    l2s.push(line2 || '');
   }
   DS.annY = Float32Array.from(ys);
   DS.annLabel = labels;
+  DS.annSil = Int8Array.from(sils);              /* sprite-table index, −1 = no figure */
+  DS.annL2 = l2s;                                /* second caption line, '' = none */
   /* widths measured once — labels, font, and tracking are fixed at init
      (system font stack: no async webfont to wait for), so a scroll frame
      never allocates a TextMetrics. Export reuses the same CSS-px widths. */
   ctx.save();
   setType(ctx, 10, 500, false, 0.18);
   DS.annW = Float32Array.from(labels, l => ctx.measureText(l).width);
+  DS.annL2W = Float32Array.from(l2s, l => l ? ctx.measureText(l).width : 0);
   DS.shelfW = Float32Array.from(DS.shelfLabel, l => ctx.measureText(l).width);
   ctx.restore();
 }
-function drawDepthAnnotations(c, w_, h_, cx, cy, Y0, alpha, scFocus, s) {
+function drawDepthAnnotations(c, w_, h_, cx, cy, Y0, alpha, scFocus, s, live) {
   if (alpha <= 0.01 || !DS.annY) return;
   c.save();
   c.textAlign = 'center';
   c.textBaseline = 'middle';
   setType(c, 10, 500, false, 0.18);
-  /* the eye of the yield is the CONTINUOUS scroll position dYs(s), never
-     dYof(round(s)) — round() flips at half-card boundaries and would snap
-     the slide ~180px in one frame on a slow scrub. dYs(s) and scFocus
-     (cos is even across the round() flip) are both smooth in s. */
-  const ey = dYs(s);
   for (let k = 0; k < DS.annY.length; k++) {
     const wy = DS.annY[k];
     const ry = snap(cy + wy - Y0);
@@ -5811,13 +5984,10 @@ function drawDepthAnnotations(c, w_, h_, cx, cy, Y0, alpha, scFocus, s) {
        the strata rulers' axis (w_/2) — one engraved centerline; the card
        lives at cx (they differ when the panel is open), so the dodge is
        gated on actual horizontal overlap (ov), also continuous. */
-    const u = clamp((96 - Math.abs(wy - ey)) / 40, 0, 1);
-    let lx = w_ / 2;
-    if (u > 0) {
-      const ov = clamp((cx + 84 * scFocus + 8 - (w_ / 2 - tw / 2 - 16)) / 24, 0, 1);
-      if (ov > 0) lx = lerp(w_ / 2, cx - (84 * scFocus + 24 + tw / 2), sstep(u) * ov);
-    }
-    if (lx < 24 + tw / 2) lx = 24 + tw / 2;
+    /* the depth insights hold still on the centerline — engraved into the
+       water like the strata rulers, they never slide to dodge the focused
+       card (Simon: they must read as fixed depth markers, not reactive UI) */
+    const lx = w_ / 2;
     c.globalAlpha = alpha;
     c.strokeStyle = 'rgba(233,237,242,0.08)';
     c.lineWidth = 1;
@@ -5831,6 +6001,48 @@ function drawDepthAnnotations(c, w_, h_, cx, cy, Y0, alpha, scFocus, s) {
     c.globalAlpha = alpha;
     c.fillStyle = TEXT_3;
     c.fillText(label, lx, ry + 0.5);
+    /* the figure rides ABOVE the caption on the SAME lx slide and alpha —
+       Deference: when the label dodges the focused card, the figure dodges
+       with it, one unit. Sprite bottom ≈ ry − 11, centered on lx; baked
+       once in caption ink, drawImage only — no per-frame Path2D fill (§3). */
+    const si = DS.annSil[k];
+    if (si >= 0) {
+      const sp = getSilSprite(si);
+      const sw = WC_SILS[si].w, sh = WC_SILS[si].h;
+      /* hover lift — the mark is a door; ink densifies, nothing moves (Feedback
+         without motion; the engraving stays an engraving) */
+      const hov = k === DS.annHover;
+      c.globalAlpha = hov ? Math.min(1, alpha * 1.9) : alpha;
+      c.drawImage(sp, snap(lx - sw / 2), snap(ry - 11 - sh), sw, sh);
+      if (hov) {                                  /* re-print the caption denser too */
+        c.fillStyle = TEXT_3;
+        c.fillText(label, lx, ry + 0.5);
+      }
+      c.globalAlpha = alpha;
+      /* the whole engraving — figure through caption(s) — is one door (§18e) */
+      if (live && DS.annRectN < dAnnPool.length) {
+        const r = dAnnPool[DS.annRectN++];
+        r.k = k; r.url = WC_SILS[si].url;
+        r.x = lx - Math.max(tw / 2 + 12, sw / 2 + 8);
+        r.y = ry - 13 - sh;
+        r.w = 2 * Math.max(tw / 2 + 12, sw / 2 + 8);
+        r.h = (13 + sh) + (DS.annL2[k] ? 25 : 10);
+      }
+    }
+    /* second caption line — same type, TEXT_3, its own ground knockout,
+       ~15px under the first (hadal compression: snailfish's coda). */
+    const l2 = DS.annL2[k];
+    if (l2) {
+      const t2 = DS.annL2W[k];
+      const ry2 = ry + 15;
+      c.globalAlpha = 1;
+      c.fillStyle = GROUND_HEX_NOW;
+      c.fillRect(lx - t2 / 2 - 16, ry2 - 8, t2 + 32, 17);
+      /* the coda lifts with the rest of the engraving — one door, one unit */
+      c.globalAlpha = k === DS.annHover ? Math.min(1, alpha * 1.9) : alpha;
+      c.fillStyle = TEXT_3;
+      c.fillText(l2, lx, ry2 + 0.5);
+    }
   }
   c.restore();
 }
@@ -5889,7 +6101,791 @@ function resize() {
   for (const w of S.watches) w._glow = null;   /* dpr may have changed */
   invalidate();
 }
+
+/* ======================================================================
+   21 · THE FITTING — quiz + reveal
+   Four independent binary threads (dreamTrip, virtue, water, era) converge
+   on one watch; a multi-select nudges ties. Scoring is a pure function over
+   FITTING (data/fitting.json). The reveal is the museum-plate poster; its
+   DOM is what the 2× offscreen PNG export mirrors (see fitSavePoster).
+   ====================================================================== */
+
+/* ---- copy: the five screens (ANCHORS). Glyphs are hairline SVG, --lume-dim.
+   Each binary option carries { axis, sign } → the answer emits sign on axis. ---- */
+const FIT_GLYPH = {
+  /* wayfinding / public-signage icons — bold, concrete, universally legible (AIGA lineage) */
+  wild: '<svg viewBox="0 0 46 46" fill="currentColor"><path d="M3 37 L16 14 L24 27 L30 18 L43 37 Z"/><circle cx="31" cy="11" r="3.4"/></svg>',
+  storied: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M5 17 L23 7 L41 17"/><path d="M9 18 V33 M17 18 V33 M29 18 V33 M37 18 V33" stroke-width="3.2"/><path d="M5 34 H41" stroke-width="3"/></svg>',
+  seen: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 23 Q23 8 42 23 Q23 38 4 23 Z"/><circle cx="23" cy="23" r="5" fill="currentColor" stroke="none"/></svg>',
+  outlast: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="23" cy="8" r="3.6"/><path d="M23 12 V38"/><path d="M14 20 H32"/><path d="M8 28 Q8 39 23 39 Q38 39 38 28"/><path d="M8 28 L4 25 M8 28 L12 25 M38 28 L42 25 M38 28 L34 25"/></svg>',
+  cold: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4 V42 M7 13.5 L39 32.5 M39 13.5 L7 32.5"/><path d="M23 4 L19 8 M23 4 L27 8 M23 42 L19 38 M23 42 L27 38 M7 13.5 L8 19 M7 13.5 L12.5 12.5 M39 32.5 L38 27 M39 32.5 L33.5 33.5 M39 13.5 L33.5 12.5 M39 13.5 L38 19 M7 32.5 L12.5 33.5 M7 32.5 L8 27"/></svg>',
+  warm: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="23" cy="23" r="8" fill="currentColor" stroke="none"/><path d="M23 3 V9 M23 37 V43 M3 23 H9 M37 23 H43 M9 9 L13.2 13.2 M32.8 32.8 L37 37 M9 37 L13.2 32.8 M32.8 13.2 L37 9"/></svg>',
+  origins: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 34 H42"/><path d="M13 34 A10 10 0 0 1 33 34 Z" fill="currentColor" stroke="none"/><path d="M23 10 V15 M8.5 18 L12 21.5 M37.5 18 L34 21.5"/></svg>',
+  next: '<svg viewBox="0 0 46 46" fill="currentColor"><path d="M23 4 L27.5 18.5 L42 23 L27.5 27.5 L23 42 L18.5 27.5 L4 23 L18.5 18.5 Z"/></svg>',
+  mechanical: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-linejoin="round"><circle cx="23" cy="23" r="8.4" stroke-width="2.6"/><circle cx="23" cy="23" r="3" stroke-width="2.4"/><path d="M23 3.5 V9.5 M23 36.5 V42.5 M3.5 23 H9.5 M36.5 23 H42.5 M10.2 10.2 L14.4 14.4 M31.6 31.6 L35.8 35.8 M10.2 35.8 L14.4 31.6 M31.6 14.4 L35.8 10.2" stroke-width="4.4" stroke-linecap="butt"/></svg>',
+  tough: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M23 4 L38 10 V22 Q38 34 23 42 Q8 34 8 22 V10 Z"/><path d="M16 22 L21 28 L31 16" stroke-width="2.8" stroke-linecap="round"/></svg>',
+  history: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M16 5 L23 19 L30 5"/><circle cx="23" cy="30" r="10"/><path d="M23 25 L24.7 28.6 L28.6 29.1 L25.8 31.9 L26.5 35.8 L23 34 L19.5 35.8 L20.2 31.9 L17.4 29.1 L21.3 28.6 Z" fill="currentColor" stroke="none"/></svg>',
+  value: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M6 23 L23 6 H40 V23 L23 40 Z"/><circle cx="31.5" cy="14.5" r="2.7" fill="currentColor" stroke="none"/></svg>',
+  grail: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M12 7 H34 Q34 24 23 27 Q12 24 12 7 Z"/><path d="M23 27 V37 M14 41 H32 M17 41 Q17 37 23 37 Q29 37 29 41"/></svg>',
+};
+
+/* each ANSWER carries its own accent — a distinct, thematically-tuned hue from
+   #F6935D's harmonies, so every choice feels like a unique act (icon + selected
+   state + the progress bar all take the chosen answer's colour) */
+const FIT_SCREENS = [
+  {
+    key: 'dreamTrip', axis: 'dreamTrip', type: 'binary',
+    headline: 'Your dream trip',
+    a: { glyph: 'wild',    sign: 1,  color: '#5FC98A', title: 'Wild and remote',  sub: 'Off the map, into the unknown.' },
+    b: { glyph: 'storied', sign: -1, color: '#E8B24C', title: 'Rich and storied', sub: 'History, culture, comfort.' },
+  },
+  {
+    key: 'virtue', axis: 'virtue', type: 'binary',
+    headline: 'When it matters most',
+    a: { glyph: 'seen',    sign: 1,  color: '#F6935D', title: 'Be seen',   sub: 'Clarity. Presence. Read at a glance.' },
+    b: { glyph: 'outlast', sign: -1, color: '#6E8BC4', title: 'Outlast it', sub: 'Endurance. Take whatever comes.' },
+  },
+  {
+    key: 'water', axis: 'water', type: 'binary',
+    headline: 'The water you’re from',
+    a: { glyph: 'cold', sign: 1,  color: '#4FB8D4', title: 'Cold and deep', sub: 'Grey, serious — the far north.' },
+    b: { glyph: 'warm', sign: -1, color: '#F27E6B', title: 'Warm and open', sub: 'Bright, alive — the reef.' },
+  },
+  {
+    key: 'era', axis: 'era', type: 'binary',
+    headline: 'What draws you',
+    a: { glyph: 'origins', sign: 1,  color: '#D69A5C', title: 'The origins', sub: 'Where it began.' },
+    b: { glyph: 'next',    sign: -1, color: '#9E7DEA', title: 'What’s next', sub: 'Modern. Made today.' },
+  },
+  {
+    key: 'extras', type: 'multi',
+    headline: 'Anything else that’s you',
+    sub: 'Pick any — or skip.',
+    options: [
+      { flag: 'mechanical', glyph: 'mechanical', color: '#4FB8D4', title: 'Mechanical soul',    sub: 'A movement, not a battery.' },
+      { flag: 'tough', glyph: 'tough',      color: '#5FC98A', title: 'Built to be beaten up', sub: 'Scars are the point.' },
+      { flag: 'history', glyph: 'history',    color: '#E8B24C', title: 'A piece of history',  sub: 'It was there.' },
+      { flag: 'value', glyph: 'value',      color: '#F6935D', title: 'Value over logo',     sub: 'Substance, not the badge.' },
+      { flag: 'grail', glyph: 'grail',      color: '#9E7DEA', title: 'The grail',           sub: 'The one you’d chase.' },
+    ],
+  },
+];
+
+/* country → full name for the poster ref line (mirrors LENS_CHIPS.origin) */
+const FIT_COUNTRY = {
+  CH: 'Switzerland', DE: 'Germany', JP: 'Japan', FR: 'France', GB: 'United Kingdom',
+  US: 'United States', RU: 'Russia', IT: 'Italy', OTHER: 'International',
+};
+
+/* --- state --- */
+const fitEl = {};              /* cached DOM, lazily bound on first open */
+let fitBound = false;
+let fitOpen = false;
+let fitStep = 0;               /* 0..4 */
+const fitAnswers = {};         /* axis → sign (binary) */
+const fitExtras = new Set();   /* multi flags */
+let fitResult = null;          /* { best, runnerUp } after scoring */
+let fitPrevFocus = null;
+let fitTurnTimer = null, fitAdvTimer = null;
+
+function bindFitting() {
+  if (fitBound) return;
+  fitBound = true;
+  fitEl.root = $('fitting');
+  fitEl.quiz = $('fit-quiz');
+  fitEl.fill = $('fq-fill');
+  fitEl.round = $('fq-round');
+  fitEl.back = $('fq-back');
+  fitEl.close = $('fq-close');
+  fitEl.stage = $('fq-stage');
+  fitEl.headline = $('fq-headline');
+  fitEl.cards = $('fq-cards');
+  fitEl.actions = $('fq-actions');
+  fitEl.continue = $('fq-continue');
+  fitEl.skip = $('fq-skip');
+  fitEl.reveal = $('fit-reveal');
+  fitEl.img = $('fr-img');
+  fitEl.archetype = $('fr-archetype');
+  fitEl.rname = $('fr-name');
+  fitEl.ref = $('fr-ref');
+  fitEl.why = $('fr-why');
+  fitEl.whyText = $('fr-why-text');
+  fitEl.alt = $('fr-alt');
+  fitEl.see = $('fr-see');
+  fitEl.save = $('fr-save');
+  fitEl.share = $('fr-share');
+  fitEl.restart = $('fr-restart');
+
+  fitEl.close.addEventListener('click', closeFitting);
+  fitEl.back.addEventListener('click', fitBack);
+  fitEl.continue.addEventListener('click', () => fitAdvance());
+  fitEl.skip.addEventListener('click', () => fitAdvance());
+  fitEl.see.addEventListener('click', fitSeeInAtlas);
+  fitEl.save.addEventListener('click', fitSavePoster);
+  fitEl.share.addEventListener('click', fitShare);
+  fitEl.restart.addEventListener('click', fitRestart);
+
+  /* keyboard: overlay owns keys while open (mirrors lightbox pattern) */
+  fitEl.root.addEventListener('keydown', onFitKey);
+}
+
+const chipEntry = () => $('fitting-chip');
+
+function openFitting() {
+  if (!FITTING) { pendingFitOpen = true; return; }   /* wait for data */
+  bindFitting();
+  if (fitOpen) return;
+  fitOpen = true;
+  fitPrevFocus = document.activeElement;
+  fitStep = 0;
+  fitResult = null;
+  for (const k in fitAnswers) delete fitAnswers[k];
+  fitExtras.clear();
+  fitEl.reveal.hidden = true;
+  fitEl.quiz.style.display = '';
+  fitEl.root.classList.remove('reveal-mode');
+  fitEl.root.hidden = false;
+  renderFitStep(false);
+  /* fade in (mirrors #no-match: hidden→false, then .on next frame) */
+  requestAnimationFrame(() => requestAnimationFrame(() => fitEl.root.classList.add('on')));
+  /* park the render loop concerns — the overlay covers the canvas */
+  try { history.replaceState(null, '', '#fit'); urlSig = '#fit'; } catch (e) { /* file:// */ }
+}
+
+function closeFitting() {
+  if (!fitOpen) return;
+  fitOpen = false;
+  clearTimeout(fitTurnTimer); clearTimeout(fitAdvTimer);
+  fitEl.root.classList.remove('on');
+  const done = () => { fitEl.root.hidden = true; };
+  if (REDUCED) done(); else setTimeout(done, 260);
+  if (fitPrevFocus && fitPrevFocus.focus) { try { fitPrevFocus.focus(); } catch (e) {} }
+  /* restore the URL to the world underneath */
+  urlSig = '';
+  scheduleURLWrite();
+  invalidate();
+}
+
+/* ---- render a quiz screen ---- */
+/* per-question accent — a spectrum walk drawn from #F6935D's harmonies; the
+   "sea time" mark stays orange, only the question's accent shifts (progress,
+   selected state, icons). warm → rose → ocean → jade → violet. */
+function renderFitStep(animate) {
+  const s = FIT_SCREENS[fitStep];
+  const pct = Math.round(((fitStep + 1) / FIT_SCREENS.length) * 100);
+  /* progress bar reflects the round's active answer — the chosen option's colour
+     if already answered, else the round's lead option (or a finale default) */
+  const barColor = s.type === 'binary'
+    ? ((fitAnswers[s.axis] === s.b.sign ? s.b.color : s.a.color))
+    : (s.options[0].color);
+  fitEl.root.style.setProperty('--fq-accent', barColor);
+  fitEl.fill.style.width = pct + '%';
+  fitEl.round.textContent = 'Round ' + (fitStep + 1) + ' / ' + FIT_SCREENS.length;
+  fitEl.back.hidden = fitStep === 0;
+
+  const paint = () => {
+    fitEl.headline.textContent = s.headline;
+    fitEl.cards.innerHTML = '';
+    fitEl.cards.classList.toggle('multi', s.type === 'multi');
+    if (s.type === 'binary') {
+      fitEl.actions.hidden = true;
+      const cur = fitAnswers[s.axis];
+      fitEl.cards.appendChild(fitBinaryCard(s, s.a, cur === s.a.sign));
+      const vs = document.createElement('div');
+      vs.id = 'fq-vs'; vs.textContent = 'vs'; vs.setAttribute('aria-hidden', 'true');
+      fitEl.cards.appendChild(vs);
+      fitEl.cards.appendChild(fitBinaryCard(s, s.b, cur === s.b.sign));
+    } else {
+      fitEl.actions.hidden = false;
+      s.options.forEach(opt => fitEl.cards.appendChild(fitMultiChip(opt)));
+      fitEl.continue.textContent = fitExtras.size ? 'Continue' : 'Continue';
+    }
+    /* focus the first interactive control for keyboard flow */
+    const first = fitEl.cards.querySelector('.fq-card, .fq-chip');
+    if (first) requestAnimationFrame(() => { try { first.focus(); } catch (e) {} });
+  };
+
+  if (animate && !REDUCED) {
+    fitEl.stage.classList.add('turning');
+    clearTimeout(fitTurnTimer);
+    fitTurnTimer = setTimeout(() => {
+      paint();
+      requestAnimationFrame(() => fitEl.stage.classList.remove('turning'));
+    }, 200);
+  } else {
+    paint();
+    fitEl.stage.classList.remove('turning');
+  }
+}
+
+function fitBinaryCard(screen, opt, chosen) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'fq-card' + (chosen ? ' chosen' : '');
+  if (opt.color) btn.style.setProperty('--fq-accent', opt.color);   /* this answer's own hue */
+  btn.setAttribute('role', 'radio');
+  btn.setAttribute('aria-checked', chosen ? 'true' : 'false');
+  btn.innerHTML =
+    '<span class="fq-card-glyph">' + FIT_GLYPH[opt.glyph] + '</span>' +
+    '<span class="fq-card-body"><span class="fq-card-title"></span><span class="fq-card-sub"></span></span>' +
+    '<svg class="fq-card-check" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="9.3" opacity="0.5"/><path d="M6.5 11.2 L9.6 14.2 L15.5 7.8"/></svg>';
+  btn.querySelector('.fq-card-title').textContent = opt.title;
+  btn.querySelector('.fq-card-sub').textContent = opt.sub;
+  btn.addEventListener('click', () => fitChooseBinary(screen, opt, btn));
+  return btn;
+}
+
+function fitMultiChip(opt) {
+  const on = fitExtras.has(opt.flag);
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'fq-chip' + (on ? ' chosen' : '');
+  if (opt.color) btn.style.setProperty('--fq-accent', opt.color);   /* this answer's own hue */
+  btn.setAttribute('role', 'checkbox');
+  btn.setAttribute('aria-checked', on ? 'true' : 'false');
+  btn.innerHTML =
+    '<span class="fq-chip-glyph">' + (FIT_GLYPH[opt.glyph] || '') + '</span>' +
+    '<span class="fq-chip-body"><span class="fq-chip-title"></span><span class="fq-chip-sub"></span></span>' +
+    '<span class="fq-chip-box"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.2 L5 8.6 L9.5 3.4"/></svg></span>';
+  btn.querySelector('.fq-chip-title').textContent = opt.title;
+  btn.querySelector('.fq-chip-sub').textContent = opt.sub;
+  btn.addEventListener('click', () => {
+    if (fitExtras.has(opt.flag)) fitExtras.delete(opt.flag); else fitExtras.add(opt.flag);
+    const now = fitExtras.has(opt.flag);
+    btn.classList.toggle('chosen', now);
+    btn.setAttribute('aria-checked', now ? 'true' : 'false');
+  });
+  return btn;
+}
+
+function fitChooseBinary(screen, opt, btn) {
+  fitAnswers[screen.axis] = opt.sign;
+  /* the progress bar animates to the chosen answer's colour */
+  if (opt.color) fitEl.root.style.setProperty('--fq-accent', opt.color);
+  /* light this card, clear the sibling */
+  fitEl.cards.querySelectorAll('.fq-card').forEach(c => {
+    const isMe = c === btn;
+    c.classList.toggle('chosen', isMe);
+    c.setAttribute('aria-checked', isMe ? 'true' : 'false');
+  });
+  /* auto-advance — the whole "effortless" feel (no Next on binaries) */
+  clearTimeout(fitAdvTimer);
+  fitAdvTimer = setTimeout(() => fitAdvance(), REDUCED ? 120 : 420);
+}
+
+function fitAdvance() {
+  clearTimeout(fitAdvTimer);
+  if (fitStep < FIT_SCREENS.length - 1) {
+    fitStep++;
+    renderFitStep(true);
+  } else {
+    fitFinish();
+  }
+}
+
+function fitBack() {
+  clearTimeout(fitAdvTimer);
+  if (fitStep === 0) return;
+  fitStep--;
+  renderFitStep(true);
+}
+
+/* ---- SCORING — pure over FITTING; deterministic ---- */
+function fitScore() {
+  const AXES = ['dreamTrip', 'virtue', 'water', 'era'];
+  const FLAGS = ['mechanical', 'tough', 'history', 'value', 'grail'];
+  const rows = [];
+  for (const id in FITTING) {
+    const f = FITTING[id];
+    if (!f) continue;
+    if (S.byId && !S.byId.has(id)) continue;   /* the winner must be a watch on the map */
+    let s = 0;
+    /* four binary axes: answerSign · watchAxisWeight (skips = 0, neutral) */
+    for (const ax of AXES) {
+      const ans = fitAnswers[ax];
+      if (ans == null) continue;
+      s += ans * (typeof f[ax] === 'number' ? f[ax] : 0);
+    }
+    /* additive multi-flag bonuses */
+    let flagBonus = 0;
+    for (const fl of FLAGS) {
+      if (fitExtras.has(fl)) flagBonus += 0.55 * (typeof f[fl] === 'number' ? f[fl] : 0);
+    }
+    s += flagBonus;
+    /* DISTINCTIVENESS bias — when convergence lands close, prefer the
+       characterful watch over the obvious default. A small additive lift
+       scaled by distinct so ties resolve toward Doxa/FF/Tuna/PloProf. */
+    const distinct = typeof f.distinct === 'number' ? f.distinct : 0.5;
+    s += 0.35 * distinct;
+    rows.push({ id, s, distinct });
+  }
+  rows.sort((a, b) =>
+    b.s - a.s ||
+    b.distinct - a.distinct ||         /* tiebreak → more characterful */
+    (a.id < b.id ? -1 : 1));           /* final deterministic tiebreak */
+  const best = rows[0] || null;
+  const runnerUp = rows[1] || null;
+  return { best, runnerUp };
+}
+
+/* ---- compose the convergence line from the user's actual answers ---- */
+function fitConvergence() {
+  const parts = [];
+  if (fitAnswers.water === 1) parts.push('Cold water');
+  else if (fitAnswers.water === -1) parts.push('Warm water');
+  if (fitAnswers.virtue === 1) parts.push('seen not hidden');
+  else if (fitAnswers.virtue === -1) parts.push('built to outlast');
+  if (fitAnswers.dreamTrip === 1) parts.push('drawn to the wild');
+  else if (fitAnswers.dreamTrip === -1) parts.push('drawn to the storied');
+  if (fitAnswers.era === 1) parts.push('born of the origins');
+  else if (fitAnswers.era === -1) parts.push('made for what’s next');
+  let clause = parts.length ? parts.join(', ') : 'When it all converges';
+  /* Sentence-case the first word only */
+  return clause.charAt(0).toUpperCase() + clause.slice(1);
+}
+
+function fitFinish() {
+  fitResult = fitScore();
+  if (!fitResult || !fitResult.best) { closeFitting(); return; }
+  renderReveal();
+}
+
+/* ---- THE REVEAL — populate the museum-plate poster ---- */
+function fitWatchMeta(id) {
+  const w = (S.byId && S.byId.get(id)) || null;
+  const f = FITTING[id] || {};
+  const brand = w ? (w.brand || '') : '';
+  const model = w ? (w.model || '') : '';
+  const name = (brand + ' ' + model).trim() || id;
+  const country = w ? (FIT_COUNTRY[w.country] || w.country || '') : '';
+  const year = w && w.year ? String(w.year) : '';
+  const insight = (w && w.significance) || fitConvergence();
+  return {
+    id, w, f, name, insight,
+    archetype: (f.archetype || name).toUpperCase(),
+    ref: [country, year].filter(Boolean).join(' · '),
+  };
+}
+
+/* reveal: preview the runner-up watch, anchored to the hovered archetype word.
+   Reuses the map's #watch-preview card but positions it off the word's rect. */
+function fitPreviewShow(id, anchorEl) {
+  const w = S.byId && S.byId.get(id);
+  if (!w || !anchorEl) return;
+  clearTimeout(wpHideTimer);
+  elWpMedia.innerHTML = '';
+  const pick = (CATALOG[id] && CATALOG[id].file) ? CATALOG[id] : null;
+  if (pick) {
+    const img = document.createElement('img');
+    img.src = './data/' + pick.file; img.alt = '';
+    img.addEventListener('error', () => { img.remove(); wpGlyphFallback(w); });
+    elWpMedia.appendChild(img);
+  } else { wpGlyphFallback(w); }
+  elWpOverline.textContent = String(w.brand || '').toUpperCase();
+  elWpName.textContent = w.model || '';
+  const price = Array.isArray(w.priceBandUsd) && w.priceBandUsd.length === 2
+    ? `${fmtShortUsd(w.priceBandUsd[0])}–${fmtShortUsd(w.priceBandUsd[1])}` : '';
+  elWpMeta.textContent = [w.reference ? `Ref. ${w.reference}` : null, w.year,
+    isFinite(w.diameterMm) ? `Ø ${w.diameterMm} mm` : null, price].filter(Boolean).join(' · ');
+  const r = anchorEl.getBoundingClientRect();
+  elWatchPreview.style.visibility = 'hidden';
+  elWatchPreview.hidden = false;
+  const cw = elWatchPreview.offsetWidth, chh = elWatchPreview.offsetHeight;
+  const px = clamp(r.left + r.width / 2 - cw / 2, 16, window.innerWidth - cw - 16);
+  let py = r.top - chh - 12;
+  if (py < 16) py = r.bottom + 12;
+  py = clamp(py, 16, window.innerHeight - chh - 16);
+  elWatchPreview.style.left = px + 'px';
+  elWatchPreview.style.top = py + 'px';
+  elWatchPreview.style.visibility = '';
+  requestAnimationFrame(() => elWatchPreview.classList.add('on'));
+}
+
+function renderReveal() {
+  const b = fitWatchMeta(fitResult.best.id);
+  const count = (S.watches && S.watches.length) || Object.keys(FITTING).length;
+
+  fitEl.img.src = 'data/img-catalog/' + b.id + '.jpg';
+  fitEl.img.alt = b.name;
+  fitEl.archetype.textContent = b.archetype;
+  fitEl.rname.textContent = b.name.toUpperCase();
+  fitEl.ref.textContent = b.ref.toUpperCase();
+
+  /* WHY THIS WATCH, RIGHT NOW — the watch's own significance (fallback: convergence) */
+  if (fitEl.whyText) fitEl.whyText.textContent = b.insight;
+
+  /* "in another life, you're the {runnerUp.archetype}" */
+  if (fitResult.runnerUp) {
+    const ru = fitWatchMeta(fitResult.runnerUp.id);
+    const raw = (ru.f.archetype || ru.name);
+    /* the archetype usually already carries its article ("The Snowflake") — don't
+       double it; otherwise supply a lowercase "the" */
+    const lead = /^the\b/i.test(raw.trim()) ? 'In another life, you’re ' : 'In another life, you’re the ';
+    fitEl.alt.innerHTML = lead + '<em></em>.';
+    const em = fitEl.alt.querySelector('em');
+    em.textContent = raw;
+    /* the archetype previews the runner-up watch on hover/focus */
+    const ruId = fitResult.runnerUp.id;
+    em.className = 'fr-alt-link';
+    em.tabIndex = 0;
+    em.setAttribute('role', 'button');
+    em.setAttribute('aria-label', 'Preview ' + ru.name);
+    em.onmouseenter = () => fitPreviewShow(ruId, em);
+    em.onmouseleave = () => hideWatchPreview();
+    em.onfocus = () => fitPreviewShow(ruId, em);
+    em.onblur = () => hideWatchPreview();
+    fitEl.alt.hidden = false;
+  } else {
+    fitEl.alt.hidden = true;
+  }
+
+  /* swap quiz → reveal */
+  fitEl.quiz.style.display = 'none';
+  fitEl.reveal.hidden = false;
+  fitEl.root.classList.add('reveal-mode');
+  fitScalePoster();
+
+  /* cinematic bloom (REDUCED = plain, no animation class) */
+  fitEl.reveal.classList.remove('fr-bloom');
+  if (!REDUCED) requestAnimationFrame(() => fitEl.reveal.classList.add('fr-bloom'));
+
+  requestAnimationFrame(() => { try { fitEl.see.focus(); } catch (e) {} });
+}
+
+/* scale the 1080×1350 poster to fit the viewport, reserving its scaled height */
+function fitScalePoster() {
+  const poster = $('fr-poster');
+  if (!poster) return;
+  const avail = Math.min(window.innerWidth - 32, 620);
+  const scale = Math.min(1, avail / 1080);
+  poster.style.setProperty('--poster-scale', scale);
+  /* the scaled poster is transform-only; reserve layout height so the actions
+     sit below it, not on top */
+  poster.style.marginBottom = (1350 * scale - 1350) + 'px';
+}
+
+/* ---- REVEAL ACTIONS ---- */
+function fitSeeInAtlas() {
+  if (!fitResult || !fitResult.best) return;
+  const id = fitResult.best.id;
+  closeFitting();
+  /* land the watch in descent (mirrors applyDeepLink #m=descent&w=<id>) */
+  try {
+    history.replaceState(null, '', '#m=descent&w=' + id);
+    urlSig = '#m=descent&w=' + id;
+  } catch (e) {}
+  if (S.byId && S.byId.has(id)) {
+    if (S.mode !== 'descent') defaultToDescent();
+    const ww = S.byId.get(id);
+    if (isFinite(ww._di)) { DS.s = ww._di; DS.lastFocus = -1; refreshFocus(); }
+    selectWatch(id, { fly: false });
+  }
+  invalidate();
+}
+
+function fitShare() {
+  if (!fitResult || !fitResult.best) return;
+  const url = location.origin + location.pathname + '#m=descent&w=' + fitResult.best.id;
+  const done = () => { elLive.textContent = 'Link copied.'; flashShare(); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(() => fallbackCopy(url, done));
+  } else fallbackCopy(url, done);
+}
+function fallbackCopy(text, done) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    done();
+  } catch (e) { elLive.textContent = 'Copy failed.'; }
+}
+function flashShare() {
+  const btn = fitEl.share, orig = btn.textContent;
+  btn.textContent = 'Copied';
+  setTimeout(() => { if (fitOpen) btn.textContent = orig; }, 1600);
+}
+
+function fitRestart() {
+  fitStep = 0;
+  fitResult = null;
+  for (const k in fitAnswers) delete fitAnswers[k];
+  fitExtras.clear();
+  fitEl.reveal.hidden = true;
+  fitEl.reveal.classList.remove('fr-bloom');
+  fitEl.quiz.style.display = '';
+  fitEl.root.classList.remove('reveal-mode');
+  renderFitStep(false);
+}
+
+/* ---- SAVE POSTER — 2× offscreen canvas → toBlob (mirrors doExport ~3690).
+   Redraws the poster spec onto a 2160×2700 canvas so the PNG is frame-worthy
+   and independent of the on-screen scale. ---- */
+function fitSavePoster() {
+  if (!fitResult || !fitResult.best) return;
+  const b = fitWatchMeta(fitResult.best.id);
+  const count = (S.watches && S.watches.length) || Object.keys(FITTING).length;
+  const scale = 2;
+  const W0 = 1080, H0 = 1350;
+  const oc = document.createElement('canvas');
+  oc.width = W0 * scale; oc.height = H0 * scale;
+  const c = oc.getContext('2d');
+  c.scale(scale, scale);
+
+  /* ground: radial vignette */
+  const g = c.createRadialGradient(W0 / 2, H0 / 2, 0, W0 / 2, H0 / 2, Math.max(W0, H0) * 0.75);
+  g.addColorStop(0, '#06080B'); g.addColorStop(0.52, '#06080B'); g.addColorStop(1, '#04050A');
+  c.fillStyle = g; c.fillRect(0, 0, W0, H0);
+
+  /* ---- SPECIMEN-PLATE GEOMETRY (mirrors the DOM/CSS exactly) ---- */
+  const MAT = 56, HAIR = 74;                 /* mat inset, inner hairline inset */
+  const PAD_X = 52, PAD_TOP = 40, PAD_BOT = 34;
+  const contentL = HAIR + PAD_X;             /* 126 */
+  const contentR = W0 - HAIR - PAD_X;        /* 954 */
+  const contentW = contentR - contentL;      /* 828 */
+  const cx = W0 / 2;
+  /* hero window: plate top 74 + pad-top 40 + serial line-box ~15.6 + pad-bottom
+     22 + border 1 → ~152.6, then stage margin-top 26 → STAGE_TOP≈179; height 760
+     → bottom 939 = CAP_TOP (caption archetype margin-top 30 handled in drawText) */
+  const STAGE_TOP = 179, STAGE_H = 690, CAP_TOP = STAGE_TOP + STAGE_H;   /* hero window; caption gets the freed room for the insight */
+
+  /* mat plate fill + frame border (1.5px), inner brightened hairline (1px) */
+  const matG = c.createLinearGradient(0, MAT, 0, H0 - MAT);
+  matG.addColorStop(0, 'rgba(16,21,28,0.55)');
+  matG.addColorStop(1, 'rgba(9,12,17,0.80)');
+  c.fillStyle = matG;
+  c.fillRect(MAT, MAT, W0 - 2 * MAT, H0 - 2 * MAT);
+  c.strokeStyle = 'rgba(233,237,242,0.30)'; c.lineWidth = 1.5;
+  c.strokeRect(MAT + 0.75, MAT + 0.75, W0 - 2 * MAT - 1.5, H0 - 2 * MAT - 1.5);
+  c.strokeStyle = 'rgba(233,237,242,0.20)'; c.lineWidth = 1;
+  c.strokeRect(HAIR + 0.5, HAIR + 0.5, W0 - 2 * HAIR - 1, H0 - 2 * HAIR - 1);
+
+  /* four corner registration ticks (graft B): a plus at each frame corner */
+  const drawTick = (tx, ty) => {
+    c.fillStyle = 'rgba(233,237,242,0.34)';
+    c.fillRect(tx - 11, ty - 0.75, 22, 1.5);
+    c.fillRect(tx - 0.75, ty - 11, 1.5, 22);
+  };
+  drawTick(MAT, MAT); drawTick(W0 - MAT, MAT);
+  drawTick(MAT, H0 - MAT); drawTick(W0 - MAT, H0 - MAT);
+
+  const drawText = () => {
+    c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+    /* plate-top: single serial, flushed right, with a divider under it */
+    fitSetType(c, 13, 500, 0.34);
+    c.fillStyle = TEXT_3;
+    c.textAlign = 'right';
+    c.fillText('THE FITTING · NO.001', contentR, HAIR + PAD_TOP + 13);
+    c.textAlign = 'left';
+    const topDivY = HAIR + PAD_TOP + 13 + 22;   /* baseline + padding-bottom */
+    c.strokeStyle = 'rgba(233,237,242,0.08)'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(contentL, topDivY); c.lineTo(contentR, topDivY); c.stroke();
+
+    /* caption block begins under the hero window (hero bottom = STAGE_TOP+760).
+       spacing chain mirrors the DOM flex flow (archetype margin-top 30, rule
+       22/24, ledger rows 34 apart, why margin-top 28) */
+    c.textAlign = 'center';
+    let y = CAP_TOP + 60;                        /* archetype baseline (mt30 + ascent) */
+    /* archetype — engraved 47/400, wide tracking */
+    fitSetType(c, 47, 400, 0.28);
+    c.fillStyle = INK; c.fillText(b.archetype, cx + 0.14 * 47, y);
+    y += 33;                                     /* → rule center */
+    /* rule: two lume-gradient hairlines + lume dot */
+    const lg1 = c.createLinearGradient(cx - 66, 0, cx - 19, 0);
+    lg1.addColorStop(0, 'rgba(228,213,168,0)'); lg1.addColorStop(1, LUME);
+    c.strokeStyle = lg1; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(cx - 66, y); c.lineTo(cx - 19, y); c.stroke();
+    const lg2 = c.createLinearGradient(cx + 19, 0, cx + 66, 0);
+    lg2.addColorStop(0, LUME); lg2.addColorStop(1, 'rgba(228,213,168,0)');
+    c.strokeStyle = lg2;
+    c.beginPath(); c.moveTo(cx + 19, y); c.lineTo(cx + 66, y); c.stroke();
+    c.save();
+    c.shadowColor = 'rgba(228,213,168,0.6)'; c.shadowBlur = 12;
+    c.fillStyle = LUME;
+    c.beginPath(); c.arc(cx, y, 2.5, 0, Math.PI * 2); c.fill();
+    c.restore();
+    y += 42;                                     /* → first ledger row baseline */
+
+    /* ---- ENGRAVED LEDGER (graft B): labels left, values flushed right ---- */
+    const ledgerW = 470, lx = cx - ledgerW / 2, rx = cx + ledgerW / 2;
+    const rows = [
+      ['REFERENCE', b.name.toUpperCase(), 15, 0.14],
+      ['PROVENANCE', b.ref.toUpperCase(), 13, 0.16],
+    ];
+    rows.forEach((r, i) => {
+      const rowY = y + i * 34;
+      c.textAlign = 'left';
+      fitSetType(c, 11, 500, 0.32);
+      c.fillStyle = TEXT_3; c.fillText(r[0], lx, rowY);
+      c.textAlign = 'right';
+      fitSetType(c, r[2], 500, r[3]);
+      c.fillStyle = INK; c.fillText(r[1], rx, rowY);
+      if (i < rows.length - 1) {
+        c.strokeStyle = 'rgba(233,237,242,0.08)'; c.lineWidth = 1;
+        c.beginPath(); c.moveTo(lx, rowY + 11); c.lineTo(rx, rowY + 11); c.stroke();
+      }
+    });
+    c.textAlign = 'center';
+    y += (rows.length - 1) * 34 + 46;            /* → insight label baseline (mt30) */
+
+    /* WHY THIS WATCH, RIGHT NOW — engraved lume eyebrow + wrapped prose insight */
+    const insightBottom = fitDrawWhy(c, cx, y, 500, b.insight);
+
+    /* plate-bottom: divider + single quiet brand signature — flows below the
+       insight (clamped to the bottom margin), so a long insight never collides */
+    const botFloor = H0 - HAIR - PAD_BOT - 4;
+    const botBaseY = Math.max(botFloor, insightBottom + 54);
+    const botDivY = botBaseY - 26;
+    c.strokeStyle = 'rgba(233,237,242,0.08)'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(contentL, botDivY); c.lineTo(contentR, botDivY); c.stroke();
+    /* single signature — the "sea time" wordmark, system font, lowercase */
+    c.font = '500 16px ' + FIT_FONT;
+    c.letterSpacing = '0px';
+    c.fillStyle = TEXT_2;
+    c.textAlign = 'center';
+    c.fillText('sea time', cx, botBaseY);
+
+    finish();
+  };
+
+  const finish = () => {
+    oc.toBlob(blob => {
+      if (!blob) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'the-fitting-' + b.id + '.png';
+      a.click();
+      elLive.textContent = 'Poster saved.';
+      const btn = fitEl.save, orig = btn.textContent;
+      btn.textContent = 'Saved';
+      setTimeout(() => { if (fitOpen) btn.textContent = orig; }, 1600);
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }, 'image/png');
+  };
+
+  /* HERO WINDOW — rectangular portrait; watch large, strap bleeds off top &
+     bottom via object-fit:cover. Mirrors #fr-stage (176px top, 760px tall). */
+  const drawStage = (img) => {
+    const HX = contentL, HW = contentW;        /* hero spans the content width */
+    const HY = STAGE_TOP, HH = STAGE_H;
+
+    c.save();
+    /* clip to the rectangular window (rounded 0 — a plate edge) */
+    c.beginPath(); c.rect(HX, HY, HW, HH); c.clip();
+    /* window ground */
+    c.fillStyle = '#04050A'; c.fillRect(HX, HY, HW, HH);
+
+    if (img && img.complete && img.naturalWidth) {
+      /* object-fit: cover — scale to fill, center, crop overflow */
+      const iw = img.naturalWidth, ih = img.naturalHeight;
+      const s = Math.max(HW / iw, HH / ih);
+      const dw = iw * s, dh = ih * s;
+      const dx = HX + (HW - dw) / 2, dy = HY + (HH - dh) / 2;
+      c.drawImage(img, dx, dy, dw, dh);
+    }
+
+    /* lume bloom, top-centre (must-fix #3) */
+    const bloomCx = HX + HW / 2, bloomCy = HY + HH * 0.44;
+    const bloomR = Math.max(HW, HH) * 0.40;
+    const bloom = c.createRadialGradient(bloomCx, bloomCy, 0, bloomCx, bloomCy, bloomR);
+    bloom.addColorStop(0, 'rgba(228,213,168,0.16)');
+    bloom.addColorStop(1, 'rgba(228,213,168,0)');
+    c.fillStyle = bloom; c.fillRect(HX, HY, HW, HH);
+
+    /* rim-lit emergence vignette (graft C): darken window corners ~12% */
+    const vg = c.createRadialGradient(bloomCx, HY + HH / 2, HH * 0.30, bloomCx, HY + HH / 2, HH * 0.72);
+    vg.addColorStop(0, 'rgba(4,5,10,0)');
+    vg.addColorStop(1, 'rgba(4,5,10,0.42)');
+    c.fillStyle = vg; c.fillRect(HX, HY, HW, HH);
+    c.restore();
+
+    /* window frame hairline */
+    c.strokeStyle = 'rgba(233,237,242,0.16)'; c.lineWidth = 1;
+    c.strokeRect(HX + 0.5, HY + 0.5, HW - 1, HH - 1);
+
+    drawText();
+  };
+
+  const img = new Image();
+  img.onload = () => drawStage(img);
+  img.onerror = () => drawStage(null);
+  img.src = 'data/img-catalog/' + b.id + '.jpg';
+  /* if cached and already complete, onload may not fire */
+  if (img.complete && img.naturalWidth) drawStage(img);
+}
+
+/* poster type helper — system stack, tabular, tracked (px em) */
+function fitSetType(c, sizePx, weight, trackingEm) {
+  c.font = weight + ' ' + sizePx + 'px ' + FIT_FONT;
+  c.letterSpacing = (trackingEm * sizePx).toFixed(2) + 'px';
+}
+const FIT_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, 'Helvetica Neue', sans-serif";
+const INK = '#E9EDF2';
+
+/* draw the "why this watch, right now" insight: engraved lume eyebrow + wrapped prose */
+function fitDrawWhy(c, cx, y, maxW, insight) {
+  c.save();
+  c.textAlign = 'center';
+  /* eyebrow — lume, letter-spaced caps (mirrors #fr-why-label) */
+  fitSetType(c, 11, 500, 0.32);
+  c.fillStyle = LUME;
+  c.fillText('WHY THIS WATCH, RIGHT NOW', cx + 0.32 * 11 / 2, y);
+  /* prose — INK, 16px, wrapped (mirrors #fr-why-text, mt12) */
+  const proseY = y + 12 + 16;
+  c.font = '400 16px ' + FIT_FONT;
+  c.letterSpacing = (0.01 * 16).toFixed(2) + 'px';
+  const words = (insight || '').split(' ');
+  const lines = []; let line = '';
+  for (const wd of words) {
+    const test = line ? line + ' ' + wd : wd;
+    if (c.measureText(test).width > maxW && line) { lines.push(line); line = wd; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+  const lh = 16 * 1.6;
+  c.fillStyle = INK;
+  lines.forEach((ln, i) => c.fillText(ln, cx, proseY + i * lh));
+  c.restore();
+  return proseY + (lines.length - 1) * lh + 6;   /* baseline of last prose line */
+}
+
+/* ---- keyboard: arrows/enter/esc, mirrors the lightbox's key ownership ---- */
+function onFitKey(e) {
+  if (!fitOpen) return;
+  if (e.key === 'Escape') {
+    e.preventDefault(); e.stopPropagation();
+    if (!fitEl.reveal.hidden) closeFitting(); else closeFitting();
+    return;
+  }
+  /* reveal screen: let Tab/Enter work natively on the action row */
+  if (!fitEl.reveal.hidden) return;
+  const s = FIT_SCREENS[fitStep];
+  if (s.type === 'binary') {
+    const cards = [...fitEl.cards.querySelectorAll('.fq-card')];
+    const idx = cards.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault(); (cards[(idx + 1 + cards.length) % cards.length] || cards[0]).focus();
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault(); (cards[(idx - 1 + cards.length) % cards.length] || cards[0]).focus();
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      if (document.activeElement && document.activeElement.classList.contains('fq-card')) {
+        e.preventDefault(); document.activeElement.click();
+      }
+    } else if (e.key === 'Backspace') { e.preventDefault(); fitBack(); }
+  } else {
+    if (e.key === 'Enter') { e.preventDefault(); fitAdvance(); }
+    else if (e.key === 'Backspace') { e.preventDefault(); fitBack(); }
+  }
+}
+
+/* wire the entry chip once DOM is present */
+(function wireFitEntry() {
+  const chip = chipEntry();
+  if (chip) chip.addEventListener('click', () => openFitting());
+})();
+
 window.addEventListener('resize', resize);
+window.addEventListener('resize', () => { if (fitOpen && !fitEl.reveal.hidden) fitScalePoster(); });
 
 resize();
 invalidate();      /* field renders immediately */

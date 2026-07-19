@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <title>The Horological Atlas</title>
-  <link rel="stylesheet" href="app.css?v=69">
+  <link rel="stylesheet" href="app.css?v=70">
   <script>/* skip the surface hero for returning visitors + shared deep links (no flash) */
-    try { if (sessionStorage.getItem('seatime.dived') || location.hash.length > 1) document.documentElement.classList.add('no-hero'); } catch (e) {}
+    try { if (/[#&]w=/.test(location.hash)) document.documentElement.classList.add('no-hero'); } catch (e) {}
   </script>
 </head>
 <body class="pre-reveal">
@@ -275,6 +275,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=69"></script>
+  <script type="module" src="js/main.js?v=70"></script>
 </body>
 </html>

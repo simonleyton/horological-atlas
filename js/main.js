@@ -6890,7 +6890,6 @@ let heroEl = null, heroVisible = false, heroPullUp = 0;
 function heroDive() {
   if (!heroEl || !heroVisible) return;
   heroVisible = false;
-  try { sessionStorage.setItem('seatime.dived', '1'); } catch (e) {}
   heroEl.classList.add('diving');
   setTimeout(() => { if (!heroVisible) heroEl.classList.add('gone'); try { invalidate(); } catch (e) {} },
             REDUCED ? 300 : 900);
@@ -6898,7 +6897,6 @@ function heroDive() {
 function heroShow() {
   if (!heroEl || heroVisible) return;
   heroVisible = true; heroPullUp = 0;
-  try { sessionStorage.removeItem('seatime.dived'); } catch (e) {}
   heroEl.classList.remove('gone');
   void heroEl.offsetWidth;                 /* reflow so the surfacing transition plays */
   heroEl.classList.remove('diving');

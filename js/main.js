@@ -6685,11 +6685,15 @@ function fitSavePoster() {
 
   const drawText = () => {
     c.textAlign = 'left'; c.textBaseline = 'alphabetic';
-    /* plate-top: single serial, flushed right, with a divider under it */
+    /* plate-top: "sea time" wordmark (left, orange) + serial (right), divider under */
+    const topBaseY = HAIR + PAD_TOP + 13;
+    c.font = '500 17px ' + FIT_FONT; c.letterSpacing = '0px';
+    c.fillStyle = '#F6935D';
+    c.fillText('sea time', contentL, topBaseY);
     fitSetType(c, 13, 500, 0.34);
     c.fillStyle = TEXT_3;
     c.textAlign = 'right';
-    c.fillText('THE FITTING · NO.001', contentR, HAIR + PAD_TOP + 13);
+    c.fillText('THE FITTING · NO.001', contentR, topBaseY);
     c.textAlign = 'left';
     const topDivY = HAIR + PAD_TOP + 13 + 22;   /* baseline + padding-bottom */
     c.strokeStyle = 'rgba(233,237,242,0.08)'; c.lineWidth = 1;
@@ -6728,21 +6732,8 @@ function fitSavePoster() {
     y += (rows.length - 1) * 34 + 40;            /* → insight label baseline (mt18) */
 
     /* WHY THIS WATCH, RIGHT NOW — orange left-aligned label + prose (ledger format) */
-    const insightBottom = fitDrawWhy(c, lx, y, ledgerW, b.insight);
-
-    /* plate-bottom: divider + single quiet brand signature — flows below the
-       insight (clamped to the bottom margin), so a long insight never collides */
-    const botFloor = H0 - HAIR - PAD_BOT - 4;
-    const botBaseY = Math.max(botFloor, insightBottom + 54);
-    const botDivY = botBaseY - 26;
-    c.strokeStyle = 'rgba(233,237,242,0.08)'; c.lineWidth = 1;
-    c.beginPath(); c.moveTo(contentL, botDivY); c.lineTo(contentR, botDivY); c.stroke();
-    /* single signature — the "sea time" wordmark, system font, lowercase */
-    c.font = '500 16px ' + FIT_FONT;
-    c.letterSpacing = '0px';
-    c.fillStyle = TEXT_2;
-    c.textAlign = 'center';
-    c.fillText('sea time', cx, botBaseY);
+    fitDrawWhy(c, lx, y, ledgerW, b.insight);
+    /* the "sea time" wordmark now lives top-left (drawn above) — no bottom signature */
 
     finish();
   };

@@ -1835,11 +1835,17 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 
 #fr-plate-top {
   flex: 0 0 auto;
-  display: flex; justify-content: flex-end; align-items: baseline;
+  display: flex; justify-content: space-between; align-items: baseline;
   padding-bottom: 22px;
   border-bottom: 1px solid var(--line-1);
 }
 #fr-serial { font-size: 13px; letter-spacing: 0.34em; text-transform: uppercase; color: var(--text-3); }
+/* the "sea time" wordmark — poster masthead, top-left */
+#fr-brandline {
+  font-family: var(--font-ui);
+  font-size: 17px; font-weight: 500; letter-spacing: 0;
+  color: #F6935D;
+}
 
 /* ---- HERO — rectangular PORTRAIT window; strap bleeds off top & bottom ---- */
 #fr-stage {
@@ -1929,19 +1935,10 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 }
 
 /* ---- BOTTOM BRAND SIGNATURE — single quiet line ---- */
-#fr-plate-bottom {
-  flex: 0 0 auto;
-  margin-top: auto;
-  padding-top: 24px;
-  border-top: 1px solid var(--line-1);
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-}
+/* the caption fills the freed space; no bottom signature (moved to the top-left) */
+#fr-caption { margin-bottom: auto; }
 /* single signature — the "sea time" wordmark, same face as the masthead */
-#fr-brandline {
-  font-family: var(--font-ui);
-  font-size: 16px; font-weight: 500; letter-spacing: 0;
-  color: var(--text-2);
-}
+
 
 /* the "in another life" line, below the poster (not part of the print) */
 #fr-alt {
@@ -1995,8 +1992,7 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 #fit-reveal .fr-bloom #fr-watch { animation: fr-bloom-watch 700ms var(--ease-out) both; }
 #fit-reveal .fr-bloom #fr-lumepool { animation: fr-bloom-pool 900ms var(--ease-out) both; }
 #fit-reveal .fr-bloom #fr-caption { animation: fr-bloom-up 640ms var(--ease-out) 180ms both; }
-#fit-reveal .fr-bloom #fr-plate-top,
-#fit-reveal .fr-bloom #fr-plate-bottom { animation: fr-bloom-up 640ms var(--ease-out) 300ms both; }
+#fit-reveal .fr-bloom #fr-plate-top { animation: fr-bloom-up 640ms var(--ease-out) 300ms both; }
 @keyframes fr-bloom-watch {
   from { opacity: 0; transform: scale(0.94); }
   to   { opacity: 1; transform: scale(1); }
@@ -2025,8 +2021,7 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
   #fit-reveal .fr-bloom #fr-watch,
   #fit-reveal .fr-bloom #fr-lumepool,
   #fit-reveal .fr-bloom #fr-caption,
-  #fit-reveal .fr-bloom #fr-plate-top,
-  #fit-reveal .fr-bloom #fr-plate-bottom { animation: none !important; }
+  #fit-reveal .fr-bloom #fr-plate-top { animation: none !important; }
 }
 
 /* ======================================================================

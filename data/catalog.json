@@ -770,12 +770,12 @@
     "confidence": "frontal"
   },
   "blancpain-bathyscaphe-1956": {
-    "file": "img-catalog/blancpain-bathyscaphe-1956.jpg",
-    "credit": "Oliver & Clarke dealer listing",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://oliverandclarke.com/cdn/shop/files/BLANCPAIN_AQUALUNG_BLK_STRAP_WEB_2.jpg",
-    "confidence": "frontal"
-  },
+"file": "img-catalog/blancpain-bathyscaphe-1956.jpg",
+"credit": "Sotheby's (Fine Watches)",
+"license": "Unlicensed — personal prototype; clear before publishing",
+"source": "https://www.sothebys.com/en/buy/auction/2021/fine-watches-8/fifty-fathoms-aqua-lung-no-radiations-a-stainless",
+"confidence": "frontal"
+},
   "bulova-oceanographer-1968": {
     "file": "img-catalog/bulova-oceanographer-1968.jpg",
     "credit": "Mayors / WOS Group dealer listing",
@@ -855,9 +855,9 @@
   },
   "jlc-deep-sea-alarm-1959": {
 "file": "img-catalog/jlc-deep-sea-alarm-1959.jpg",
-"credit": "Bulang & Sons",
+"credit": "Phillips (auction lot)",
 "license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://bulangandsons.com/products/jaeger-le-coultre-deepsea-alarm-ref-e857-w839",
+"source": "https://www.phillips.com/detail/jaegerlecoultre/NY080118/43",
 "confidence": "frontal"
 },
   "seiko-monster-skx779-2000": {

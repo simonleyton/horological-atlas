@@ -1,0 +1,7 @@
+scratchpad-dl/
+scratchpad/
+build/
+.git/
+node_modules/
+*.pyc
+__pycache__/

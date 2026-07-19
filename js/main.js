@@ -6930,7 +6930,9 @@ function heroLumePlace() {
   if (!media || !lume) return;
   const b = media.getBoundingClientRect();
   if (!b.width) return;
-  const cx = b.width * 0.44, cy = b.height * 0.5, R = Math.min(b.width, b.height) * 0.30;
+  /* the dial sits slightly left-of-centre and above the vertical midline in the
+     contained watch; size the glow to the black dial face */
+  const cx = b.width * 0.455, cy = b.height * 0.465, R = b.height * 0.15;
   lume.style.left = (cx - R) + 'px'; lume.style.top = (cy - R) + 'px';
   lume.style.width = (2 * R) + 'px'; lume.style.height = (2 * R) + 'px';
 }

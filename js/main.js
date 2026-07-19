@@ -3909,6 +3909,7 @@ canvas.addEventListener('pointermove', e => {
       if (descDrag.moved) {
         const dt = Math.max((now2 - descDrag.lastT) / 1000, 0.001);
         const ds = -dy / 64;                       /* 1 card per 64px — the vertical pitch, 1:1 */
+        if (heroPullCheck(ds)) { descDrag = null; S.dragging = false; canvas.classList.remove('grabbing'); return; }
         const s0 = DS.s;
         DS.s = clamp(s0 + ds, 0, DS.n - 1);
         /* the EMA reads what actually moved — at the clamp the effective ds
@@ -4569,6 +4570,7 @@ function descentWheel(dy) {
   const dt = clamp((now - (DS.emaT || now - 16)) / 1000, 0.008, 0.2);
   DS.emaT = now;
   const ds = dy / 480;                          /* 1/480 cards per px, ctrl+wheel identical */
+  if (heroPullCheck(ds)) return;                /* pulling up at the top resurfaces the hero */
   const s0 = DS.s;
   DS.s = clamp(s0 + ds, 0, DS.n - 1);
   /* feed the EMA the effective (post-clamp) motion — wheeling against the
@@ -6883,40 +6885,53 @@ loadData();
    A DOM layer over the (already-booting) atlas; dismissing it reveals
    the descent underneath. Skipped for returning visitors + deep links.
    ====================================================================== */
-(function setupHero() {
-  const hero = document.getElementById('hero');
-  if (!hero || document.documentElement.classList.contains('no-hero')) return;
-  let dismissed = false;
+let heroEl = null, heroVisible = false, heroPullUp = 0;
 
-  function dive() {
-    if (dismissed) return;
-    dismissed = true;
-    try { sessionStorage.setItem('seatime.dived', '1'); } catch (e) {}
-    hero.classList.add('diving');
-    setTimeout(() => { hero.classList.add('gone'); try { invalidate(); } catch (e) {} },
-              REDUCED ? 300 : 900);
-    window.removeEventListener('wheel', onWheel, { passive: false });
-    window.removeEventListener('keydown', onKey);
-    hero.removeEventListener('touchstart', onTouchStart);
-    hero.removeEventListener('touchmove', onTouchMove, { passive: false });
-  }
+function heroDive() {
+  if (!heroEl || !heroVisible) return;
+  heroVisible = false;
+  try { sessionStorage.setItem('seatime.dived', '1'); } catch (e) {}
+  heroEl.classList.add('diving');
+  setTimeout(() => { if (!heroVisible) heroEl.classList.add('gone'); try { invalidate(); } catch (e) {} },
+            REDUCED ? 300 : 900);
+}
+function heroShow() {
+  if (!heroEl || heroVisible) return;
+  heroVisible = true; heroPullUp = 0;
+  try { sessionStorage.removeItem('seatime.dived'); } catch (e) {}
+  heroEl.classList.remove('gone');
+  void heroEl.offsetWidth;                 /* reflow so the surfacing transition plays */
+  heroEl.classList.remove('diving');
+}
+/* resurface the hero when the diver pulls up past the top of the spiral
+   (dsIntent < 0 = moving toward the surface). Called from the descent scroll paths. */
+function heroPullCheck(dsIntent) {
+  if (!heroEl || heroVisible || !heroEl.classList.contains('gone')) return false;
+  if (DS.s <= 0.02 && dsIntent < 0) {
+    heroPullUp += -dsIntent;
+    if (heroPullUp > 0.7) { heroShow(); return true; }   /* ~a deliberate upward pull */
+  } else { heroPullUp = 0; }
+  return false;
+}
 
-  function onWheel(e) { e.preventDefault(); if (e.deltaY > 4) dive(); }
-  function onKey(e) {
+(function heroInit() {
+  heroEl = document.getElementById('hero');
+  if (!heroEl || document.documentElement.classList.contains('no-hero')) { heroEl = null; return; }
+  heroVisible = true;
+  window.addEventListener('wheel', e => {
+    if (!heroVisible) return; e.preventDefault(); if (e.deltaY > 4) heroDive();
+  }, { passive: false });
+  window.addEventListener('keydown', e => {
+    if (!heroVisible) return;
     if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' ||
-        e.key === 'Enter' || e.key === 'Spacebar') { e.preventDefault(); dive(); }
-  }
+        e.key === 'Enter' || e.key === 'Spacebar') { e.preventDefault(); heroDive(); }
+  });
   let ty0 = null;
-  function onTouchStart(e) { ty0 = e.touches[0].clientY; }
-  function onTouchMove(e) {
-    e.preventDefault();
-    if (ty0 != null && ty0 - e.touches[0].clientY > 24) dive();
-  }
-
-  window.addEventListener('wheel', onWheel, { passive: false });
-  window.addEventListener('keydown', onKey);
-  hero.addEventListener('touchstart', onTouchStart, { passive: true });
-  hero.addEventListener('touchmove', onTouchMove, { passive: false });
+  heroEl.addEventListener('touchstart', e => { if (heroVisible) ty0 = e.touches[0].clientY; }, { passive: true });
+  heroEl.addEventListener('touchmove', e => {
+    if (!heroVisible) return; e.preventDefault();
+    if (ty0 != null && ty0 - e.touches[0].clientY > 24) heroDive();
+  }, { passive: false });
   const btn = document.getElementById('hero-descend');
-  if (btn) btn.addEventListener('click', dive);
+  if (btn) btn.addEventListener('click', heroDive);
 })();

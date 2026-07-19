@@ -4986,7 +4986,11 @@ function drawDescent(c, w_, h_, now, isExport) {
   if (!isExport) maybeLoadImages();
   const cx = isExport ? DS.cx : axisTick('cx', descTargetCX(), now);
   const cy = isExport ? DS.cy : axisTick('cy', descTargetCY(), now);
-  const R = clamp(w_ * 0.33, 320, 500);
+  /* MOBILE: smaller plates on a tighter spiral so several cards read at once —
+     the helix becomes legible instead of one card filling the screen. */
+  const mob = !isExport && w_ < 620;
+  const cardK = mob ? 0.64 : 1;                          /* plate shrink */
+  const R = mob ? clamp(w_ * 0.40, 128, 190) : clamp(w_ * 0.33, 320, 500);
   const s = DS.s;
   const Y0 = dYs(s);
   const n = clamp(Math.round(s), 0, DS.n - 1);
@@ -5003,7 +5007,7 @@ function drawDescent(c, w_, h_, now, isExport) {
      needs it before the card loop runs. */
   const phiF = (n - s) * HELIX_DTH;
   const dF = (1 + Math.cos(phiF)) / 2;
-  const scF = (0.40 + 0.60 * Math.pow(dF, 1.5)) * bloomOf(Math.max(0, 1 - Math.abs(n - s)));
+  const scF = (0.40 + 0.60 * Math.pow(dF, 1.5)) * bloomOf(Math.max(0, 1 - Math.abs(n - s))) * cardK;
   const vy = -(dYs(s + 0.01) - dYs(s - 0.01)) / 0.02;   /* screen-px per card unit, shared */
   drawSurfaceCeiling(c, w_, h_, cy, Y0, 1);
   drawDescentRulers(c, w_, h_, cy, Y0, 1);
@@ -5024,7 +5028,7 @@ function drawDescent(c, w_, h_, now, isExport) {
     const d = (1 + Math.cos(phi)) / 2;
     const o = dSlots[m++];
     o.i = i; o.phi = phi; o.d = d;
-    o.sc = (0.40 + 0.60 * Math.pow(d, 1.5)) * bloomOf(Math.max(0, 1 - Math.abs(i - s)));
+    o.sc = (0.40 + 0.60 * Math.pow(d, 1.5)) * bloomOf(Math.max(0, 1 - Math.abs(i - s))) * cardK;
     o.al = 0.08 + 0.92 * d * d;
     o.x = cx + R * Math.sin(phi);
     o.y = cy + dYof(i) - Y0;
@@ -5115,7 +5119,7 @@ function drawDescent(c, w_, h_, now, isExport) {
       const op = rf.oldPos.get(w.id);
       if (!op) continue;
       const dd = (1 + Math.cos(op.phi)) / 2;
-      const sc = 0.40 + 0.60 * Math.pow(dd, 1.5);
+      const sc = (0.40 + 0.60 * Math.pow(dd, 1.5)) * cardK;
       const wd = CARD_W * sc, ht = CARD_H * sc;
       const ex = cx + R * Math.sin(op.phi) - wd / 2;
       const ey = cy + (op.y - rf.oldY0) + sink - ht / 2;

@@ -1405,7 +1405,20 @@ footer {
   }
   #panel.open { transform: none; }
   #panel.closing { transform: translateY(12px); }
-  #search.open { width: calc(100vw - 48px); }
+
+  /* MOBILE SEARCH — open to a full-width bar anchored by BOTH edges (left+right),
+     so it can never overflow the viewport regardless of iOS keyboard/viewport
+     quirks. The magnifier stays as a left affordance → reads as a search bar. */
+  #search.open {
+    left: 16px; right: 16px; width: auto;
+    transition: box-shadow 220ms var(--ease-out), opacity 400ms var(--ease-out);
+  }
+  #search.open #search-toggle {
+    display: inline-flex;
+    position: absolute; left: 5px; top: 50%; transform: translateY(-50%);
+    color: rgba(11, 11, 13, 0.55); pointer-events: none;
+  }
+  #search.open #search-input { padding-left: 46px; }
 }
 
 /* ---------- REDUCED MOTION ---------- */

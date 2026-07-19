@@ -2755,8 +2755,10 @@ function openSearch() {
   skipReveal();
   searchOpen = true;
   if (searchRestW == null) searchRestW = elSearch.offsetWidth;
-  const target = window.innerWidth <= 760 ? (window.innerWidth - 48) + 'px' : '320px';
-  animateSearchWidth(target);
+  /* mobile: CSS anchors the open bar by both edges (left+right) — never set an
+     inline width, which would fight the anchoring and overflow the viewport */
+  if (window.innerWidth <= 760) elSearch.style.width = '';
+  else animateSearchWidth('320px');
   elSearch.classList.add('open');
   elSearchInput.hidden = false;
   elSearchInput.value = '';
@@ -2767,7 +2769,8 @@ function openSearch() {
 function closeSearch() {
   if (!searchOpen) return;
   searchOpen = false;
-  animateSearchWidth(searchRestW != null ? searchRestW + 'px' : '');
+  if (window.innerWidth <= 760) elSearch.style.width = '';   /* CSS owns the collapse back to the circle */
+  else animateSearchWidth(searchRestW != null ? searchRestW + 'px' : '');
   elSearch.classList.remove('open');
   elSearchInput.hidden = true;
   elSearchInput.value = '';

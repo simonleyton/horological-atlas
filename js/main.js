@@ -203,7 +203,10 @@ let nmHideTimer = null;
 /* the over-filtered empty state — a designed destination, not a dead end.
    Shown only when the Lens has narrowed the resting Descent to nothing. */
 function updateNoMatch() {
-  const show = S.mode === 'descent' && !S.morph && DS.full && DS.n === 0;
+  /* never over the open Lens — the user is actively filtering; the empty-state
+     belongs on the descent, seen once the Lens is closed (Apple HIG: no
+     competing, overlapping surfaces) */
+  const show = S.mode === 'descent' && !S.morph && DS.full && DS.n === 0 && !lensOpen;
   if (show) {
     clearTimeout(nmHideTimer);
     if (elNoMatch.hidden) {
@@ -1695,6 +1698,7 @@ function closeLensPanel() {
   elLensChip.setAttribute('aria-expanded', 'false');
   setTimeout(() => { elLensPanel.hidden = true; }, REDUCED ? 90 : 250);
   if (elLensPanel.contains(document.activeElement)) elLensChip.focus({ preventScroll: true });
+  updateNoMatch();   /* if the filters left the field empty, surface the empty-state now */
 }
 elLensChip.addEventListener('click', () => {
   /* the Lens is persistent across sky and descent — only a flight or export locks it */

@@ -92,8 +92,15 @@ elif BGMODE=='dark':
     edge = np.clip((lum - klo)/max(1.0, khi-klo), 0, 1)      # 1=watch, 0=dark bg
 else:
     edge = fg.astype(float)
-a = np.where(core, 1.0, edge) * region
-alpha = Image.fromarray((np.clip(a,0,1)*255).astype('uint8'),'L').filter(ImageFilter.GaussianBlur(0.6))
+if '--clean' in args:
+    # clean morphological alpha — the binary silhouette, gently eroded + blurred.
+    # no luminance ramp at the boundary → no strap fray, smooth crisp edges.
+    er = int(opt('--erode','1'))
+    a = ndi.binary_erosion(fg, iterations=er).astype(float)
+else:
+    a = np.where(core, 1.0, edge) * region
+blur = float(opt('--feather','0.6'))
+alpha = Image.fromarray((np.clip(a,0,1)*255).astype('uint8'),'L').filter(ImageFilter.GaussianBlur(blur))
 rgba = im.convert('RGBA'); rgba.putalpha(alpha)
 nw,nh = round(W*scale),round(H*scale)
 rgba = rgba.resize((nw,nh),Image.LANCZOS)

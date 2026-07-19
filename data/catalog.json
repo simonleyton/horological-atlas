@@ -364,12 +364,12 @@
     "confidence": "frontal"
   },
   "rolex-submariner-6538-1956": {
-    "file": "img-catalog/rolex-submariner-6538-1956.jpg",
-    "credit": "Bob's Watches",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://www.bobswatches.com/vintage-tropical-rolex-submariner-ref-6538.html",
-    "confidence": "frontal"
-  },
+"file": "img-catalog/rolex-submariner-6538-1956.jpg",
+"credit": "Phillips (auction lot)",
+"license": "Unlicensed — personal prototype; clear before publishing",
+"source": "https://www.phillips.com/",
+"confidence": "frontal"
+},
   "rolex-submariner-5513-1962": {
     "file": "img-catalog/rolex-submariner-5513-1962.jpg",
     "credit": "Tropical Watch",
@@ -595,12 +595,12 @@
     "confidence": "frontal"
   },
   "jlc-memovox-polaris-1968": {
-    "file": "img-catalog/jlc-memovox-polaris-1968.jpg",
-    "credit": "S.Song Vintage Watches",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://www.ssongwatches.com/products/jaeger-lecoultre-polaris-e-859",
-    "confidence": "frontal"
-  },
+"file": "img-catalog/jlc-memovox-polaris-1968.jpg",
+"credit": "Matthew Bain Inc.",
+"license": "Unlicensed — personal prototype; clear before publishing",
+"source": "https://www.matthewbaininc.com/",
+"confidence": "frontal"
+},
   "seiko-6159-1968": {
 "file": "img-catalog/seiko-6159-1968.jpg",
 "credit": "Craft + Tailored",
@@ -756,12 +756,12 @@
 "confidence": "frontal"
 },
   "nivada-chronomaster-1961": {
-    "file": "img-catalog/nivada-chronomaster-1961.jpg",
-    "credit": "S.Song Vintage Watches product photograph",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://www.ssongwatches.com/products/croton-chronomaster-aviator-sea-diver",
-    "confidence": "frontal"
-  },
+"file": "img-catalog/nivada-chronomaster-1961.jpg",
+"credit": "S.Song Watches",
+"license": "Unlicensed — personal prototype; clear before publishing",
+"source": "https://www.ssongwatches.com/",
+"confidence": "frontal"
+},
   "monta-oceanking-2016": {
     "file": "img-catalog/monta-oceanking-2016.jpg",
     "credit": "MONTA / Time+Tide product render",
@@ -773,7 +773,7 @@
 "file": "img-catalog/blancpain-bathyscaphe-1956.jpg",
 "credit": "Sotheby's (Fine Watches)",
 "license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.sothebys.com/en/buy/auction/2021/fine-watches-8/fifty-fathoms-aqua-lung-no-radiations-a-stainless",
+"source": "https://www.sothebys.com/",
 "confidence": "frontal"
 },
   "bulova-oceanographer-1968": {
@@ -826,12 +826,12 @@
     "confidence": "frontal"
   },
   "omega-seamaster-300-165024-1964": {
-    "file": "img-catalog/omega-seamaster-300-165024-1964.jpg",
-    "credit": "S.Song Vintage Watches product photo",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://www.ssongwatches.com/products/omega-seamaster-300-165-024",
-    "confidence": "frontal"
-  },
+"file": "img-catalog/omega-seamaster-300-165024-1964.jpg",
+"credit": "Analog:Shift",
+"license": "Unlicensed — personal prototype; clear before publishing",
+"source": "https://www.analogshift.com/",
+"confidence": "frontal"
+},
   "certina-ds-ph200m-2018": {
     "file": "img-catalog/certina-ds-ph200m-2018.jpg",
     "credit": "WatchBase catalog render",
@@ -840,12 +840,12 @@
     "confidence": "frontal"
   },
   "rolex-submariner-5512-1959": {
-    "file": "img-catalog/rolex-submariner-5512-1959.jpg",
-    "credit": "Grand Caliber (vintage 5512, background hand-cut)",
-    "license": "Unlicensed \u2014 personal prototype; clear before publishing",
-    "source": "https://grandcaliber.com/products/rolex-submariner-5512",
-    "confidence": "frontal"
-  },
+"file": "img-catalog/rolex-submariner-5512-1959.jpg",
+"credit": "Tropical Watch",
+"license": "Unlicensed — personal prototype; clear before publishing",
+"source": "https://tropicalwatch.com/",
+"confidence": "frontal"
+},
   "blancpain-fifty-fathoms-1953": {
     "file": "img-catalog/blancpain-fifty-fathoms-1953.jpg",
     "credit": "Bulang & Sons",
@@ -1011,7 +1011,7 @@
 "file": "img-catalog/invicta-pro-diver-8926-2004.jpg",
 "credit": "Invicta official",
 "license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.invictawatch.com/watches/detail/8926ob-pro-diver-men",
+"source": "https://www.invictawatch.com/",
 "confidence": "frontal"
 },
 "casio-duro-mdv106-2009": {

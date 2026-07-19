@@ -1327,7 +1327,7 @@ footer {
 #lp-fill {
   position: absolute; top: 7.5px;
   height: 1px;
-  background: var(--lume-dim);
+  background: rgba(246, 147, 93, 0.65);   /* sea-time orange */
 }
 .lp-thumb {
   position: absolute; top: 50%;
@@ -1335,11 +1335,11 @@ footer {
   margin: -5.5px 0 0 -5.5px;
   border-radius: 50%;
   background: var(--field-0);
-  border: 1px solid var(--lume-dim);
+  border: 1px solid rgba(246, 147, 93, 0.6);   /* sea-time orange */
   cursor: ew-resize;
   transition: border-color 160ms var(--ease-out);
 }
-.lp-thumb:hover, .lp-thumb:focus-visible { border-color: var(--lume); }
+.lp-thumb:hover, .lp-thumb:focus-visible { border-color: #F6935D; }
 #lp-fields {
   margin-top: 8px;
   display: flex; align-items: center; gap: 8px;

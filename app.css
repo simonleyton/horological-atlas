@@ -1514,16 +1514,20 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 
 /* the orange seatime mark on the reveal — top-right, shown only on the reveal */
 #fr-brandmark {
-  position: fixed; top: 37px; right: 24px;
+  position: fixed; top: 37px; left: 24px;
   font-family: var(--font-ui);
   font-size: 18px; font-weight: 500;
   line-height: 1; letter-spacing: 0;
   color: #F6935D;
+  background: none; border: none; padding: 0;
   z-index: 21;
-  user-select: none; pointer-events: none;
+  user-select: none; cursor: pointer;
+  transition: opacity 160ms var(--ease-out);
   display: none;
 }
 #fitting.reveal-mode #fr-brandmark { display: block; }
+#fr-brandmark:hover { opacity: 0.72; }
+#fr-brandmark:focus-visible { outline: none; box-shadow: 0 0 0 2px #F6935D; border-radius: 4px; }
 /* on narrow screens the quiz column runs full-width; drop it below the mark */
 @media (max-width: 760px) { #fit-quiz { padding-top: max(62px, env(safe-area-inset-top)); } }
 
@@ -1536,10 +1540,10 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 }
 #fq-fill {
   height: 100%; width: 20%;
-  background: var(--fq-accent);
+  background: #ffffff;
   border-radius: 3px;
   transform-origin: left center;
-  transition: width 420ms var(--ease-glide), background 460ms var(--ease-out);
+  transition: width 420ms var(--ease-glide);
 }
 #fq-topline {
   display: flex; align-items: center; justify-content: space-between;
@@ -1609,7 +1613,11 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 }
 .fq-card:hover { border-color: var(--line-2); }
 .fq-card:hover::before { opacity: 0.5; }
-.fq-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* press / focus correlate with the answer's own colour — never the browser blue */
+.fq-card { -webkit-tap-highlight-color: transparent; }
+.fq-card:focus { outline: none; }
+.fq-card:active { border-color: var(--fq-accent); }
+.fq-card:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--fq-accent); }
 .fq-card.chosen {
   border-color: var(--fq-accent);
   background: color-mix(in srgb, var(--fq-accent) 9%, var(--surface-1));
@@ -1677,7 +1685,10 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
   transition: border-color 180ms var(--ease-out), background 180ms var(--ease-out);
 }
 .fq-chip:hover { border-color: var(--line-2); }
-.fq-chip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.fq-chip { -webkit-tap-highlight-color: transparent; }
+.fq-chip:focus { outline: none; }
+.fq-chip:active { border-color: var(--fq-accent); }
+.fq-chip:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--fq-accent); }
 .fq-chip.chosen {
   border-color: var(--fq-accent);
   background: color-mix(in srgb, var(--fq-accent) 8%, var(--surface-1));
@@ -1860,25 +1871,9 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
   text-transform: uppercase; color: var(--text-1);
   padding-left: 0.28em;
 }
-#fr-rule {
-  display: flex; justify-content: center; align-items: center; gap: 14px;
-  margin: 22px 0 24px;
-}
-#fr-rule .fr-hair {
-  width: 40px; height: 1px;
-  background: linear-gradient(90deg, rgba(228,213,168,0) 0%, var(--lume) 100%);
-}
-#fr-rule .fr-hair:last-child {
-  background: linear-gradient(90deg, var(--lume) 0%, rgba(228,213,168,0) 100%);
-}
-#fr-rule .fr-dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: var(--lume);
-  box-shadow: 0 0 12px 3px var(--lume-glow);
-}
 /* engraved ledger (graft B): left labels, values flushed right, ledger align */
 #fr-ledger {
-  width: 100%; max-width: 470px; margin: 0 auto;
+  width: 100%; max-width: 470px; margin: 34px auto 0;
   display: flex; flex-direction: column; gap: 12px;
   font-variant-numeric: tabular-nums;
 }
@@ -1901,19 +1896,21 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
   font-variant-numeric: tabular-nums;
 }
 #fr-name { font-size: 15px !important; letter-spacing: 0.14em !important; }
-/* the insight — "why this watch, right now" (replaces the match-count + convergence) */
+/* the insight — "why this watch, right now"; same ledger format as the rows
+   above (left-aligned, 470px column), label in the sea-time orange */
 #fr-why {
-  max-width: 500px; margin: 30px auto 0;
-  text-align: center;
+  width: 100%; max-width: 470px; margin: 18px auto 0;
+  text-align: left;
 }
 #fr-why-label {
   display: block;
   font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
-  color: var(--lume);
-  margin-bottom: 12px;
+  color: #F6935D;
+  font-weight: 500;
+  margin-bottom: 9px;
 }
 #fr-why-text {
-  font-size: 16px; line-height: 1.6; letter-spacing: 0.01em;
+  font-size: 14px; line-height: 1.55; letter-spacing: 0.01em;
   color: var(--text-1);
   margin: 0;
 }

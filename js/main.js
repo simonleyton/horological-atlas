@@ -6122,7 +6122,7 @@ const FIT_GLYPH = {
   warm: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="23" cy="23" r="8" fill="currentColor" stroke="none"/><path d="M23 3 V9 M23 37 V43 M3 23 H9 M37 23 H43 M9 9 L13.2 13.2 M32.8 32.8 L37 37 M9 37 L13.2 32.8 M32.8 13.2 L37 9"/></svg>',
   origins: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 34 H42"/><path d="M13 34 A10 10 0 0 1 33 34 Z" fill="currentColor" stroke="none"/><path d="M23 10 V15 M8.5 18 L12 21.5 M37.5 18 L34 21.5"/></svg>',
   next: '<svg viewBox="0 0 46 46" fill="currentColor"><path d="M23 4 L27.5 18.5 L42 23 L27.5 27.5 L23 42 L18.5 27.5 L4 23 L18.5 18.5 Z"/></svg>',
-  mechanical: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-linejoin="round"><circle cx="23" cy="23" r="8.4" stroke-width="2.6"/><circle cx="23" cy="23" r="3" stroke-width="2.4"/><path d="M23 3.5 V9.5 M23 36.5 V42.5 M3.5 23 H9.5 M36.5 23 H42.5 M10.2 10.2 L14.4 14.4 M31.6 31.6 L35.8 35.8 M10.2 35.8 L14.4 31.6 M31.6 14.4 L35.8 10.2" stroke-width="4.4" stroke-linecap="butt"/></svg>',
+  mechanical: '<svg viewBox="0 0 46 46" fill="currentColor" fill-rule="evenodd"><path d="M39 23L43.6 27.1L40.5 34.7L34.3 34.3L34.7 40.5L27.1 43.6L23 39L18.9 43.6L11.3 40.5L11.7 34.3L5.5 34.7L2.4 27.1L7 23L2.4 18.9L5.5 11.3L11.7 11.7L11.3 5.5L18.9 2.4L23 7L27.1 2.4L34.7 5.5L34.3 11.7L40.5 11.3L43.6 18.9L39 23Z M23 16.5 A 6.5 6.5 0 1 0 23 29.5 A 6.5 6.5 0 1 0 23 16.5 Z"/></svg>',
   tough: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M23 4 L38 10 V22 Q38 34 23 42 Q8 34 8 22 V10 Z"/><path d="M16 22 L21 28 L31 16" stroke-width="2.8" stroke-linecap="round"/></svg>',
   history: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M16 5 L23 19 L30 5"/><circle cx="23" cy="30" r="10"/><path d="M23 25 L24.7 28.6 L28.6 29.1 L25.8 31.9 L26.5 35.8 L23 34 L19.5 35.8 L20.2 31.9 L17.4 29.1 L21.3 28.6 Z" fill="currentColor" stroke="none"/></svg>',
   value: '<svg viewBox="0 0 46 46" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><path d="M6 23 L23 6 H40 V23 L23 40 Z"/><circle cx="31.5" cy="14.5" r="2.7" fill="currentColor" stroke="none"/></svg>',
@@ -6217,6 +6217,7 @@ function bindFitting() {
   fitEl.restart = $('fr-restart');
 
   fitEl.close.addEventListener('click', closeFitting);
+  { const bm = $('fr-brandmark'); if (bm) bm.addEventListener('click', fitToSpiral); }
   fitEl.back.addEventListener('click', fitBack);
   fitEl.continue.addEventListener('click', () => fitAdvance());
   fitEl.skip.addEventListener('click', () => fitAdvance());
@@ -6273,12 +6274,6 @@ function closeFitting() {
 function renderFitStep(animate) {
   const s = FIT_SCREENS[fitStep];
   const pct = Math.round(((fitStep + 1) / FIT_SCREENS.length) * 100);
-  /* progress bar reflects the round's active answer — the chosen option's colour
-     if already answered, else the round's lead option (or a finale default) */
-  const barColor = s.type === 'binary'
-    ? ((fitAnswers[s.axis] === s.b.sign ? s.b.color : s.a.color))
-    : (s.options[0].color);
-  fitEl.root.style.setProperty('--fq-accent', barColor);
   fitEl.fill.style.width = pct + '%';
   fitEl.round.textContent = 'Round ' + (fitStep + 1) + ' / ' + FIT_SCREENS.length;
   fitEl.back.hidden = fitStep === 0;
@@ -6360,8 +6355,6 @@ function fitMultiChip(opt) {
 
 function fitChooseBinary(screen, opt, btn) {
   fitAnswers[screen.axis] = opt.sign;
-  /* the progress bar animates to the chosen answer's colour */
-  if (opt.color) fitEl.root.style.setProperty('--fq-accent', opt.color);
   /* light this card, clear the sibling */
   fitEl.cards.querySelectorAll('.fq-card').forEach(c => {
     const isMe = c === btn;
@@ -6565,6 +6558,14 @@ function fitScalePoster() {
 }
 
 /* ---- REVEAL ACTIONS ---- */
+/* the "sea time" mark on the reveal → close the fitting and return to the spiral */
+function fitToSpiral() {
+  closeFitting();
+  try { history.replaceState(null, '', '#m=descent'); urlSig = '#m=descent'; } catch (e) {}
+  if (S.mode !== 'descent') defaultToDescent();
+  invalidate();
+}
+
 function fitSeeInAtlas() {
   if (!fitResult || !fitResult.best) return;
   const id = fitResult.best.id;
@@ -6689,22 +6690,7 @@ function fitSavePoster() {
     /* archetype — engraved 47/400, wide tracking */
     fitSetType(c, 47, 400, 0.28);
     c.fillStyle = INK; c.fillText(b.archetype, cx + 0.14 * 47, y);
-    y += 33;                                     /* → rule center */
-    /* rule: two lume-gradient hairlines + lume dot */
-    const lg1 = c.createLinearGradient(cx - 66, 0, cx - 19, 0);
-    lg1.addColorStop(0, 'rgba(228,213,168,0)'); lg1.addColorStop(1, LUME);
-    c.strokeStyle = lg1; c.lineWidth = 1;
-    c.beginPath(); c.moveTo(cx - 66, y); c.lineTo(cx - 19, y); c.stroke();
-    const lg2 = c.createLinearGradient(cx + 19, 0, cx + 66, 0);
-    lg2.addColorStop(0, LUME); lg2.addColorStop(1, 'rgba(228,213,168,0)');
-    c.strokeStyle = lg2;
-    c.beginPath(); c.moveTo(cx + 19, y); c.lineTo(cx + 66, y); c.stroke();
-    c.save();
-    c.shadowColor = 'rgba(228,213,168,0.6)'; c.shadowBlur = 12;
-    c.fillStyle = LUME;
-    c.beginPath(); c.arc(cx, y, 2.5, 0, Math.PI * 2); c.fill();
-    c.restore();
-    y += 42;                                     /* → first ledger row baseline */
+    y += 52;                                     /* → first ledger row baseline (rule removed) */
 
     /* ---- ENGRAVED LEDGER (graft B): labels left, values flushed right ---- */
     const ledgerW = 470, lx = cx - ledgerW / 2, rx = cx + ledgerW / 2;
@@ -6725,11 +6711,11 @@ function fitSavePoster() {
         c.beginPath(); c.moveTo(lx, rowY + 11); c.lineTo(rx, rowY + 11); c.stroke();
       }
     });
-    c.textAlign = 'center';
-    y += (rows.length - 1) * 34 + 46;            /* → insight label baseline (mt30) */
+    c.textAlign = 'left';
+    y += (rows.length - 1) * 34 + 40;            /* → insight label baseline (mt18) */
 
-    /* WHY THIS WATCH, RIGHT NOW — engraved lume eyebrow + wrapped prose insight */
-    const insightBottom = fitDrawWhy(c, cx, y, 500, b.insight);
+    /* WHY THIS WATCH, RIGHT NOW — orange left-aligned label + prose (ledger format) */
+    const insightBottom = fitDrawWhy(c, lx, y, ledgerW, b.insight);
 
     /* plate-bottom: divider + single quiet brand signature — flows below the
        insight (clamped to the bottom margin), so a long insight never collides */
@@ -6822,18 +6808,19 @@ function fitSetType(c, sizePx, weight, trackingEm) {
 const FIT_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, 'Helvetica Neue', sans-serif";
 const INK = '#E9EDF2';
 
-/* draw the "why this watch, right now" insight: engraved lume eyebrow + wrapped prose */
-function fitDrawWhy(c, cx, y, maxW, insight) {
+/* draw the "why this watch, right now" insight, LEFT-ALIGNED (ledger format):
+   orange label (#F6935D) + wrapped prose. lx = left edge of the ledger column. */
+function fitDrawWhy(c, lx, y, maxW, insight) {
   c.save();
-  c.textAlign = 'center';
-  /* eyebrow — lume, letter-spaced caps (mirrors #fr-why-label) */
+  c.textAlign = 'left';
+  /* label — sea-time orange, letter-spaced caps (mirrors #fr-why-label) */
   fitSetType(c, 11, 500, 0.32);
-  c.fillStyle = LUME;
-  c.fillText('WHY THIS WATCH, RIGHT NOW', cx + 0.32 * 11 / 2, y);
-  /* prose — INK, 16px, wrapped (mirrors #fr-why-text, mt12) */
-  const proseY = y + 12 + 16;
-  c.font = '400 16px ' + FIT_FONT;
-  c.letterSpacing = (0.01 * 16).toFixed(2) + 'px';
+  c.fillStyle = '#F6935D';
+  c.fillText('WHY THIS WATCH, RIGHT NOW', lx, y);
+  /* prose — INK, 14px, wrapped (mirrors #fr-why-text, mb9) */
+  const proseY = y + 9 + 14;
+  c.font = '400 14px ' + FIT_FONT;
+  c.letterSpacing = (0.01 * 14).toFixed(2) + 'px';
   const words = (insight || '').split(' ');
   const lines = []; let line = '';
   for (const wd of words) {
@@ -6842,9 +6829,9 @@ function fitDrawWhy(c, cx, y, maxW, insight) {
     else line = test;
   }
   if (line) lines.push(line);
-  const lh = 16 * 1.6;
+  const lh = 14 * 1.55;
   c.fillStyle = INK;
-  lines.forEach((ln, i) => c.fillText(ln, cx, proseY + i * lh));
+  lines.forEach((ln, i) => c.fillText(ln, lx, proseY + i * lh));
   c.restore();
   return proseY + (lines.length - 1) * lh + 6;   /* baseline of last prose line */
 }

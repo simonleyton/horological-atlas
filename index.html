@@ -5,9 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <title>The Horological Atlas</title>
-  <link rel="stylesheet" href="app.css?v=65">
+  <link rel="stylesheet" href="app.css?v=67">
+  <script>/* skip the surface hero for returning visitors + shared deep links (no flash) */
+    try { if (sessionStorage.getItem('seatime.dived') || location.hash.length > 1) document.documentElement.classList.add('no-hero'); } catch (e) {}
+  </script>
 </head>
 <body class="pre-reveal">
+
+  <!-- THE SURFACE — the landing hero, 0 M; scroll to descend into the atlas -->
+  <section id="hero" aria-label="Sea Time — a field guide to the dive watch">
+    <div id="hero-media" aria-hidden="true">
+      <img id="hero-watch" src="data/hero-fifty-fathoms.jpg" alt="Blancpain Fifty Fathoms dive watch">
+    </div>
+    <div id="hero-content">
+      <h1 id="hero-wordmark">sea time</h1>
+      <div id="hero-meta">
+        <span id="hero-eyebrow">field<br>guide</span>
+        <p id="hero-body">A living map of the dive watch, arranged by the one measure that ever mattered at sea. Depth. Every reference rests at the fathom it survives, from the surface to the Mariana floor.</p>
+      </div>
+      <button id="hero-descend" type="button">scroll to descent <span class="hd-caret" aria-hidden="true">⌄</span></button>
+    </div>
+  </section>
 
   <canvas id="atlas" aria-label="The Horological Atlas — an interactive map of dive-watch design history"></canvas>
 
@@ -255,6 +273,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=65"></script>
+  <script type="module" src="js/main.js?v=67"></script>
 </body>
 </html>

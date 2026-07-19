@@ -6877,3 +6877,46 @@ window.addEventListener('resize', () => { if (fitOpen && !fitEl.reveal.hidden) f
 resize();
 invalidate();      /* field renders immediately */
 loadData();
+
+/* ======================================================================
+   THE SURFACE HERO — dive into the descent on first scroll / tap.
+   A DOM layer over the (already-booting) atlas; dismissing it reveals
+   the descent underneath. Skipped for returning visitors + deep links.
+   ====================================================================== */
+(function setupHero() {
+  const hero = document.getElementById('hero');
+  if (!hero || document.documentElement.classList.contains('no-hero')) return;
+  let dismissed = false;
+
+  function dive() {
+    if (dismissed) return;
+    dismissed = true;
+    try { sessionStorage.setItem('seatime.dived', '1'); } catch (e) {}
+    hero.classList.add('diving');
+    setTimeout(() => { hero.classList.add('gone'); try { invalidate(); } catch (e) {} },
+              REDUCED ? 300 : 900);
+    window.removeEventListener('wheel', onWheel, { passive: false });
+    window.removeEventListener('keydown', onKey);
+    hero.removeEventListener('touchstart', onTouchStart);
+    hero.removeEventListener('touchmove', onTouchMove, { passive: false });
+  }
+
+  function onWheel(e) { e.preventDefault(); if (e.deltaY > 4) dive(); }
+  function onKey(e) {
+    if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' ||
+        e.key === 'Enter' || e.key === 'Spacebar') { e.preventDefault(); dive(); }
+  }
+  let ty0 = null;
+  function onTouchStart(e) { ty0 = e.touches[0].clientY; }
+  function onTouchMove(e) {
+    e.preventDefault();
+    if (ty0 != null && ty0 - e.touches[0].clientY > 24) dive();
+  }
+
+  window.addEventListener('wheel', onWheel, { passive: false });
+  window.addEventListener('keydown', onKey);
+  hero.addEventListener('touchstart', onTouchStart, { passive: true });
+  hero.addEventListener('touchmove', onTouchMove, { passive: false });
+  const btn = document.getElementById('hero-descend');
+  if (btn) btn.addEventListener('click', dive);
+})();

@@ -1221,12 +1221,12 @@ footer {
   display: flex; align-items: center; justify-content: center;
   padding: 0 5px;
   border-radius: 999px;
-  background: var(--lume);
+  background: #F6935D;
   color: #0b0b0d;
   font-family: var(--font-ui);
   font-size: 11px; font-weight: 600; letter-spacing: 0;
   font-variant-numeric: tabular-nums; line-height: 1;
-  box-shadow: 0 0 0 2px #07090d, 0 0 10px rgba(228, 213, 168, 0.75);   /* ring + the gleam glow */
+  box-shadow: 0 0 0 2px #07090d, 0 0 10px rgba(246, 147, 93, 0.75);   /* ring + the gleam glow */
   opacity: 0; transform: scale(0.4);
   transition: opacity 200ms var(--ease-out), transform 260ms var(--ease-out);
   pointer-events: none;
@@ -1234,9 +1234,9 @@ footer {
 #lens-chip.has-count .lens-count { opacity: 1; transform: scale(1); }
 .lens-count.gleam { animation: lens-gleam 620ms var(--ease-out); }
 @keyframes lens-gleam {
-  0%   { box-shadow: 0 0 0 2px #07090d, 0 0 0 rgba(228, 213, 168, 0); }
-  35%  { box-shadow: 0 0 0 2px #07090d, 0 0 16px 3px rgba(228, 213, 168, 0.95); transform: scale(1.18); }
-  100% { box-shadow: 0 0 0 2px #07090d, 0 0 10px rgba(228, 213, 168, 0.75); transform: scale(1); }
+  0%   { box-shadow: 0 0 0 2px #07090d, 0 0 0 rgba(246, 147, 93, 0); }
+  35%  { box-shadow: 0 0 0 2px #07090d, 0 0 16px 3px rgba(246, 147, 93, 0.95); transform: scale(1.18); }
+  100% { box-shadow: 0 0 0 2px #07090d, 0 0 10px rgba(246, 147, 93, 0.75); transform: scale(1); }
 }
 @media (prefers-reduced-motion: reduce) { .lens-count.gleam { animation: none; } }
 #fit-chip:focus-visible, #lens-chip:focus-visible {
@@ -2028,12 +2028,36 @@ html.no-hero #hero { display: none; }
   transition: opacity 900ms var(--ease-out), transform 900ms var(--ease-out),
               background 900ms var(--ease-out);
 }
-#hero-content { order: 1; }      /* left */
-#hero-media { order: 2; }        /* right — the watch, per the mockup */
+#hero-content { order: 1; position: relative; z-index: 4; }   /* left, above the light */
+#hero-media { order: 2; z-index: 1; }                         /* right — the watch */
+/* depth wash: surface-lit at the top, the deep gathering below */
+#hero::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(32,78,100,0.40) 0%, rgba(10,28,38,0) 40%, rgba(3,11,17,0.55) 100%);
+  transition: opacity 900ms var(--ease-out);
+}
+/* the underwater light — shafts, caustic dapple, bubbles (canvas), over the whole scene */
+#hero-fx {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  z-index: 3; pointer-events: none;
+  transition: opacity 700ms var(--ease-out);
+}
+/* the lume-breath — the watch keeps sea time by its own light (placed over the dial by JS) */
+#hero-lume {
+  position: absolute; z-index: 2; pointer-events: none; border-radius: 50%;
+  mix-blend-mode: screen;
+  background: radial-gradient(circle, rgba(228,213,168,0.55) 0%, rgba(228,213,168,0.14) 42%, rgba(228,213,168,0) 68%);
+  animation: hero-lume-breath 5.5s ease-in-out infinite;
+}
+@keyframes hero-lume-breath { 0%,100% { opacity: 0.28; } 50% { opacity: 0.9; } }
+
 #hero.diving {                 /* the dive — sink up, darken to the deep, fade */
   opacity: 0; transform: translateY(-5%);
   background: #06080B; pointer-events: none;
 }
+/* the dive choreography — light recedes, the watch sinks and blurs into the deep */
+#hero.diving::before, #hero.diving #hero-fx, #hero.diving #hero-lume { opacity: 0; }
+#hero.diving #hero-watch { transform: scale(0.94) translateY(2.5%); filter: blur(2px); }
 #hero.gone { display: none; }
 
 #hero-media { position: relative; height: 100%; overflow: hidden; }
@@ -2041,6 +2065,7 @@ html.no-hero #hero { display: none; }
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: 46% center;
   user-select: none; -webkit-user-drag: none;
+  transition: transform 900ms var(--ease-out), filter 900ms var(--ease-out);
 }
 
 #hero-content {
@@ -2089,5 +2114,7 @@ html.no-hero #hero { display: none; }
 @media (prefers-reduced-motion: reduce) {
   #hero { transition: opacity 300ms linear; }
   #hero.diving { transform: none; }
+  #hero.diving #hero-watch { transform: none; }
   #hero-descend .hd-caret { animation: none; }
+  #hero-lume { animation: none; opacity: 0.5; }
 }

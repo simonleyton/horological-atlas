@@ -6902,6 +6902,82 @@ function heroShow() {
   heroEl.classList.remove('gone');
   void heroEl.offsetWidth;                 /* reflow so the surfacing transition plays */
   heroEl.classList.remove('diving');
+  heroLumePlace(); heroFxStart();
+}
+
+/* --- the underwater light: sun shafts + caustic dapple + rising bubbles (canvas 2D) --- */
+let heroFx = null, heroFxRaf = 0;
+function heroFxSetup() {
+  const cv = document.getElementById('hero-fx');
+  if (!cv) return;
+  const r = () => Math.random();
+  heroFx = {
+    cv, ctx: cv.getContext('2d'), DPR: Math.min(dpr, 2), W: 0, H: 0,
+    shafts: Array.from({ length: 6 }, (_, i) => ({ x0: 0.30 + i * 0.13, w: 0.11 + r() * 0.07, ang: -0.14 + r() * 0.28, ph: r() * 6.28, a: 0.055 + r() * 0.05 })),
+    dapple: Array.from({ length: 8 }, () => ({ x: 0.30 + r() * 0.7, y: r() * 0.55, r: 0.05 + r() * 0.08, ph: r() * 6.28, sp: 0.2 + r() * 0.3, a: 0.03 + r() * 0.028 })),
+    bubbles: Array.from({ length: 18 }, () => ({ x: 0.30 + r() * 0.7, y: r(), r: 1 + r() * 3.2, sp: 0.02 + r() * 0.05, ph: r() * 6.28, a: 0.07 + r() * 0.2 })),
+  };
+  heroFxResize();
+}
+function heroFxResize() {
+  if (!heroFx) return;
+  const cv = heroFx.cv;
+  heroFx.W = cv.clientWidth; heroFx.H = cv.clientHeight;
+  cv.width = Math.round(heroFx.W * heroFx.DPR);
+  cv.height = Math.round(heroFx.H * heroFx.DPR);
+  heroLumePlace();
+}
+function heroLumePlace() {
+  const media = document.getElementById('hero-media'), lume = document.getElementById('hero-lume');
+  if (!media || !lume) return;
+  const b = media.getBoundingClientRect();
+  if (!b.width) return;
+  const cx = b.width * 0.44, cy = b.height * 0.5, R = Math.min(b.width, b.height) * 0.30;
+  lume.style.left = (cx - R) + 'px'; lume.style.top = (cy - R) + 'px';
+  lume.style.width = (2 * R) + 'px'; lume.style.height = (2 * R) + 'px';
+}
+function heroFxFrame(ms) {
+  heroFxRaf = 0;
+  if (!heroFx || !heroEl || heroEl.classList.contains('gone')) return;
+  const st = heroFx, x = st.ctx, DPR = st.DPR, W = st.W, H = st.H, t = ms / 1000;
+  const lf = px => Math.min(1, Math.max(0, (px / W - 0.14) / 0.24));
+  x.setTransform(DPR, 0, 0, DPR, 0, 0);
+  x.clearRect(0, 0, W, H);
+  x.globalCompositeOperation = 'lighter';
+  for (const s of st.shafts) {
+    const cx = (s.x0 + Math.sin(t * 0.22 + s.ph) * 0.03) * W, ang = s.ang + Math.sin(t * 0.16 + s.ph) * 0.05, f = lf(cx);
+    if (f <= 0) continue;
+    x.save(); x.translate(cx, -40); x.rotate(ang);
+    const w = s.w * W, gg = x.createLinearGradient(0, 0, 0, H * 1.25), pulse = s.a * f * (0.7 + 0.3 * Math.sin(t * 0.5 + s.ph));
+    gg.addColorStop(0, `rgba(150,205,235,${pulse})`); gg.addColorStop(0.5, `rgba(120,185,220,${pulse * 0.32})`); gg.addColorStop(1, 'rgba(120,185,220,0)');
+    x.fillStyle = gg; x.filter = 'blur(16px)';
+    x.beginPath(); x.moveTo(-w * 0.3, 0); x.lineTo(w * 0.3, 0); x.lineTo(w * 0.9, H * 1.25); x.lineTo(-w * 0.9, H * 1.25); x.closePath(); x.fill();
+    x.restore();
+  }
+  x.filter = 'none';
+  for (const d of st.dapple) {
+    const px = (d.x + Math.sin(t * d.sp + d.ph) * 0.03) * W, py = (d.y + Math.cos(t * d.sp * 0.8 + d.ph) * 0.03) * H, f = lf(px);
+    if (f <= 0) continue;
+    const r = (d.r * (0.85 + 0.25 * Math.sin(t * 0.6 + d.ph))) * W, a = d.a * f * (0.55 + 0.45 * Math.sin(t * 0.7 + d.ph));
+    const rg = x.createRadialGradient(px, py, 0, px, py, r);
+    rg.addColorStop(0, `rgba(175,218,242,${Math.max(0, a)})`); rg.addColorStop(1, 'rgba(175,218,242,0)');
+    x.fillStyle = rg; x.beginPath(); x.arc(px, py, r, 0, 6.2832); x.fill();
+  }
+  for (const b of st.bubbles) {
+    b.y -= b.sp * 0.012; if (b.y < -0.02) { b.y = 1.03; b.x = 0.30 + Math.random() * 0.7; }
+    const px = (b.x + Math.sin(t * 0.6 + b.ph) * 0.006) * W, py = b.y * H, f = lf(px);
+    if (f <= 0) continue;
+    const rg = x.createRadialGradient(px - b.r * 0.3, py - b.r * 0.3, 0, px, py, b.r * 2.2);
+    rg.addColorStop(0, `rgba(220,240,255,${b.a * f})`); rg.addColorStop(0.6, `rgba(180,215,240,${b.a * f * 0.3})`); rg.addColorStop(1, 'rgba(180,215,240,0)');
+    x.fillStyle = rg; x.beginPath(); x.arc(px, py, b.r * 2.2, 0, 6.2832); x.fill();
+  }
+  x.globalCompositeOperation = 'source-over';
+  if (!REDUCED) heroFxRaf = requestAnimationFrame(heroFxFrame);
+}
+function heroFxStart() {
+  if (!heroFx) return;
+  if (REDUCED) { heroFxFrame(0); return; }          /* one static frame, no loop */
+  if (!heroFxRaf) heroFxRaf = requestAnimationFrame(heroFxFrame);
 }
 /* resurface the hero when the diver pulls up past the top of the spiral
    (dsIntent < 0 = moving toward the surface). Called from the descent scroll paths. */
@@ -6934,4 +7010,7 @@ function heroPullCheck(dsIntent) {
   }, { passive: false });
   const btn = document.getElementById('hero-descend');
   if (btn) btn.addEventListener('click', heroDive);
+  heroFxSetup();
+  heroFxStart();
+  window.addEventListener('resize', heroFxResize);
 })();

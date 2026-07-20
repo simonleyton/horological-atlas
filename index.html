@@ -29,7 +29,7 @@
   <link rel="icon" href="favicon-16.png?v=2" sizes="16x16" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
   <meta name="theme-color" content="#06080B">
-  <link rel="stylesheet" href="app.css?v=103">
+  <link rel="stylesheet" href="app.css?v=104">
   <script>/* skip the surface hero for returning visitors + shared deep links (no flash).
        #fit and #fit&r=<id> count: both open the fitting overlay immediately, so
        landing on the hero would bury a shared plate behind a full-screen scroll. */
@@ -93,7 +93,10 @@
     <ul id="search-results" role="listbox" aria-label="Watches and families" hidden></ul>
   </div>
 
+  <!-- scrim before the panel in the DOM: same stacking context, paints beneath -->
+  <div id="panel-scrim" aria-hidden="true" hidden></div>
   <aside id="panel" role="dialog" aria-label="Watch detail" tabindex="-1" hidden>
+    <button id="panel-grab" type="button" aria-label="Close details"><span aria-hidden="true"></span></button>
     <button id="panel-close" type="button" aria-label="Close">
       <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden="true">
         <path d="M0.5 0.5 L7.5 7.5 M7.5 0.5 L0.5 7.5" stroke="currentColor" stroke-width="1" fill="none"/>
@@ -416,6 +419,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=96"></script>
+  <script type="module" src="js/main.js?v=97"></script>
 </body>
 </html>

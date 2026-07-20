@@ -189,7 +189,8 @@ const canvas = $('atlas'), body = document.body;
 const elStatus = $('status'), elS1 = $('status-1'), elS2 = $('status-2');
 const elSearch = $('search'), elSearchToggle = $('search-toggle'),
       elSearchInput = $('search-input'), elSearchResults = $('search-results');
-const elPanel = $('panel'), elPanelClose = $('panel-close'), elPanelContent = $('panel-content');
+const elPanel = $('panel'), elPanelClose = $('panel-close'), elPanelContent = $('panel-content'),
+      elPanelScrim = $('panel-scrim'), elPanelGrab = $('panel-grab');
 const elFooterGauge = $('footer-gauge'),
       elFitChip = $('fit-chip'), elCartouche = $('cartouche'), elCart2 = $('cart-2'), elLive = $('live');
 const elTimeline = $('timeline'), elTlPlay = $('tl-play'), elTlTrack = $('tl-track'),
@@ -2663,6 +2664,10 @@ function openPanelWith(ariaLabel, inject, crossfade) {
     panelPrevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     inject();
     elPanel.hidden = false;
+    if (elPanelScrim) {
+      elPanelScrim.hidden = false;
+      requestAnimationFrame(() => elPanelScrim.classList.add('on'));
+    }
     elPanel.classList.remove('closing');
     elPanel.scrollTop = 0;
     elPanel.focus({ preventScroll: true });
@@ -2850,11 +2855,13 @@ function updateFamilyPanelTime(yr, engaged) {
 function hidePanel() {
   if (elPanel.hidden) return;
   elPanel.classList.remove('open');
+  if (elPanelScrim) elPanelScrim.classList.remove('on');
   elPanel.classList.add('closing');
   clearTimeout(panelHideTimer);
   const focusWasInside = elPanel.contains(document.activeElement) || document.activeElement === elPanel;
   panelHideTimer = setTimeout(() => {
     elPanel.hidden = true;
+    if (elPanelScrim) elPanelScrim.hidden = true;
     elPanel.classList.remove('closing');
     elPanelContent.innerHTML = '';
   }, REDUCED ? 90 : 250);
@@ -4227,6 +4234,45 @@ elPanelClose.addEventListener('click', () => {
   if (S.selection) { releaseFamActive(); S.familyView = null; deselect(); }
   else closeFamily();
 });
+
+/* the scrim is a door out, same as everywhere else */
+if (elPanelScrim) elPanelScrim.addEventListener('click', () => elPanelClose.click());
+
+/* ---- THUMB-DOWN DISMISS — the sheet follows the finger from its grabber;
+   past 96px or a flick it closes through the same path as the close button
+   (chain and all), otherwise it springs back on its own curve. ---- */
+(function panelDrag() {
+  if (!elPanelGrab) return;
+  let dragging = false, y0 = 0, t0 = 0, dy = 0;
+  elPanelGrab.addEventListener('pointerdown', e => {
+    if (window.innerWidth > 760) return;
+    dragging = true; y0 = e.clientY; t0 = performance.now(); dy = 0;
+    elPanel.style.transition = 'none';
+    if (elPanelScrim) elPanelScrim.style.transition = 'none';
+    elPanelGrab.setPointerCapture(e.pointerId);
+  });
+  elPanelGrab.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    dy = Math.max(0, e.clientY - y0);
+    elPanel.style.transform = 'translateY(' + dy + 'px)';
+    if (elPanelScrim) elPanelScrim.style.opacity =
+      String(Math.max(0, 1 - dy / (elPanel.offsetHeight || 600)));
+  });
+  const settle = () => {
+    elPanel.style.transition = '';
+    elPanel.style.transform = '';
+    if (elPanelScrim) { elPanelScrim.style.transition = ''; elPanelScrim.style.opacity = ''; }
+  };
+  const end = e => {
+    if (!dragging) return;
+    dragging = false;
+    const v = dy / Math.max(performance.now() - t0, 1);
+    settle();
+    if (dy > 96 || v > 0.55 || dy < 6) elPanelClose.click();   /* drag past, flick, or a tap */
+  };
+  elPanelGrab.addEventListener('pointerup', end);
+  elPanelGrab.addEventListener('pointercancel', () => { dragging = false; settle(); });
+})();
 
 window.addEventListener('keydown', e => {
   const t = e.target;

@@ -2353,6 +2353,12 @@ html.no-hero #hero { display: none; }
    #ece6df hairline -> --line-1, the name takes the sea-time orange at the
    wordmark's own weight rather than the source's 700/-0.02em.
    ====================================================================== */
+/* an explicit display OVERRIDES the hidden attribute, so this guard is not
+   optional: without it the overlay sits fixed over the whole viewport at
+   opacity 0 and eats every event bound to the canvas — the descent's wheel
+   listener is on `canvas`, the hero's is on `window`, which is exactly why
+   the hero still scrolled and the descent did not. */
+#colophon[hidden] { display: none; }
 #colophon {
   position: fixed; inset: 0; z-index: 60;
   background: var(--field-0);

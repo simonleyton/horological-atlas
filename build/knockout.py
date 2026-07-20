@@ -18,9 +18,19 @@ Two things make a silver watch on white harder than it looks:
      FULL resolution so the downscale to 900 does the anti-aliasing against
      the dark ground rather than against white.
 
-    python3 build/knockout.py <src> <out-id> [--probe]
+    python3 build/knockout.py <src> <out-id> [--probe] [--bleed] [--tol N]
 
 --probe writes diagnostics instead of the final image.
+--bleed  composes the 900x600 landscape plate instead of the 900x900 one.
+
+The corpus has two committed formats, measured across all 146 plates:
+  900x900  116 plates, subject wholly inside the frame (the specimen cut)
+  900x600   30 plates, of which 15 run the bracelet cleanly off BOTH the top
+            and bottom edges (the bleed cut)
+--bleed reproduces the second: subject width normalised to 0.49 of the frame
+(the corpus median), watch head centred on the frame's middle, bracelet
+allowed to leave the frame. The head is found as the widest row of the mask,
+which is the line through the case and crown.
 """
 
 import sys, os
@@ -36,6 +46,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 src_path = sys.argv[1]
 out_id = sys.argv[2]
 probe = '--probe' in sys.argv
+bleed = '--bleed' in sys.argv
 
 
 def flood_background(a, tol=14):
@@ -128,13 +139,30 @@ comp = Image.fromarray(np.clip(comp, 0, 255).astype('uint8'))
 # --- crop to the subject, then frame it like the rest of the catalog
 x0, y0, x1, y1 = bbox
 sw, sh = x1 - x0, y1 - y0
-target = OUT * SUBJECT_FRAC
-scale = target / max(sw, sh)
-comp = comp.crop((x0, y0, x1, y1)).resize(
-    (max(1, round(sw * scale)), max(1, round(sh * scale))), Image.LANCZOS)
 
-canvas = Image.new('RGB', (OUT, OUT), GROUND)
-canvas.paste(comp, ((OUT - comp.width) // 2, (OUT - comp.height) // 2))
+if bleed:
+    CW, CH = 900, 600
+    WIDTH_FRAC = 0.49                       # corpus median for the bleed plates
+    scale = (CW * WIDTH_FRAC) / sw
+    # the watch head sits on the widest row of the mask — the line through the
+    # case and crown. Centring the bbox instead would centre the BRACELET, which
+    # is what pushes the head off-centre on a portrait source.
+    roww = subj[y0:y1 + 1].sum(axis=1)
+    head_y = y0 + int(np.argmax(roww))
+    comp = comp.crop((x0, 0, x1, comp.height)).resize(
+        (max(1, round(sw * scale)), max(1, round(comp.height * scale))), Image.LANCZOS)
+    canvas = Image.new('RGB', (CW, CH), GROUND)
+    ox = (CW - comp.width) // 2
+    oy = round(CH / 2 - (head_y * scale))   # head on the frame's horizon
+    canvas.paste(comp, (ox, oy))
+else:
+    target = OUT * SUBJECT_FRAC
+    scale = target / max(sw, sh)
+    comp = comp.crop((x0, y0, x1, y1)).resize(
+        (max(1, round(sw * scale)), max(1, round(sh * scale))), Image.LANCZOS)
+    canvas = Image.new('RGB', (OUT, OUT), GROUND)
+    canvas.paste(comp, ((OUT - comp.width) // 2, (OUT - comp.height) // 2))
+
 dst = os.path.join(ROOT, 'data', 'img-catalog', out_id + '.jpg')
 canvas.save(dst, 'JPEG', quality=92)
 print('wrote', dst, canvas.size, 'subject', comp.size)

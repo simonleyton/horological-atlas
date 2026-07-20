@@ -1569,12 +1569,8 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
     font-size: 12px; padding: 0 15px; gap: 6px;
   }
 }
-/* smallest phones: 11px runs ~86px against a ~79px cap and would ellipsize;
-   one step down keeps the whole name. Separate block, AFTER the 620 query —
-   splicing into it is how the CTA rules got trapped last time. */
-@media (max-width: 400px) {
-  #colophon-open { font-size: 10px; }
-}
+/* "© simon leyton" (~76px at 11px) fits the 360px cap (~79px) that the longer
+   "by" form did not — the 10px step it needed came back out with it. */
 
 /* ---------- OVERLAY SHELL ---------- */
 #fitting {

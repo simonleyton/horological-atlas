@@ -167,6 +167,33 @@ body.revealing footer { transition-duration: 320ms; transition-delay: 200ms; }
   #wordmark.surfaced { animation: none; }
   #wordmark { transition: none; }
 }
+
+/* the mark replaces the wordmark on a phone — "sea time" and "descent · surface"
+   were competing for the same line, and the toggle is what a thumb actually needs.
+   The text node stays in the DOM: aria-label already carries the accessible name
+   ("sea time — return to the surface"), so nothing is lost to a screen reader. */
+@media (max-width: 760px) {
+  /* OPTICAL, not geometric. Measured on the actual Apple glyph: its ink starts
+     0.1625em below the box top and is only 0.8375em tall, and the shape is
+     bottom-heavy, so box-centring parks it low. Weighting the centroid by
+     contrast-against-ground (what the eye actually reads, since the dark trough
+     nearly dissolves into #06080B) puts the perceived centre at 0.6244em from
+     the box top = 13.74px at this size. 46 − 13.74 = 32.26, so: */
+  #wordmark { font-size: 0; line-height: 1; top: 32px; }
+  #wordmark::before {
+    content: "\1F30A";                 /* 🌊 */
+    font-size: 22px; line-height: 1;
+    display: block;
+  }
+  /* the surface breath can't ride text-shadow here — colour emoji are rendered
+     as images and take no text decoration. The arrival gets a swell instead. */
+  #wordmark.surfaced { animation: wordmark-surfaced-mark 1100ms var(--ease-out) both; }
+}
+@keyframes wordmark-surfaced-mark {
+  0%   { transform: scale(1); }
+  22%  { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
 body.dim-chrome #wordmark { opacity: var(--dim-chrome); }
 body.observatory #wordmark, body.export #wordmark { opacity: 0; }
 

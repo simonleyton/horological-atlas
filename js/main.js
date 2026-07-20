@@ -2419,7 +2419,19 @@ function panelHtml(w, lin) {
    attribution; external links open in a new tab. */
 function loreHtml(id) {
   const L = LORE[id];
-  if (!L || !L.lede) return '';
+  /* Images used to be gated behind a written history: no lede, no section, and
+     therefore no filmstrip — a watch could carry media that nothing would ever
+     render. A gallery does not need prose to justify itself, so it gets its own
+     section and its own honest heading ("Heritage" promises a story). */
+  if (!L || !L.lede) {
+    const only = mediaHtml(id);
+    return only
+      ? `<div class="sec lore lore-media-only" data-lore>
+    <h3 class="lore-head">Gallery</h3>
+    ${only}
+  </div>`
+      : '';
+  }
   const cite = (label, url) => url
     ? `<a class="lore-cite" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}<span class="lore-arrow" aria-hidden="true">↗</span></a>`
     : `<span class="lore-cite lore-cite-plain">${escapeHtml(label)}</span>`;
@@ -2581,19 +2593,26 @@ function showPanel(w, lin, crossfade) {
     const photo = elPanelContent.querySelector('.p-photo img');
     if (photo) {
       photo.addEventListener('click', () => {
-        /* the life shot first, the specimen second */
-        const items = [];
+        /* the life shot first, the specimen second, the gallery after.
+           DEDUPED BY SRC: the editorial and catalog layers frequently hold the
+           same file, and pushing both put the identical photograph in twice —
+           which is what "this watch has two of the same variant" actually was. */
+        const items = [], seen = new Set();
+        const push = it => { if (it && it.src && !seen.has(it.src)) { seen.add(it.src); items.push(it); } };
         const ed = IMAGES[w.id], cat = CATALOG[w.id];
-        if (ed && ed.file) items.push({
+        if (ed && ed.file) push({
           src: './data/' + ed.file,
           title: `${w.brand} ${w.model} · ${w.year}`,
           credit: photoCredit(ed)
         });
-        if (cat && cat.file) items.push({
+        if (cat && cat.file) push({
           src: './data/' + cat.file,
           title: `${w.brand} ${w.model} · ${w.year} — specimen`,
           credit: (cat && cat.credit) || 'WatchBase catalog render'
         });
+        /* variants and heritage ride the same carousel — opening the hero and
+           arrowing across is how you compare the black dial against the white */
+        for (const m of mediaItems(w.id)) push(m);
         if (items.length) lightboxOpen(items, 0);
       });
     }

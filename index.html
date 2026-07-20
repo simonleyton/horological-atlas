@@ -4,20 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
-  <title>The Horological Atlas</title>
+  <!-- the tab carries the BRAND, not the project name: "The Horological Atlas"
+       is what the repo is called, "Sea Time" is what a visitor meets on the
+       page. One string, one separator (·, the site's own connective), one case
+       — repeated verbatim in og: and twitter: below. -->
+  <title>Sea Time · A Field Guide to the Dive Watch</title>
   <meta name="description" content="A living map of the dive watch, arranged by the one measure that ever mattered at sea. Depth.">
-  <!-- link previews. og:image must be ABSOLUTE for X/Slack — set once the domain is live. -->
+  <!-- link previews. og:image is ABSOLUTE — X and Slack will not resolve a relative one. -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Sea Time">
-  <meta property="og:title" content="Sea Time — a field guide to the dive watch">
+  <meta property="og:url" content="https://seatime.watch/">
+  <link rel="canonical" href="https://seatime.watch/">
+  <meta property="og:title" content="Sea Time · A Field Guide to the Dive Watch">
   <meta property="og:description" content="A living map of the dive watch, arranged by depth. Every reference rests at the fathom it survives.">
-  <meta property="og:image" content="og-default.png">
+  <meta property="og:image" content="https://seatime.watch/og-default.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Sea Time — a field guide to the dive watch">
+  <meta name="twitter:title" content="Sea Time · A Field Guide to the Dive Watch">
   <meta name="twitter:description" content="A living map of the dive watch, arranged by depth.">
-  <meta name="twitter:image" content="og-default.png">
+  <meta name="twitter:image" content="https://seatime.watch/og-default.png">
   <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
   <link rel="icon" href="favicon-32.png?v=2" sizes="32x32" type="image/png">
   <link rel="icon" href="favicon-16.png?v=2" sizes="16x16" type="image/png">
@@ -49,7 +55,11 @@
     </div>
   </section>
 
-  <canvas id="atlas" aria-label="The Horological Atlas — an interactive map of dive-watch design history"></canvas>
+  <!-- brand aligned; the description stays, since "an interactive map of…" is
+       the only thing telling a screen-reader user what this canvas IS. Spoken
+       labels keep the em dash — "·" is announced as "middle dot" by some
+       screen readers, so the visual separator does not belong in speech. -->
+  <canvas id="atlas" aria-label="Sea Time — an interactive map of dive-watch design history"></canvas>
 
   <div id="status" hidden>
     <p id="status-1"></p>
@@ -350,6 +360,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=83"></script>
+  <script type="module" src="js/main.js?v=85"></script>
 </body>
 </html>

@@ -1,666 +1,658 @@
 {
-"panerai-luminor-1950": {
-"file": "img/panerai-luminor-1950.jpg",
-"credit": "Guy Sie from Utrecht, Netherlands",
-"license": "CC BY-SA 2.0",
-"source": "https://commons.wikimedia.org/wiki/File:Panerai_6152_1_homage_-_dial_(5413423203).jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"blancpain-fifty-fathoms-1953": {
-"file": "img/blancpain-fifty-fathoms-1953.jpg",
-"credit": "Amsterdam Vintage Watches",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://amsterdamvintagewatches.com/shop/blancpain-fifty-fathoms/",
-"confidence": "curated",
-"pose": "frontal"
-},
-"rado-captain-cook-1962": {
-"file": "img/rado-captain-cook-1962.jpg",
-"credit": "Evilsabd",
-"license": "CC BY-SA 4.0",
-"source": "https://commons.wikimedia.org/wiki/File:Rado_Captain_Cook_MK1.jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"rolex-submariner-5513-1962": {
-"file": "img/rolex-submariner-5513-1962.jpg",
-"credit": "User:Eternalsleeper at en.wikipedia",
-"license": "CC BY-SA 3.0",
-"source": "https://commons.wikimedia.org/wiki/File:Rolex_Submariner.JPG",
-"confidence": "high",
-"pose": "angled"
-},
-"rolex-submariner-6204-1953": {
-"file": "img/rolex-submariner-6204-1953.jpg",
-"credit": "Bob's Watches (editorial)",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.bobswatches.com/watch-resources/rolex-submariner-ref-6204-history",
-"confidence": "curated",
-"pose": "angled"
-},
-"zodiac-sea-wolf-1953": {
-"file": "img/zodiac-sea-wolf-1953.jpg",
-"credit": "Joe Haupt from USA",
-"license": "CC BY-SA 2.0",
-"source": "https://commons.wikimedia.org/wiki/File:Vintage_Watch_Collection-_Zodiac_Sea_Wolf_Automatic_Wrist_Watch,_Swiss-Made_(11519540893).jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"breitling-superocean-1957": {
-"file": "img/breitling-superocean-1957.jpg",
-"credit": "Zenith El Primero",
-"license": "CC BY-SA 3.0",
-"source": "https://commons.wikimedia.org/wiki/File:Breitling_Superocean_01.jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"yema-superman-1963": {
-"file": "img/yema-superman-1963.jpg",
-"credit": "Henry Louis Belmont",
-"license": "CC BY-SA 4.0",
-"source": "https://commons.wikimedia.org/wiki/File:Yema_Superman.png",
-"confidence": "high",
-"pose": "angled"
-},
-"omega-seamaster-300-165024-1964": {
-"file": "img/omega-seamaster-300-165024-1964.jpg",
-"credit": "Rama",
-"license": "CC BY-SA 2.0 fr",
-"source": "https://commons.wikimedia.org/wiki/File:Omega_Seamaster_chronograph_watch_(300_meters_water_resist).jpg",
-"confidence": "high",
-"pose": "frontal"
-},
-"aquastar-deepstar-1965": {
-"file": "img/aquastar-deepstar-1965.jpg",
-"credit": "Analog:Shift (dealer photography)",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.analogshift.com/products/aquastar-deepstar",
-"confidence": "curated",
-"pose": "frontal"
-},
-"vostok-amphibia-1967": {
-"file": "img/vostok-amphibia-1967.jpg",
-"credit": "Matthew Bellemare",
-"license": "CC BY-SA 2.0",
-"source": "https://commons.wikimedia.org/wiki/File:Zissou_Vostok_Amphibia.jpg",
-"confidence": "high",
-"pose": "frontal"
-},
-"iwc-aquatimer-812ad-1967": {
-"file": "img/iwc-aquatimer-812ad-1967.jpg",
-"credit": "https://www.flickr.com/photos/kossy/",
-"license": "CC BY 2.0",
-"source": "https://commons.wikimedia.org/wiki/File:IWC_Aquatimer.jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"citizen-aqualand-1985": {
-"file": "img/citizen-aqualand-1985.jpg",
-"credit": "Pittigrilli",
-"license": "CC BY-SA 4.0",
-"source": "https://commons.wikimedia.org/wiki/File:Citizen_Aqualand_Promaster_JP1010_diving_watch_with_depth_gauge.jpg",
-"confidence": "high",
-"pose": "frontal"
-},
-"rolex-submariner-16610-1988": {
-"file": "img/rolex-submariner-16610-1988.jpg",
-"credit": "FrankWilliams",
-"license": "Public domain",
-"source": "https://commons.wikimedia.org/wiki/File:Rolex-Submariner.jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"seiko-skx007-1996": {
-"file": "img/seiko-skx007-1996.jpg",
-"credit": "Ashley Pomeroy",
-"license": "CC BY-SA 4.0",
-"source": "https://commons.wikimedia.org/wiki/File:Seiko_SKX007.jpg",
-"confidence": "high",
-"pose": "frontal"
-},
-"seiko-monster-skx779-2000": {
-"file": "img/seiko-monster-skx779-2000.jpg",
-"credit": "Olgierd Rudak",
-"license": "CC BY-SA 4.0",
-"source": "https://commons.wikimedia.org/wiki/File:Seiko_SKX781_Orange_Monster_diver_watch_(2026-02-13).jpg",
-"confidence": "high",
-"pose": "frontal"
-},
-"seiko-marinemaster-sbdx001-2000": {
-"file": "img/seiko-marinemaster-sbdx001-2000.jpg",
-"credit": "Francis Flinch",
-"license": "CC BY-SA 3.0",
-"source": "https://commons.wikimedia.org/wiki/File:Seiko_SBDX001_Marinemaster.jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"tag-heuer-aquaracer-2004": {
-"file": "img/tag-heuer-aquaracer-2004.jpg",
-"credit": "Juho Eskelä",
-"license": "CC BY-SA 3.0",
-"source": "https://commons.wikimedia.org/wiki/File:TAG_Heuer_Aquaracer_Chronograph.jpg",
-"confidence": "high",
-"pose": "frontal"
-},
-"citizen-ecozilla-bj8050-2004": {
-"file": "img/citizen-ecozilla-bj8050-2004.jpg",
-"credit": "Naklig",
-"license": "CC BY-SA 3.0 gr",
-"source": "https://commons.wikimedia.org/wiki/File:Citizen_Promaster_Eco-Drive_BJ8050-08E_Diver%27s_300_m.jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"omega-planet-ocean-2005": {
-"file": "img/omega-planet-ocean-2005.jpg",
-"credit": "Johntorcasio",
-"license": "CC BY-SA 3.0",
-"source": "https://commons.wikimedia.org/wiki/File:Omega_Seamaster_Planet_Ocean_Quantum_of_Solace.jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"blancpain-fifty-fathoms-5015-2007": {
-"file": "img/blancpain-fifty-fathoms-5015-2007.jpg",
-"credit": "Johnson Watch",
-"license": "Public domain",
-"source": "https://commons.wikimedia.org/wiki/File:Blancpain.jpg",
-"confidence": "low",
-"pose": "angled"
-},
-"longines-hydroconquest-2007": {
-"file": "img/longines-hydroconquest-2007.jpg",
-"credit": "I khushi",
-"license": "CC BY-SA 3.0",
-"source": "https://commons.wikimedia.org/wiki/File:Longines_HydroConquest_Automatic_Blue.jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"rolex-deepsea-116660-2008": {
-"file": "img/rolex-deepsea-116660-2008.jpg",
-"credit": "Johntorcasio",
-"license": "CC BY-SA 3.0",
-"source": "https://commons.wikimedia.org/wiki/File:Rolex_Deepsea_Oyster_Perpetual_Reference_code_116660.JPG",
-"confidence": "high",
-"pose": "angled"
-},
-"rolex-submariner-116610ln-2010": {
-"file": "img/rolex-submariner-116610ln-2010.jpg",
-"credit": "foeoc kannilc",
-"license": "CC BY 2.0",
-"source": "https://commons.wikimedia.org/wiki/File:Rolex_Submariner_diving_watch.jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"tudor-pelagos-2012": {
-"file": "img/tudor-pelagos-2012.jpg",
-"credit": "OpaleHorse",
-"license": "CC BY-SA 4.0",
-"source": "https://commons.wikimedia.org/wiki/File:Tudor_Pelagos_for_Carolina_Watch_Club_Limited_Edition.jpg",
-"confidence": "high",
-"pose": "frontal"
-},
-"iwc-aquatimer-2014": {
-"file": "img/iwc-aquatimer-2014.jpg",
-"credit": "Ferengi",
-"license": "CC BY-SA 3.0",
-"source": "https://commons.wikimedia.org/wiki/File:IWC_Vintage_Collection_Jubilee_Edition.JPG",
-"confidence": "low",
-"pose": "angled"
-},
-"rado-captain-cook-2017": {
-"file": "img/rado-captain-cook-2017.jpg",
-"credit": "Evilsabd",
-"license": "CC BY-SA 4.0",
-"source": "https://commons.wikimedia.org/wiki/File:Rado_Captain_Cook_MK1.jpg",
-"confidence": "high",
-"pose": "angled"
-},
-"panerai-luminor-marina-pam111-2002": {
-"file": "img/panerai-luminor-marina-pam111-2002.jpg",
-"credit": "Jay Pulli",
-"license": "Copyrighted free use",
-"source": "https://commons.wikimedia.org/wiki/File:PaneraiMM.jpg",
-"confidence": "low",
-"pose": "angled"
-},
-"omega-marine-1932": {
-"file": "img/omega-marine-1932.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"tudor-submariner-7922-1954": {
-"file": "img/tudor-submariner-7922-1954.jpg",
-"credit": "Hodinkee (watermark) — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "frontal"
-},
-"longines-nautilus-skin-diver-1958": {
-"file": "img/longines-nautilus-skin-diver-1958.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "frontal"
-},
-"doxa-sub-300-1967": {
-"file": "img/doxa-sub-300-1967.jpg",
-"credit": "Marco Thier via Monochrome Watches",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://monochrome-watches.com/historical-perspective-the-doxa-sub-300-the-dive-watch-personified/",
-"confidence": "curated",
-"pose": "angled"
-},
-"jenny-caribbean-1000-1964": {
-"file": "img/jenny-caribbean-1000-1964.jpg",
-"credit": "Hodinkee via PW Project Watch",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://pwprojectwatch.com/jenny-caribbean-1000/",
-"confidence": "curated",
-"pose": "frontal"
-},
-"orient-king-diver-1965": {
-"file": "img/orient-king-diver-1965.jpg",
-"credit": "Mr. Orient (Eran Reuveni), Orient Place blog",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "http://orientplace.blogspot.com/2020/06/the-1965-weekly-auto-orient-king-diver.html",
-"confidence": "curated",
-"pose": "frontal"
-},
-"vulcain-cricket-nautical-1961": {
-"file": "img/vulcain-cricket-nautical-1961.jpg",
-"credit": "Analog:Shift (listing photography)",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.analogshift.com/products/vulcain-cricket-nautical-as02179",
-"confidence": "curated",
-"pose": "frontal"
-},
-"tudor-submariner-7016-1969": {
-"file": "img/tudor-submariner-7016-1969.jpg",
-"credit": "Bulang & Sons (listing photography)",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://bulangandsons.com/products/tudor-submariner-blue-snowflake-no-date-reference-7016",
-"confidence": "curated",
-"pose": "frontal"
-},
-"seiko-6159-1968": {
-"file": "img/seiko-6159-1968.jpg",
-"credit": "Hairspring (listing photography)",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://hairspring.com/blogs/finds/6159-7001-seiko-hi-beat-professional-300m",
-"confidence": "curated",
-"pose": "angled"
-},
-"rolex-submariner-6538-1956": {
-"file": "img/rolex-submariner-6538-1956.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"rolex-submariner-5512-1959": {
-"file": "img/rolex-submariner-5512-1959.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "frontal"
-},
-"nivada-chronomaster-1961": {
-"file": "img/nivada-chronomaster-1961.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "frontal"
-},
-"tornek-rayville-tr900-1964": {
-"file": "img/tornek-rayville-tr900-1964.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"certina-ds-ph200m-1967": {
-"file": "img/certina-ds-ph200m-1967.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"favre-leuba-bathy-50-1968": {
-"file": "img/favre-leuba-bathy-50-1968.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "frontal"
-},
-"certina-ds-ph200m-2018": {
-"file": "img/certina-ds-ph200m-2018.jpg",
-"credit": "Fratello Watches (watermark visible) — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "frontal"
-},
-"panerai-egiziano-1956": {
-"file": "img/panerai-egiziano-1956.jpg",
-"credit": "Phillips (auction lot photography)",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.phillips.com/detail/panerai/HK080220/996",
-"confidence": "curated",
-"pose": "frontal"
-},
-"tissot-seastar-1965": {
-"file": "img/tissot-seastar-1965.jpg",
-"credit": "Fratello Watches",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.fratellowatches.com/tbt-the-underrated-bond-tissot-pr-516-watch/",
-"confidence": "curated",
-"pose": "angled"
-},
-"blancpain-bathyscaphe-1956": {
-"file": "img/blancpain-bathyscaphe-1956.jpg",
-"credit": "Analog:Shift",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.analogshift.com/products/blancpain-bathyscaphe",
-"confidence": "curated",
-"pose": "angled"
-},
-"tudor-submariner-7928-1959": {
-"file": "img/tudor-submariner-7928-1959.jpg",
-"credit": "Bulang & Sons",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://bulangandsons.com/blogs/watch-talks/the-tudor-submariner-reference-7928-the-exclamation-dot-era",
-"confidence": "curated",
-"pose": "angled"
-},
-"enicar-sherpa-super-dive-1964": {
-"file": "img/enicar-sherpa-super-dive-1964.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"seiko-62mas-1965": {
-"file": "img/seiko-62mas-1965.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"omega-seamaster-120-1966": {
-"file": "img/omega-seamaster-120-1966.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "frontal"
-},
-"blancpain-fifty-fathoms-milspec-1957": {
-"file": "img/blancpain-fifty-fathoms-milspec-1957.jpg",
-"credit": "Phillips Watches (auction catalogue)",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.phillips.com/detail/blancpain/CH080119/135",
-"confidence": "curated",
-"pose": "frontal"
-},
-"jlc-deep-sea-alarm-1959": {
-"file": "img/jlc-deep-sea-alarm-1959.jpg",
-"credit": "Sotheby's auction catalogue — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.sothebys.com/en/auctions/ecatalogue/2019/watches-l19071/lot.5.html",
-"confidence": "curated",
-"pose": "frontal"
-},
-"seiko-6215-1967": {
-"file": "img/seiko-6215-1967.jpg",
-"credit": "Unknown — recovered from prior sweep (Fratello watermark visible)",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"doxa-sub-300t-1968": {
-"file": "img/doxa-sub-300t-1968.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "frontal"
-},
-"rolex-submariner-6200-1954": {
-"file": "img/rolex-submariner-6200-1954.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"omega-seamaster-300-ck2913-1957": {
-"file": "img/omega-seamaster-300-ck2913-1957.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"longines-legend-diver-7042-1960": {
-"file": "img/longines-legend-diver-7042-1960.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "frontal"
-},
-"zrc-grands-fonds-300-1964": {
-"file": "img/zrc-grands-fonds-300-1964.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"universal-polerouter-sub-1965": {
-"file": "img/universal-polerouter-sub-1965.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"rolex-sea-dweller-1665-1967": {
-"file": "img/rolex-sea-dweller-1665-1967.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"jlc-memovox-polaris-1968": {
-"file": "img/jlc-memovox-polaris-1968.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"rolex-submariner-1680-1969": {
-"file": "img/rolex-submariner-1680-1969.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"seiko-tuna-6159-7010-1975": {
-"file": "img/seiko-tuna-6159-7010-1975.jpg",
-"credit": "Unknown — recovered from prior sweep",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "",
-"confidence": "curated",
-"pose": "angled"
-},
-"tudor-pelagos-39-2022": {
-"file": "img/tudor-pelagos-39-2022.jpg",
-"credit": "Tubray Media / Fratello Watches",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.fratellowatches.com/hands-on-with-the-new-tudor-pelagos-39-the-professional-dive-watch-for-a-new-generation/",
-"confidence": "curated",
-"pose": "angled"
-},
-"seiko-sla017-2017": {
-"file": "img/seiko-sla017-2017.jpg",
-"credit": "Monochrome Watches",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://monochrome-watches.com/seiko-prospex-diver-sla017-reedition-62mas-review-price/",
-"confidence": "curated",
-"pose": "angled"
-},
-"omega-seamaster-300m-2018": {
-"file": "img/omega-seamaster-300m-2018.jpg",
-"credit": "Monochrome Watches",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://monochrome-watches.com/omega-seamaster-diver-300m-master-chronometer-hands-on-price/",
-"confidence": "curated",
-"pose": "angled"
-},
-"panerai-submersible-bronzo-2011": {
-"file": "img/panerai-submersible-bronzo-2011.jpg",
-"credit": "Swisswatches Magazine",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://swisswatches-magazine.com/panerai-luminor-submersible-1950-3-days-automatic-bronzo-47mm-pam00382/",
-"confidence": "curated",
-"pose": "angled"
-},
-"omega-seamaster-professional-2531-1993": {
-"file": "img/omega-seamaster-professional-2531-1993.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/omega/seamaster-diver-300m/2531-80-00",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"panerai-luminor-submersible-1998": {
-"file": "img/panerai-luminor-submersible-1998.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/panerai/submersible/pam00024",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"sinn-u1-2005": {
-"file": "img/sinn-u1-2005.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/sinn/diving-watches/1010-010",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"longines-legend-diver-2007": {
-"file": "img/longines-legend-diver-2007.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/longines/legend-diver/l3-674-4-50-0",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"omega-ploprof-1200-2009": {
-"file": "img/omega-ploprof-1200-2009.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/omega/seamaster-ploprof/224-30-55-21-04-001",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"tudor-black-bay-2012": {
-"file": "img/tudor-black-bay-2012.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/tudor/black-bay/79220r-0002",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"blancpain-bathyscaphe-2013": {
-"file": "img/blancpain-bathyscaphe-2013.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/blancpain/fifty-fathoms/5000-1110-b52a",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"omega-seamaster-300-master-2014": {
-"file": "img/omega-seamaster-300-master-2014.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/omega/seamaster-300/233-30-41-21-01-001",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"seiko-srp777-2016": {
-"file": "img/seiko-srp777-2016.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/seiko/prospex-divers/srp777",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"rolex-sea-dweller-126600-2017": {
-"file": "img/rolex-sea-dweller-126600-2017.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/rolex/sea-dweller/126600-0001",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"tissot-seastar-1000-2018": {
-"file": "img/tissot-seastar-1000-2018.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/tissot/seastar/t120-407-11-041-00",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"glashutte-original-seaq-2019": {
-"file": "img/glashutte-original-seaq-2019.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/glashutte-original/seaq/1-39-11-06-80-70",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"mido-ocean-star-tribute-2020": {
-"file": "img-catalog/mido-ocean-star-tribute-2020.jpg?v=2",
-"credit": "WatchMaxx dealer packshot (blue-gradient dial)",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://www.watchmaxx.com/mido-watch-m026-830-11-041-00",
-"confidence": "frontal",
-"pose": "frontal"
-},
-"omega-ultra-deep-2022": {
-"file": "img/omega-ultra-deep-2022.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/omega/seamaster-planet-ocean/215-30-46-21-06-001",
-"confidence": "catalog",
-"pose": "frontal"
-},
-"panerai-submersible-quarantaquattro-2022": {
-"file": "img/panerai-submersible-quarantaquattro-2022.jpg",
-"credit": "WatchBase catalog render",
-"license": "Unlicensed — personal prototype; clear before publishing",
-"source": "https://watchbase.com/panerai/submersible/pam01229",
-"confidence": "catalog",
-"pose": "frontal"
-}
+ "panerai-luminor-1950": {
+  "file": "img/panerai-luminor-1950.jpg",
+  "credit": "Guy Sie from Utrecht, Netherlands",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Panerai_6152_1_homage_-_dial_(5413423203).jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "blancpain-fifty-fathoms-1953": {
+  "file": "img/blancpain-fifty-fathoms-1953.jpg",
+  "credit": "Amsterdam Vintage Watches",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://amsterdamvintagewatches.com/shop/blancpain-fifty-fathoms/",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "rado-captain-cook-1962": {
+  "file": "img/rado-captain-cook-1962.jpg",
+  "credit": "Evilsabd",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Rado_Captain_Cook_MK1.jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "rolex-submariner-5513-1962": {
+  "file": "img/rolex-submariner-5513-1962.jpg",
+  "credit": "User:Eternalsleeper at en.wikipedia",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Rolex_Submariner.JPG",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "rolex-submariner-6204-1953": {
+  "file": "img/rolex-submariner-6204-1953.jpg",
+  "credit": "Bob's Watches (editorial)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.bobswatches.com/watch-resources/rolex-submariner-ref-6204-history",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "zodiac-sea-wolf-1953": {
+  "file": "img/zodiac-sea-wolf-1953.jpg",
+  "credit": "Joe Haupt from USA",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Vintage_Watch_Collection-_Zodiac_Sea_Wolf_Automatic_Wrist_Watch,_Swiss-Made_(11519540893).jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "breitling-superocean-1957": {
+  "file": "img/breitling-superocean-1957.jpg",
+  "credit": "Zenith El Primero",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Breitling_Superocean_01.jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "yema-superman-1963": {
+  "file": "img/yema-superman-1963.jpg",
+  "credit": "Henry Louis Belmont",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Yema_Superman.png",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "omega-seamaster-300-165024-1964": {
+  "file": "img/omega-seamaster-300-165024-1964.jpg",
+  "credit": "Rama",
+  "license": "CC BY-SA 2.0 fr",
+  "source": "https://commons.wikimedia.org/wiki/File:Omega_Seamaster_chronograph_watch_(300_meters_water_resist).jpg",
+  "confidence": "high",
+  "pose": "frontal"
+ },
+ "aquastar-deepstar-1965": {
+  "file": "img/aquastar-deepstar-1965.jpg",
+  "credit": "Analog:Shift (dealer photography)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.analogshift.com/products/aquastar-deepstar",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "vostok-amphibia-1967": {
+  "file": "img/vostok-amphibia-1967.jpg",
+  "credit": "Matthew Bellemare",
+  "license": "CC BY-SA 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Zissou_Vostok_Amphibia.jpg",
+  "confidence": "high",
+  "pose": "frontal"
+ },
+ "iwc-aquatimer-812ad-1967": {
+  "file": "img/iwc-aquatimer-812ad-1967.jpg",
+  "credit": "https://www.flickr.com/photos/kossy/",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:IWC_Aquatimer.jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "citizen-aqualand-1985": {
+  "file": "img/citizen-aqualand-1985.jpg",
+  "credit": "Pittigrilli",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Citizen_Aqualand_Promaster_JP1010_diving_watch_with_depth_gauge.jpg",
+  "confidence": "high",
+  "pose": "frontal"
+ },
+ "rolex-submariner-16610-1988": {
+  "file": "img/rolex-submariner-16610-1988.jpg",
+  "credit": "FrankWilliams",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Rolex-Submariner.jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "seiko-skx007-1996": {
+  "file": "img/seiko-skx007-1996.jpg",
+  "credit": "Ashley Pomeroy",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Seiko_SKX007.jpg",
+  "confidence": "high",
+  "pose": "frontal"
+ },
+ "seiko-monster-skx779-2000": {
+  "file": "img/seiko-monster-skx779-2000.jpg",
+  "credit": "Olgierd Rudak",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Seiko_SKX781_Orange_Monster_diver_watch_(2026-02-13).jpg",
+  "confidence": "high",
+  "pose": "frontal"
+ },
+ "seiko-marinemaster-sbdx001-2000": {
+  "file": "img/seiko-marinemaster-sbdx001-2000.jpg",
+  "credit": "Francis Flinch",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Seiko_SBDX001_Marinemaster.jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "tag-heuer-aquaracer-2004": {
+  "file": "img/tag-heuer-aquaracer-2004.jpg",
+  "credit": "Juho Eskelä",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:TAG_Heuer_Aquaracer_Chronograph.jpg",
+  "confidence": "high",
+  "pose": "frontal"
+ },
+ "citizen-ecozilla-bj8050-2004": {
+  "file": "img/citizen-ecozilla-bj8050-2004.jpg",
+  "credit": "Naklig",
+  "license": "CC BY-SA 3.0 gr",
+  "source": "https://commons.wikimedia.org/wiki/File:Citizen_Promaster_Eco-Drive_BJ8050-08E_Diver%27s_300_m.jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "omega-planet-ocean-2005": {
+  "file": "img/omega-planet-ocean-2005.jpg",
+  "credit": "Johntorcasio",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Omega_Seamaster_Planet_Ocean_Quantum_of_Solace.jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "blancpain-fifty-fathoms-5015-2007": {
+  "file": "img/blancpain-fifty-fathoms-5015-2007.jpg",
+  "credit": "Johnson Watch",
+  "license": "Public domain",
+  "source": "https://commons.wikimedia.org/wiki/File:Blancpain.jpg",
+  "confidence": "low",
+  "pose": "angled"
+ },
+ "longines-hydroconquest-2007": {
+  "file": "img/longines-hydroconquest-2007.jpg",
+  "credit": "I khushi",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Longines_HydroConquest_Automatic_Blue.jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "rolex-deepsea-116660-2008": {
+  "file": "img/rolex-deepsea-116660-2008.jpg",
+  "credit": "Johntorcasio",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Rolex_Deepsea_Oyster_Perpetual_Reference_code_116660.JPG",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "rolex-submariner-116610ln-2010": {
+  "file": "img/rolex-submariner-116610ln-2010.jpg",
+  "credit": "foeoc kannilc",
+  "license": "CC BY 2.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Rolex_Submariner_diving_watch.jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "tudor-pelagos-2012": {
+  "file": "img/tudor-pelagos-2012.jpg",
+  "credit": "OpaleHorse",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Tudor_Pelagos_for_Carolina_Watch_Club_Limited_Edition.jpg",
+  "confidence": "high",
+  "pose": "frontal"
+ },
+ "iwc-aquatimer-2014": {
+  "file": "img/iwc-aquatimer-2014.jpg",
+  "credit": "Ferengi",
+  "license": "CC BY-SA 3.0",
+  "source": "https://commons.wikimedia.org/wiki/File:IWC_Vintage_Collection_Jubilee_Edition.JPG",
+  "confidence": "low",
+  "pose": "angled"
+ },
+ "rado-captain-cook-2017": {
+  "file": "img/rado-captain-cook-2017.jpg",
+  "credit": "Evilsabd",
+  "license": "CC BY-SA 4.0",
+  "source": "https://commons.wikimedia.org/wiki/File:Rado_Captain_Cook_MK1.jpg",
+  "confidence": "high",
+  "pose": "angled"
+ },
+ "panerai-luminor-marina-pam111-2002": {
+  "file": "img/panerai-luminor-marina-pam111-2002.jpg",
+  "credit": "Jay Pulli",
+  "license": "Copyrighted free use",
+  "source": "https://commons.wikimedia.org/wiki/File:PaneraiMM.jpg",
+  "confidence": "low",
+  "pose": "angled"
+ },
+ "omega-marine-1932": {
+  "file": "img/omega-marine-1932.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "tudor-submariner-7922-1954": {
+  "file": "img/tudor-submariner-7922-1954.jpg",
+  "credit": "Hodinkee (watermark) — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "longines-nautilus-skin-diver-1958": {
+  "file": "img/longines-nautilus-skin-diver-1958.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "doxa-sub-300-1967": {
+  "file": "img/doxa-sub-300-1967.jpg",
+  "credit": "Marco Thier via Monochrome Watches",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://monochrome-watches.com/historical-perspective-the-doxa-sub-300-the-dive-watch-personified/",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "jenny-caribbean-1000-1964": {
+  "file": "img/jenny-caribbean-1000-1964.jpg",
+  "credit": "Hodinkee via PW Project Watch",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://pwprojectwatch.com/jenny-caribbean-1000/",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "orient-king-diver-1965": {
+  "file": "img/orient-king-diver-1965.jpg",
+  "credit": "Mr. Orient (Eran Reuveni), Orient Place blog",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "http://orientplace.blogspot.com/2020/06/the-1965-weekly-auto-orient-king-diver.html",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "vulcain-cricket-nautical-1961": {
+  "file": "img/vulcain-cricket-nautical-1961.jpg",
+  "credit": "Analog:Shift (listing photography)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.analogshift.com/products/vulcain-cricket-nautical-as02179",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "tudor-submariner-7016-1969": {
+  "file": "img/tudor-submariner-7016-1969.jpg",
+  "credit": "Bulang & Sons (listing photography)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://bulangandsons.com/products/tudor-submariner-blue-snowflake-no-date-reference-7016",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "seiko-6159-1968": {
+  "file": "img/seiko-6159-1968.jpg",
+  "credit": "Hairspring (listing photography)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://hairspring.com/blogs/finds/6159-7001-seiko-hi-beat-professional-300m",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "rolex-submariner-6538-1956": {
+  "file": "img/rolex-submariner-6538-1956.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "rolex-submariner-5512-1959": {
+  "file": "img/rolex-submariner-5512-1959.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "nivada-chronomaster-1961": {
+  "file": "img/nivada-chronomaster-1961.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "tornek-rayville-tr900-1964": {
+  "file": "img/tornek-rayville-tr900-1964.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "certina-ds-ph200m-1967": {
+  "file": "img/certina-ds-ph200m-1967.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "favre-leuba-bathy-50-1968": {
+  "file": "img/favre-leuba-bathy-50-1968.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "certina-ds-ph200m-2018": {
+  "file": "img/certina-ds-ph200m-2018.jpg",
+  "credit": "Fratello Watches (watermark visible) — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "panerai-egiziano-1956": {
+  "file": "img/panerai-egiziano-1956.jpg",
+  "credit": "Phillips (auction lot photography)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.phillips.com/detail/panerai/HK080220/996",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "tissot-seastar-1965": {
+  "file": "img/tissot-seastar-1965.jpg",
+  "credit": "Fratello Watches",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.fratellowatches.com/tbt-the-underrated-bond-tissot-pr-516-watch/",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "blancpain-bathyscaphe-1956": {
+  "file": "img/blancpain-bathyscaphe-1956.jpg",
+  "credit": "Analog:Shift",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.analogshift.com/products/blancpain-bathyscaphe",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "tudor-submariner-7928-1959": {
+  "file": "img/tudor-submariner-7928-1959.jpg",
+  "credit": "Bulang & Sons",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://bulangandsons.com/blogs/watch-talks/the-tudor-submariner-reference-7928-the-exclamation-dot-era",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "enicar-sherpa-super-dive-1964": {
+  "file": "img/enicar-sherpa-super-dive-1964.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "seiko-62mas-1965": {
+  "file": "img/seiko-62mas-1965.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "omega-seamaster-120-1966": {
+  "file": "img/omega-seamaster-120-1966.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "blancpain-fifty-fathoms-milspec-1957": {
+  "file": "img/blancpain-fifty-fathoms-milspec-1957.jpg",
+  "credit": "Phillips Watches (auction catalogue)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.phillips.com/detail/blancpain/CH080119/135",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "jlc-deep-sea-alarm-1959": {
+  "file": "img/jlc-deep-sea-alarm-1959.jpg",
+  "credit": "Sotheby's auction catalogue — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.sothebys.com/en/auctions/ecatalogue/2019/watches-l19071/lot.5.html",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "seiko-6215-1967": {
+  "file": "img/seiko-6215-1967.jpg",
+  "credit": "Unknown — recovered from prior sweep (Fratello watermark visible)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "doxa-sub-300t-1968": {
+  "file": "img/doxa-sub-300t-1968.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "rolex-submariner-6200-1954": {
+  "file": "img/rolex-submariner-6200-1954.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "omega-seamaster-300-ck2913-1957": {
+  "file": "img/omega-seamaster-300-ck2913-1957.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "longines-legend-diver-7042-1960": {
+  "file": "img/longines-legend-diver-7042-1960.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "frontal"
+ },
+ "zrc-grands-fonds-300-1964": {
+  "file": "img/zrc-grands-fonds-300-1964.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "universal-polerouter-sub-1965": {
+  "file": "img/universal-polerouter-sub-1965.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "rolex-sea-dweller-1665-1967": {
+  "file": "img/rolex-sea-dweller-1665-1967.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "jlc-memovox-polaris-1968": {
+  "file": "img/jlc-memovox-polaris-1968.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "rolex-submariner-1680-1969": {
+  "file": "img/rolex-submariner-1680-1969.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "seiko-tuna-6159-7010-1975": {
+  "file": "img/seiko-tuna-6159-7010-1975.jpg",
+  "credit": "Unknown — recovered from prior sweep",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "tudor-pelagos-39-2022": {
+  "file": "img/tudor-pelagos-39-2022.jpg",
+  "credit": "Tubray Media / Fratello Watches",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.fratellowatches.com/hands-on-with-the-new-tudor-pelagos-39-the-professional-dive-watch-for-a-new-generation/",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "seiko-sla017-2017": {
+  "file": "img/seiko-sla017-2017.jpg",
+  "credit": "Monochrome Watches",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://monochrome-watches.com/seiko-prospex-diver-sla017-reedition-62mas-review-price/",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "omega-seamaster-300m-2018": {
+  "file": "img/omega-seamaster-300m-2018.jpg",
+  "credit": "Monochrome Watches",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://monochrome-watches.com/omega-seamaster-diver-300m-master-chronometer-hands-on-price/",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "panerai-submersible-bronzo-2011": {
+  "file": "img/panerai-submersible-bronzo-2011.jpg",
+  "credit": "Swisswatches Magazine",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://swisswatches-magazine.com/panerai-luminor-submersible-1950-3-days-automatic-bronzo-47mm-pam00382/",
+  "confidence": "curated",
+  "pose": "angled"
+ },
+ "omega-seamaster-professional-2531-1993": {
+  "file": "img/omega-seamaster-professional-2531-1993.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/omega/seamaster-diver-300m/2531-80-00",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "panerai-luminor-submersible-1998": {
+  "file": "img/panerai-luminor-submersible-1998.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/panerai/submersible/pam00024",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "sinn-u1-2005": {
+  "file": "img/sinn-u1-2005.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/sinn/diving-watches/1010-010",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "longines-legend-diver-2007": {
+  "file": "img/longines-legend-diver-2007.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/longines/legend-diver/l3-674-4-50-0",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "tudor-black-bay-2012": {
+  "file": "img/tudor-black-bay-2012.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/tudor/black-bay/79220r-0002",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "blancpain-bathyscaphe-2013": {
+  "file": "img/blancpain-bathyscaphe-2013.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/blancpain/fifty-fathoms/5000-1110-b52a",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "omega-seamaster-300-master-2014": {
+  "file": "img/omega-seamaster-300-master-2014.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/omega/seamaster-300/233-30-41-21-01-001",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "seiko-srp777-2016": {
+  "file": "img/seiko-srp777-2016.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/seiko/prospex-divers/srp777",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "rolex-sea-dweller-126600-2017": {
+  "file": "img/rolex-sea-dweller-126600-2017.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/rolex/sea-dweller/126600-0001",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "tissot-seastar-1000-2018": {
+  "file": "img/tissot-seastar-1000-2018.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/tissot/seastar/t120-407-11-041-00",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "glashutte-original-seaq-2019": {
+  "file": "img/glashutte-original-seaq-2019.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/glashutte-original/seaq/1-39-11-06-80-70",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "mido-ocean-star-tribute-2020": {
+  "file": "img-catalog/mido-ocean-star-tribute-2020.jpg?v=2",
+  "credit": "WatchMaxx dealer packshot (blue-gradient dial)",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.watchmaxx.com/mido-watch-m026-830-11-041-00",
+  "confidence": "frontal",
+  "pose": "frontal"
+ },
+ "omega-ultra-deep-2022": {
+  "file": "img/omega-ultra-deep-2022.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/omega/seamaster-planet-ocean/215-30-46-21-06-001",
+  "confidence": "catalog",
+  "pose": "frontal"
+ },
+ "panerai-submersible-quarantaquattro-2022": {
+  "file": "img/panerai-submersible-quarantaquattro-2022.jpg",
+  "credit": "WatchBase catalog render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://watchbase.com/panerai/submersible/pam01229",
+  "confidence": "catalog",
+  "pose": "frontal"
+ }
 }

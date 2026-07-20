@@ -139,6 +139,33 @@ body.revealing footer { transition-duration: 320ms; transition-delay: 200ms; }
   color: #F6935D;
   z-index: 2;
   user-select: none;
+  /* it is a button now (return to the surface) — strip the UA chrome, keep the mark */
+  appearance: none; background: none; border: 0; padding: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: filter 200ms var(--ease-out), opacity 200ms var(--ease-out);
+}
+/* the affordance is a breath of brightness, not a underline or a chevron —
+   a wordmark that decorates itself on hover stops being a wordmark */
+#wordmark:hover { filter: brightness(1.18); }
+#wordmark:active { filter: brightness(0.92); }
+#wordmark:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
+/* already at 0 M, or in the sky where there is no depth axis: stop offering */
+#wordmark.at-surface, #wordmark.inert { cursor: default; }
+#wordmark.at-surface:hover, #wordmark.inert:hover { filter: none; }
+#wordmark.at-surface:active, #wordmark.inert:active { filter: none; }
+
+/* THE SURFACE BREAK — one lume breath when a real ascent arrives at 0 M.
+   Fires once, decays to nothing, and never repeats on a short hop. */
+@keyframes wordmark-surfaced {
+  0%   { filter: brightness(1); text-shadow: none; }
+  22%  { filter: brightness(1.5); text-shadow: 0 0 18px rgba(246, 147, 93, 0.55); }
+  100% { filter: brightness(1); text-shadow: none; }
+}
+#wordmark.surfaced { animation: wordmark-surfaced 1100ms var(--ease-out) both; }
+@media (prefers-reduced-motion: reduce) {
+  #wordmark.surfaced { animation: none; }
+  #wordmark { transition: none; }
 }
 body.dim-chrome #wordmark { opacity: var(--dim-chrome); }
 body.observatory #wordmark, body.export #wordmark { opacity: 0; }
@@ -1840,6 +1867,19 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
   border-bottom: 1px solid var(--line-1);
 }
 #fr-serial { font-size: 13px; letter-spacing: 0.34em; text-transform: uppercase; color: var(--text-3); }
+
+/* ---- PLATE FOOT — the return path. Set in the ledger-label style so it reads
+   as part of the plate's typography rather than a watermark laid over it.
+   Geometry mirrors buildPoster()'s footer exactly. ---- */
+#fr-plate-foot {
+  flex: 0 0 auto;
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding-top: 22px;
+  border-top: 1px solid var(--line-1);
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--text-3);
+}
 /* the "sea time" wordmark — poster masthead, top-left */
 #fr-brandline {
   font-family: var(--font-ui);
@@ -1934,10 +1974,10 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
   margin: 0;
 }
 
-/* ---- BOTTOM BRAND SIGNATURE — single quiet line ---- */
-/* the caption fills the freed space; no bottom signature (moved to the top-left) */
-#fr-caption { margin-bottom: auto; }
-/* single signature — the "sea time" wordmark, same face as the masthead */
+/* the caption fills the freed space between the hero window and the plate foot.
+   (was margin-bottom:auto, which anchored a bottomless plate — with the foot
+   added that auto margin pushed it straight out through the frame.) */
+#fr-caption { margin-bottom: 0; }
 
 
 /* the "in another life" line, below the poster (not part of the print) */
@@ -1978,15 +2018,33 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 #fr-actions button:hover { border-color: var(--lume-dim); background: var(--surface-2); }
 #fr-actions button:active { transform: scale(0.98); }
 #fr-actions button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-/* Save is the viral action — it carries the filled primary emphasis */
-#fr-save {
+
+/* ONE primary, on its own line — sharing the plate is the whole point of the
+   reveal. The rest sit under it as quiet alternatives, not as peers; four
+   equal pills meant nothing was actually being recommended. */
+#fr-share, #fr-take {
+  flex: 0 0 100%;
+  max-width: 320px;
+  margin: 0 auto 2px;
   background: var(--text-1) !important;
   color: var(--field-0) !important;
   border-color: var(--text-1) !important;
 }
-#fr-save:hover { background: #fff !important; }
+#fr-share:hover, #fr-take:hover { background: #fff !important; }
+#fr-save, #fr-see { color: var(--text-2) !important; }
 #fr-restart { color: var(--text-3) !important; border-color: transparent !important; }
 #fr-restart:hover { color: var(--text-2) !important; background: transparent !important; }
+
+/* "A fitting, shared with you" — the received plate says whose it is before
+   the viewer mistakes the result for their own */
+#fr-received {
+  margin: 0 0 18px;
+  text-align: center;
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--text-3);
+}
 
 /* cinematic bloom-in for the poster (REDUCED = simple fade handled by #fitting.on) */
 #fit-reveal .fr-bloom #fr-watch { animation: fr-bloom-watch 700ms var(--ease-out) both; }

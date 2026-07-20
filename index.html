@@ -5,14 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <title>The Horological Atlas</title>
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
-  <link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="description" content="A living map of the dive watch, arranged by the one measure that ever mattered at sea. Depth.">
+  <!-- link previews. og:image must be ABSOLUTE for X/Slack — set once the domain is live. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Sea Time">
+  <meta property="og:title" content="Sea Time — a field guide to the dive watch">
+  <meta property="og:description" content="A living map of the dive watch, arranged by depth. Every reference rests at the fathom it survives.">
+  <meta property="og:image" content="og-default.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Sea Time — a field guide to the dive watch">
+  <meta name="twitter:description" content="A living map of the dive watch, arranged by depth.">
+  <meta name="twitter:image" content="og-default.png">
+  <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
+  <link rel="icon" href="favicon-32.png?v=2" sizes="32x32" type="image/png">
+  <link rel="icon" href="favicon-16.png?v=2" sizes="16x16" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
   <meta name="theme-color" content="#06080B">
-  <link rel="stylesheet" href="app.css?v=77">
-  <script>/* skip the surface hero for returning visitors + shared deep links (no flash) */
-    try { if (/[#&]w=/.test(location.hash)) document.documentElement.classList.add('no-hero'); } catch (e) {}
+  <link rel="stylesheet" href="app.css?v=80">
+  <script>/* skip the surface hero for returning visitors + shared deep links (no flash).
+       #fit and #fit&r=<id> count: both open the fitting overlay immediately, so
+       landing on the hero would bury a shared plate behind a full-screen scroll. */
+    try { if (/[#&](w=|fit\b)/.test(location.hash)) document.documentElement.classList.add('no-hero'); } catch (e) {}
   </script>
 </head>
 <body class="pre-reveal">
@@ -41,7 +56,8 @@
     <p id="status-2"></p>
   </div>
 
-  <header id="wordmark" class="chrome">sea time</header>
+  <button id="wordmark" class="chrome" type="button"
+          aria-label="sea time — return to the surface" title="Return to the surface">sea time</button>
 
   <nav id="mode-toggle" class="chrome" aria-label="Projection">
     <button id="mt-descent" type="button" aria-pressed="true">descent</button>
@@ -238,6 +254,8 @@
 
     <!-- THE REVEAL — the museum-plate poster -->
     <div id="fit-reveal" hidden>
+      <!-- shown only when the plate arrived via a shared link (#fit&r=<id>) -->
+      <p id="fr-received" hidden>A fitting, shared with you</p>
       <div id="fr-poster">
         <div id="fr-mat" aria-hidden="true"></div>
         <div id="fr-mat-hair" aria-hidden="true"></div>
@@ -248,7 +266,7 @@
         <div id="fr-plate">
           <div id="fr-plate-top">
             <span id="fr-brandline">sea time</span>
-            <span id="fr-serial">The Fitting · No.001</span>
+            <span id="fr-serial">The Fitting</span>
           </div>
           <div id="fr-stage">
             <div id="fr-watch"><img id="fr-img" alt=""></div>
@@ -266,18 +284,24 @@
               <p id="fr-why-text"></p>
             </div>
           </div>
+          <!-- the return path — mirrors the PNG's plate foot exactly -->
+          <div id="fr-plate-foot">
+            <span id="fr-host"></span>
+            <span id="fr-serial-no"></span>
+          </div>
         </div>
       </div>
       <p id="fr-alt"></p>
       <div id="fr-actions">
+        <button id="fr-share" type="button">Share your plate</button>
+        <button id="fr-take" type="button" hidden>Take the fitting</button>
         <button id="fr-save" type="button">Save poster</button>
-        <button id="fr-share" type="button">Share</button>
         <button id="fr-see" type="button">See it in the index</button>
         <button id="fr-restart" type="button">Start over</button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=75"></script>
+  <script type="module" src="js/main.js?v=81"></script>
 </body>
 </html>

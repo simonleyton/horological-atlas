@@ -71,6 +71,11 @@ function cubicBezier(x1, y1, x2, y2) {
 }
 const easeGlide = cubicBezier(0.4, 0.0, 0.1, 1);
 const easeOut = cubicBezier(0.22, 1, 0.36, 1);
+/* the ascent — a rise, not a scroll. Unweights quickly, holds a near-steady
+   mid-rise (the long middle is where the depth actually reads as distance
+   travelled), then the water thickens and sets you down on the surface with
+   no bounce. Steeper out of the gate than easeGlide, longer tail than easeOut. */
+const easeAscent = cubicBezier(0.18, 0.62, 0.10, 1);
 const easeExit = cubicBezier(0.4, 0, 1, 1);
 const easeBeat = cubicBezier(0.3, 0, 0, 1);
 
@@ -418,7 +423,7 @@ async function loadData() {
     .catch(() => { /* no media layer yet */ });
   fetch('./data/fitting.json', { cache: 'no-cache' })
     .then(r => r.ok ? r.json() : null)
-    .then(j => { if (j && typeof j === 'object') { FITTING = j; if (pendingFitOpen) { pendingFitOpen = false; openFitting(); } } })
+    .then(j => { if (j && typeof j === 'object') { FITTING = j; if (pendingFitOpen) { const o = pendingFitOpen; pendingFitOpen = false; openFitting(o === true ? null : o); } } })
     .catch(() => { /* the fitting is progressive — the atlas stands without it */ });
   const t = setTimeout(() => {
     if (!S.loaded && !S.failed) {
@@ -622,6 +627,10 @@ function urlFromState() {
 function writeURL() {
   urlTimer = null;
   if (!S.loaded || S.morph) return;
+  /* the fitting overlay owns the address bar while it's open — otherwise the
+     world underneath keeps settling and overwrites #fit&r=<id>, so a recipient
+     who copies the URL sends on a link to the atlas instead of the plate */
+  if (fitOpen) return;
   const h = urlFromState();
   if (h === urlSig) return;
   urlSig = h;
@@ -653,7 +662,12 @@ function applyDeepLink() {
   if (h === 'fit' || h.indexOf('fit&') === 0 || /(^|&)fit(&|$)/.test(h)) {
     defaultToDescent();
     scheduleWaterTail(performance.now());
-    if (FITTING) openFitting(); else pendingFitOpen = true;
+    /* #fit&r=<id> — a plate someone was sent. Open on THEIR result, with one
+       thing to do: take your own. */
+    let rec = null;
+    try { rec = new URLSearchParams(h).get('r'); } catch (e) {}
+    const opts = rec ? { received: rec } : null;
+    if (FITTING) openFitting(opts); else pendingFitOpen = opts || true;
     return true;
   }
   const p = new URLSearchParams(h);
@@ -4622,7 +4636,14 @@ function stepDescent(now) {
     const prev = DS.s;
     DS.s = lerp(g.from, g.to, g.ease(p));
     DS.v = dt > 0 ? (DS.s - prev) / dt : 0;      /* blur reads real velocity, even scripted */
-    if (p >= 1) { DS.s = g.to; descentSettled(); }
+    if (p >= 1) {
+      DS.s = g.to;
+      const asc = g.ascent;          /* read before descentSettled() nulls the glide */
+      descentSettled();
+      /* only a completed ascent breaks the surface. Any interruption clears
+         DS.glide, so an ascent the user cut short can never fire this later. */
+      if (asc && Math.round(DS.s) === 0) surfaceBreak();
+    }
   } else if (DS.phase === 'coast') {
     /* §18c pressure in the hand — τ thickens 174→150ms with depth; felt,
        not seen. Applies under reduced motion too: it is state, not motion. */
@@ -4670,6 +4691,11 @@ function refreshFocus() {
   const n = clamp(Math.round(DS.s), 0, DS.n - 1);
   if (n === DS.lastFocus) return;               /* strings rebuilt only on focus change */
   DS.lastFocus = n;
+  /* the wordmark stops advertising a trip you have already taken (n changes
+     exactly when this guard falls through, so this costs nothing per frame) */
+  { const wm = $('wordmark');
+    if (wm) { wm.classList.toggle('at-surface', n === 0);
+              wm.setAttribute('aria-disabled', n === 0 ? 'true' : 'false'); } }
   const w = DS.order[n];
   const pillRef = w.reference ? ` · REF. ${String(w.reference).toUpperCase()}` : '';
   DS.pillText = `${String(w.brand || '').toUpperCase()} ${String(w.model || '').toUpperCase()}${pillRef} · ${fmtM(w.waterResistanceM)} M`;
@@ -4706,6 +4732,58 @@ function descentStratumStep(d) {
 function descentFlyToIndex(i) {
   descentGlideTo(i, Math.min(600 + 40 * Math.abs(i - DS.s), 1400), easeGlide);
 }
+/* ---- THE ASCENT — the wordmark returns you to the surface ---------------
+   HIG, in order of what it cost to get right:
+
+   Agency      the rise is interruptible at any instant. Every gesture path
+               (pointer 3890, wheel 4596, sounding 4861) already clears
+               DS.glide and claims phase='gesture', so a wheel tick mid-ascent
+               hands control back on the same frame. Nothing to add — but it
+               is the reason this is a glide and not a bespoke animator.
+   Craft       duration scales with the SQUARE ROOT of distance, not linearly.
+               Linear makes a 5-card hop feel sluggish and a 143-card haul feel
+               interminable; sqrt keeps the near trip snappy (~700ms) and the
+               full climb from the hadal floor a journey you can watch (~1.45s)
+               without ever crossing into waiting.
+   Familiarity the wake is real: the glide writes true per-frame velocity into
+               DS.v (stepDescent 4633), which the bubble column already reads
+               (BUB_RISE_GUST) — so a fast ascent blows a heavier stream of
+               bubbles, and bubbles only ever rise. The metaphor holds for free.
+   Purpose     it goes to the surface, the one landmark the axis actually has.
+   Flexibility it is a <button>: click, Enter and Space all work, focus-visible
+               draws the standard ring, and reduced motion cuts to 0 M at once
+               (descentGlideTo handles that branch).
+   Responsibility  inert when you are already at 0 M or in the sky projection —
+               it stops advertising itself rather than lying about what it does.
+   Delight     the mark takes a lume breath when the surface is reached, once,
+               and only when the trip was long enough to have been a journey.
+   Simplicity  ~20 lines on top of machinery that already existed. */
+function ascendToSurface() {
+  if (S.mode !== 'descent' || S.morph || !DS.n) return;
+  const from = DS.s;
+  const delta = Math.abs(from - 0);
+  if (delta < 0.5 && DS.phase === 'rest') return;   /* already there — say nothing */
+  /* sqrt-scaled: 520ms floor for the short hop, ~1.45s from the Mariana floor */
+  const dur = Math.min(520 + 78 * Math.sqrt(delta), 1600);
+  descentGlideTo(0, dur, easeAscent);
+  /* mark the flight itself — a flourish on a two-card nudge is noise */
+  if (DS.glide && delta >= 3) DS.glide.ascent = true;
+  elLive.textContent = 'Ascending to the surface.';
+}
+
+/* the arrival — one lume breath on the mark that was pressed, so the gesture
+   closes where it started. Skipped on short hops: a flourish that fires on a
+   two-card nudge is noise, and skipped under reduced motion. */
+function surfaceBreak() {
+  elLive.textContent = 'Surface. 0 metres.';
+  const el = $('wordmark');
+  if (!el || REDUCED) return;
+  el.classList.remove('surfaced');
+  void el.offsetWidth;                               /* restart the animation */
+  el.classList.add('surfaced');
+  setTimeout(() => el.classList.remove('surfaced'), 1200);
+}
+
 function descentFlyToWatch(w) {
   /* a watch reached via search may be filtered out of the narrowed view — the
      search intent wins: clear the Lens and expand so the flight lands true */
@@ -5162,6 +5240,10 @@ let descentChromeOn = false, descentChromeTimer = null;
 
 function applyDescentChrome(on) {
   descentChromeOn = on;
+  /* the depth axis only exists in the descent — in the sky the mark is a mark */
+  { const wm = $('wordmark');
+    if (wm) { wm.classList.toggle('inert', !on);
+              if (!on) wm.setAttribute('aria-disabled', 'true'); } }
   if (typeof updateNoMatch === 'function') updateNoMatch();
   if (elTagline) elTagline.textContent = on ? TAGLINE_DESCENT : TAGLINE_SKY;
   if (on) {
@@ -6228,6 +6310,8 @@ function bindFitting() {
   fitEl.save = $('fr-save');
   fitEl.share = $('fr-share');
   fitEl.restart = $('fr-restart');
+  fitEl.recv = $('fr-received');
+  fitEl.take = $('fr-take');
 
   fitEl.close.addEventListener('click', closeFitting);
   { const bm = $('fr-brandmark'); if (bm) bm.addEventListener('click', fitToSpiral); }
@@ -6238,6 +6322,7 @@ function bindFitting() {
   fitEl.save.addEventListener('click', fitSavePoster);
   fitEl.share.addEventListener('click', fitShare);
   fitEl.restart.addEventListener('click', fitRestart);
+  if (fitEl.take) fitEl.take.addEventListener('click', fitTake);
 
   /* keyboard: overlay owns keys while open (mirrors lightbox pattern) */
   fitEl.root.addEventListener('keydown', onFitKey);
@@ -6245,8 +6330,8 @@ function bindFitting() {
 
 const chipEntry = () => $('fitting-chip');
 
-function openFitting() {
-  if (!FITTING) { pendingFitOpen = true; return; }   /* wait for data */
+function openFitting(opts) {
+  if (!FITTING) { pendingFitOpen = opts || true; return; }   /* wait for data */
   bindFitting();
   if (fitOpen) return;
   fitOpen = true;
@@ -6259,11 +6344,21 @@ function openFitting() {
   fitEl.quiz.style.display = '';
   fitEl.root.classList.remove('reveal-mode');
   fitEl.root.hidden = false;
-  renderFitStep(false);
+
+  /* a received plate lands straight on the reveal — the sender's result, framed
+     as theirs. Unknown id falls through to the quiz rather than erroring out. */
+  const rec = opts && opts.received;
+  if (rec && FITTING[rec]) {
+    fitResult = { best: { id: rec }, runnerUp: null };
+    renderReveal({ received: true });
+  } else {
+    renderFitStep(false);
+  }
   /* fade in (mirrors #no-match: hidden→false, then .on next frame) */
   requestAnimationFrame(() => requestAnimationFrame(() => fitEl.root.classList.add('on')));
   /* park the render loop concerns — the overlay covers the canvas */
-  try { history.replaceState(null, '', '#fit'); urlSig = '#fit'; } catch (e) { /* file:// */ }
+  const sig = (rec && FITTING[rec]) ? '#fit&r=' + rec : '#fit';
+  try { history.replaceState(null, '', sig); urlSig = sig; } catch (e) { /* file:// */ }
 }
 
 function closeFitting() {
@@ -6507,9 +6602,11 @@ function fitPreviewShow(id, anchorEl) {
   requestAnimationFrame(() => elWatchPreview.classList.add('on'));
 }
 
-function renderReveal() {
+function renderReveal(opts) {
   const b = fitWatchMeta(fitResult.best.id);
   const count = (S.watches && S.watches.length) || Object.keys(FITTING).length;
+  /* received = this plate belongs to whoever sent the link, not to the viewer */
+  const received = !!(opts && opts.received);
 
   fitEl.img.src = 'data/img-catalog/' + b.id + '.jpg';
   fitEl.img.alt = b.name;
@@ -6519,6 +6616,15 @@ function renderReveal() {
 
   /* WHY THIS WATCH, RIGHT NOW — the watch's own significance (fallback: convergence) */
   if (fitEl.whyText) fitEl.whyText.textContent = b.insight;
+
+  /* plate foot — kept identical to the PNG (buildPoster) so the screen and the
+     shared image never disagree about the address or the edition number */
+  const host = $('fr-host'), serialNo = $('fr-serial-no');
+  if (host) host.textContent = SITE_HOST;
+  if (serialNo) {
+    const rank = (S.watches ? S.watches.findIndex(w => w.id === b.id) : -1) + 1;
+    serialNo.textContent = (rank ? 'No.' + String(rank).padStart(3, '0') : 'No.—') + ' / ' + count;
+  }
 
   /* "in another life, you're the {runnerUp.archetype}" */
   if (fitResult.runnerUp) {
@@ -6545,17 +6651,49 @@ function renderReveal() {
     fitEl.alt.hidden = true;
   }
 
+  /* ---- MODE: yours vs. received ----
+     Received hides the runner-up (it's not the viewer's other life), states
+     whose plate this is, and collapses the action row to a single invitation. */
+  fitEl.root.classList.toggle('received', received);
+  if (received) fitEl.alt.hidden = true;
+  if (fitEl.recv) fitEl.recv.hidden = !received;
+  if (fitEl.take) fitEl.take.hidden = !received;
+  fitEl.share.hidden = received;
+  fitEl.restart.hidden = received;
+  /* on a phone the share sheet already offers "Save Image", so a second button
+     for it is noise. Desktop Chrome also reports canShare({files}) but its sheet
+     is AirDrop/Mail/Messages with no save path — so gate on a coarse pointer,
+     not on capability alone, and keep Save wherever a file is the real want. */
+  const touchSheet = canShareFiles() &&
+    (window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false);
+  fitEl.save.hidden = received || touchSheet;
+
   /* swap quiz → reveal */
   fitEl.quiz.style.display = 'none';
   fitEl.reveal.hidden = false;
   fitEl.root.classList.add('reveal-mode');
   fitScalePoster();
 
+  /* draw the PNG now so the share tap stays inside the user gesture */
+  if (!received) fitPrimePoster(b.id);
+
   /* cinematic bloom (REDUCED = plain, no animation class) */
   fitEl.reveal.classList.remove('fr-bloom');
   if (!REDUCED) requestAnimationFrame(() => fitEl.reveal.classList.add('fr-bloom'));
 
-  requestAnimationFrame(() => { try { fitEl.see.focus(); } catch (e) {} });
+  const focusTarget = received ? fitEl.take : fitEl.see;
+  requestAnimationFrame(() => { try { focusTarget.focus(); } catch (e) {} });
+}
+
+/* received → take your own: drop the sender's result and start the quiz clean */
+function fitTake() {
+  fitEl.root.classList.remove('received');
+  if (fitEl.recv) fitEl.recv.hidden = true;
+  if (fitEl.take) fitEl.take.hidden = true;
+  fitEl.share.hidden = false;
+  fitEl.restart.hidden = false;
+  fitRestart();
+  try { history.replaceState(null, '', '#fit'); urlSig = '#fit'; } catch (e) {}
 }
 
 /* scale the 1080×1350 poster to fit the viewport, reserving its scaled height */
@@ -6599,8 +6737,31 @@ function fitSeeInAtlas() {
 
 function fitShare() {
   if (!fitResult || !fitResult.best) return;
-  const url = location.origin + location.pathname + '#m=descent&w=' + fitResult.best.id;
-  const done = () => { elLive.textContent = 'Link copied.'; flashShare(); };
+  const b = fitWatchMeta(fitResult.best.id);
+  const count = (S.watches && S.watches.length) || Object.keys(FITTING).length;
+  const url = fitShareURL(b.id);
+  /* written as the sender, in the site's register — no "check out", no hype */
+  const text = 'The Fitting put me on the ' + b.name + '. ' + count + ' dive watches, one plate.';
+
+  /* the OS sheet already contains Instagram, X, Threads, WhatsApp, Messages —
+     in the user's own app order. Adding our own row of brand glyphs would put
+     foreign logos inside a frame built to feel like a museum plate, and split
+     the tap across eight targets instead of one. */
+  const blob = (fitPoster.id === b.id) ? fitPoster.blob : null;
+  if (blob && canShareFiles()) {
+    const file = new File([blob], 'the-fitting-' + b.id + '.png', { type: 'image/png' });
+    navigator.share({ files: [file], text, url })
+      .then(() => { elLive.textContent = 'Shared.'; })
+      .catch(() => {});   /* AbortError = user dismissed the sheet; say nothing */
+    return;
+  }
+  /* no file support (or the plate isn't drawn yet): share the link if the sheet
+     exists at all, otherwise copy it — Save poster carries the image on desktop */
+  if (navigator.share) {
+    navigator.share({ text, url }).catch(() => {});
+    return;
+  }
+  const done = () => { elLive.textContent = 'Link copied.'; flashBtn(fitEl.share, 'Copied'); };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(done).catch(() => fallbackCopy(url, done));
   } else fallbackCopy(url, done);
@@ -6614,9 +6775,10 @@ function fallbackCopy(text, done) {
     done();
   } catch (e) { elLive.textContent = 'Copy failed.'; }
 }
-function flashShare() {
-  const btn = fitEl.share, orig = btn.textContent;
-  btn.textContent = 'Copied';
+function flashBtn(btn, msg) {
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = msg;
   setTimeout(() => { if (fitOpen) btn.textContent = orig; }, 1600);
 }
 
@@ -6632,24 +6794,34 @@ function fitRestart() {
   renderFitStep(false);
 }
 
-/* ---- SAVE POSTER — 2× offscreen canvas → toBlob (mirrors doExport ~3690).
+/* ---- BUILD THE PLATE — 2× offscreen canvas → toBlob (mirrors doExport ~3690).
    Redraws the poster spec onto a 2160×2700 canvas so the PNG is frame-worthy
-   and independent of the on-screen scale. ---- */
-function fitSavePoster() {
-  if (!fitResult || !fitResult.best) return;
+   and independent of the on-screen scale.
+
+   opts.tall → 1080×1920 instead of 1080×1350. Same plate, same geometry; the
+   ground vignette simply keeps going above and below it, so a Stories post has
+   no letterbox seam and no platform-generated blur behind the frame.
+   Returns a Promise<Blob|null>. ---- */
+function buildPoster(opts) {
+  return new Promise(resolve => {
+  if (!fitResult || !fitResult.best) { resolve(null); return; }
   const b = fitWatchMeta(fitResult.best.id);
   const count = (S.watches && S.watches.length) || Object.keys(FITTING).length;
   const scale = 2;
   const W0 = 1080, H0 = 1350;
+  const OUT_H = (opts && opts.tall) ? 1920 : H0;
   const oc = document.createElement('canvas');
-  oc.width = W0 * scale; oc.height = H0 * scale;
+  oc.width = W0 * scale; oc.height = OUT_H * scale;
   const c = oc.getContext('2d');
   c.scale(scale, scale);
 
-  /* ground: radial vignette */
-  const g = c.createRadialGradient(W0 / 2, H0 / 2, 0, W0 / 2, H0 / 2, Math.max(W0, H0) * 0.75);
+  /* ground: radial vignette — drawn across the FULL output height */
+  const g = c.createRadialGradient(W0 / 2, OUT_H / 2, 0, W0 / 2, OUT_H / 2, Math.max(W0, OUT_H) * 0.75);
   g.addColorStop(0, '#06080B'); g.addColorStop(0.52, '#06080B'); g.addColorStop(1, '#04050A');
-  c.fillStyle = g; c.fillRect(0, 0, W0, H0);
+  c.fillStyle = g; c.fillRect(0, 0, W0, OUT_H);
+
+  /* centre the plate — every coordinate below stays plate-local (0…1350) */
+  c.translate(0, (OUT_H - H0) / 2);
 
   /* ---- SPECIMEN-PLATE GEOMETRY (mirrors the DOM/CSS exactly) ---- */
   const MAT = 56, HAIR = 74;                 /* mat inset, inner hairline inset */
@@ -6693,7 +6865,7 @@ function fitSavePoster() {
     fitSetType(c, 13, 500, 0.34);
     c.fillStyle = TEXT_3;
     c.textAlign = 'right';
-    c.fillText('THE FITTING · NO.001', contentR, topBaseY);
+    c.fillText('THE FITTING', contentR, topBaseY);   /* the serial moves to the foot, opposite the address */
     c.textAlign = 'left';
     const topDivY = HAIR + PAD_TOP + 13 + 22;   /* baseline + padding-bottom */
     c.strokeStyle = 'rgba(233,237,242,0.08)'; c.lineWidth = 1;
@@ -6733,25 +6905,31 @@ function fitSavePoster() {
 
     /* WHY THIS WATCH, RIGHT NOW — orange left-aligned label + prose (ledger format) */
     fitDrawWhy(c, lx, y, ledgerW, b.insight);
-    /* the "sea time" wordmark now lives top-left (drawn above) — no bottom signature */
+
+    /* ---- PLATE FOOT — the return path, bracketed by the serial.
+       Set in the same engraved caps as the ledger labels so it reads as part
+       of the plate's own typography, not as a watermark stuck on top of it.
+       This is the only thing on the poster that tells a stranger where the
+       fitting came from — without it the plate is a beautiful dead end. */
+    const footBaseY = H0 - HAIR - PAD_BOT;          /* 1350 − 74 − 34 = 1242 */
+    const footDivY = footBaseY - 22;
+    c.strokeStyle = 'rgba(233,237,242,0.08)'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(contentL, footDivY); c.lineTo(contentR, footDivY); c.stroke();
+    fitSetType(c, 11, 500, 0.32);
+    c.textAlign = 'left';
+    c.fillStyle = TEXT_3;
+    c.fillText(SITE_HOST.toUpperCase(), contentL, footBaseY);
+    /* the plate number is this reference's place in the atlas, not a counter —
+       true without a backend, and it reads like a print edition: NO.087 / 143 */
+    c.textAlign = 'right';
+    const rank = (S.watches ? S.watches.findIndex(w => w.id === b.id) : -1) + 1;
+    c.fillText((rank ? 'NO.' + String(rank).padStart(3, '0') : 'NO.—') + ' / ' + count, contentR, footBaseY);
+    c.textAlign = 'left';
 
     finish();
   };
 
-  const finish = () => {
-    oc.toBlob(blob => {
-      if (!blob) return;
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'the-fitting-' + b.id + '.png';
-      a.click();
-      elLive.textContent = 'Poster saved.';
-      const btn = fitEl.save, orig = btn.textContent;
-      btn.textContent = 'Saved';
-      setTimeout(() => { if (fitOpen) btn.textContent = orig; }, 1600);
-      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    }, 'image/png');
-  };
+  const finish = () => { oc.toBlob(blob => resolve(blob), 'image/png'); };
 
   /* HERO WINDOW — rectangular portrait; watch large, strap bleeds off top &
      bottom via object-fit:cover. Mirrors #fr-stage (176px top, 760px tall). */
@@ -6802,6 +6980,49 @@ function fitSavePoster() {
   img.src = 'data/img-catalog/' + b.id + '.jpg';
   /* if cached and already complete, onload may not fire */
   if (img.complete && img.naturalWidth) drawStage(img);
+  });
+}
+
+/* ---- THE PLATE IS THE SHARE ---------------------------------------------
+   The reveal primes a PNG the moment it lands, so the share tap is instant AND
+   — the part that actually matters — navigator.share() fires inside the user
+   gesture. Awaiting toBlob() first spends the transient activation and iOS
+   Safari silently refuses the call. */
+let fitPoster = { id: null, blob: null };
+
+function fitPrimePoster(id) {
+  if (fitPoster.id === id) return;
+  fitPoster = { id, blob: null };
+  buildPoster().then(blob => { if (fitPoster.id === id) fitPoster.blob = blob; });
+}
+
+/* can this browser hand over an actual image file? (probe once) */
+let _canShareFiles = null;
+function canShareFiles() {
+  if (_canShareFiles !== null) return _canShareFiles;
+  try {
+    const probe = new File([new Blob([''], { type: 'image/png' })], 'p.png', { type: 'image/png' });
+    _canShareFiles = !!(navigator.canShare && navigator.share && navigator.canShare({ files: [probe] }));
+  } catch (e) { _canShareFiles = false; }
+  return _canShareFiles;
+}
+
+function fitSavePoster() {
+  if (!fitResult || !fitResult.best) return;
+  const id = fitResult.best.id;
+  const use = (blob) => { if (blob) downloadPoster(blob, id); };
+  if (fitPoster.id === id && fitPoster.blob) use(fitPoster.blob);
+  else buildPoster().then(use);
+}
+
+function downloadPoster(blob, id) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'the-fitting-' + id + '.png';
+  a.click();
+  elLive.textContent = 'Poster saved.';
+  flashBtn(fitEl.save, 'Saved');
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
 /* poster type helper — system stack, tabular, tracked (px em) */
@@ -6811,6 +7032,23 @@ function fitSetType(c, sizePx, weight, trackingEm) {
 }
 const FIT_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, 'Helvetica Neue', sans-serif";
 const INK = '#E9EDF2';
+
+/* ---- THE RETURN PATH ----------------------------------------------------
+   A plate that travels needs a way home. The address is derived from wherever
+   the site is served, so dev prints dev and production prints production and
+   nobody has to remember to change a constant before a deploy. */
+const SITE_HOST = (() => {
+  try { return (location.host || '').replace(/^www\./, '') || 'sea time'; }
+  catch (e) { return 'sea time'; }
+})();
+
+/* the link a shared plate carries: the recipient lands on the SENDER'S plate
+   with one thing to do — take their own. Not the index; the index is the
+   answer, and handing over the answer kills the reason to play. */
+function fitShareURL(id) {
+  try { return location.origin + location.pathname + '#fit&r=' + id; }
+  catch (e) { return 'https://' + SITE_HOST + '/#fit&r=' + id; }
+}
 
 /* draw the "why this watch, right now" insight, LEFT-ALIGNED (ledger format):
    orange label (#F6935D) + wrapped prose. lx = left edge of the ledger column. */
@@ -6868,6 +7106,12 @@ function onFitKey(e) {
     else if (e.key === 'Backspace') { e.preventDefault(); fitBack(); }
   }
 }
+
+/* the wordmark is the way back to 0 M — a <button>, so Enter and Space come free */
+(function wireWordmark() {
+  const wm = $('wordmark');
+  if (wm) wm.addEventListener('click', ascendToSurface);
+})();
 
 /* wire the entry chip once DOM is present */
 (function wireFitEntry() {

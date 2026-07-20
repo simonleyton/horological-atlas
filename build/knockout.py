@@ -18,10 +18,12 @@ Two things make a silver watch on white harder than it looks:
      FULL resolution so the downscale to 900 does the anti-aliasing against
      the dark ground rather than against white.
 
-    python3 build/knockout.py <src> <out-id> [--probe] [--bleed] [--tol N]
+    python3 build/knockout.py <src> <out-id> [--probe] [--bleed] [--tol N] [--alpha]
 
 --probe writes diagnostics instead of the final image.
 --bleed  composes the 900x600 landscape plate instead of the 900x900 one.
+--alpha  trust the source's own alpha channel as the mask — no flood fill, no
+         erosion (a real matte has no contaminated ring), no shadow cut.
 
 The corpus has two committed formats, measured across all 146 plates:
   900x900  116 plates, subject wholly inside the frame (the specimen cut)
@@ -75,20 +77,32 @@ def flood_background(a, tol=14):
     return bg
 
 
-im = Image.open(src_path).convert('RGB')
-a = np.asarray(im)
-H, W = a.shape[:2]
-
-tol = int(sys.argv[sys.argv.index('--tol') + 1]) if '--tol' in sys.argv else 14
-bg = flood_background(a, tol)
-subj = ~bg
+use_alpha = '--alpha' in sys.argv
+if use_alpha:
+    # the source brings its own matte — composite over the ground FIRST, then
+    # everything downstream sees a flat RGB exactly like the flood-fill path
+    rgba = np.asarray(Image.open(src_path).convert('RGBA')).astype(np.float32)
+    af = rgba[..., 3:] / 255.0
+    flat = rgba[..., :3] * af + np.array(GROUND, np.float32) * (1 - af)
+    im = Image.fromarray(np.clip(flat, 0, 255).astype('uint8'))
+    a = np.asarray(im)
+    H, W = a.shape[:2]
+    subj = rgba[..., 3] > 8
+else:
+    im = Image.open(src_path).convert('RGB')
+    a = np.asarray(im)
+    H, W = a.shape[:2]
+    tol = int(sys.argv[sys.argv.index('--tol') + 1]) if '--tol' in sys.argv else 14
+    bg = flood_background(a, tol)
+    subj = ~bg
 
 # Seal the specular bites. Polished steel flanks peak near white, so the fill
 # reaches a little way into them; a morphological close puts back anything the
 # subject encloses without moving the true silhouette.
-_m = Image.fromarray((subj * 255).astype('uint8'))
-_m = _m.filter(ImageFilter.MaxFilter(7)).filter(ImageFilter.MinFilter(7))
-subj = np.asarray(_m) > 127
+if not use_alpha:
+    _m = Image.fromarray((subj * 255).astype('uint8'))
+    _m = _m.filter(ImageFilter.MaxFilter(7)).filter(ImageFilter.MinFilter(7))
+    subj = np.asarray(_m) > 127
 
 # The soft cast shadow under the lot photo is too faint for the fill to take,
 # so it survives as "subject" and the close then bridges it to the bracelet.
@@ -98,17 +112,18 @@ subj = np.asarray(_m) > 127
 # unmistakable (std 31.7 at the bracelet, 1.9 one row into the shadow).
 # An earlier gap-based attempt cut at row 431, in the upper bracelet, and threw
 # the whole watch away.
-grey = a.astype(np.float32)
-rows_m = subj.any(axis=1)
-ys_all = np.where(rows_m)[0]
-split = None
-for y in range(ys_all.max(), ys_all.min(), -1):
-    px = grey[y][grey[y].min(axis=1) < 240]
-    if len(px) > 40 and px.std() > 10:
-        split = y + 1
-        break
-if split is not None and split <= ys_all.max():
-    subj[split:, :] = False
+if not use_alpha:
+    grey = a.astype(np.float32)
+    rows_m = subj.any(axis=1)
+    ys_all = np.where(rows_m)[0]
+    split = None
+    for y in range(ys_all.max(), ys_all.min(), -1):
+        px = grey[y][grey[y].min(axis=1) < 240]
+        if len(px) > 40 and px.std() > 10:
+            split = y + 1
+            break
+    if split is not None and split <= ys_all.max():
+        subj[split:, :] = False
 
 ys, xs = np.where(subj)
 bbox = (xs.min(), ys.min(), xs.max(), ys.max())
@@ -125,10 +140,13 @@ if probe:
     sys.exit(0)
 
 # --- erode past the contaminated ring, then feather
-m = Image.fromarray((subj * 255).astype('uint8'))
-m = m.filter(ImageFilter.MinFilter(5))        # erode ~2px: kills the white fringe
-m = m.filter(ImageFilter.GaussianBlur(1.2))   # feather
-alpha = np.asarray(m).astype(np.float32) / 255.0
+if use_alpha:
+    alpha = subj.astype(np.float32)           # already composited; mask is exact
+else:
+    m = Image.fromarray((subj * 255).astype('uint8'))
+    m = m.filter(ImageFilter.MinFilter(5))        # erode ~2px: kills the white fringe
+    m = m.filter(ImageFilter.GaussianBlur(1.2))   # feather
+    alpha = np.asarray(m).astype(np.float32) / 255.0
 
 # --- composite at FULL resolution so the downscale anti-aliases against ground
 ground = np.zeros_like(a, dtype=np.float32)

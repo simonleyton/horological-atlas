@@ -1020,5 +1020,19 @@
   "license": "Unlicensed — personal prototype; clear before publishing",
   "source": "https://www.amazon.com/dp/B009KYJAJY",
   "confidence": "frontal"
+ },
+ "scurfa-diver-one-titanium-2025": {
+  "file": "img-catalog/scurfa-diver-one-titanium-2025.jpg",
+  "credit": "Scurfa official product render",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.scurfawatches.com/product/diver-one-d1-500-nd-titanium-black-2025/",
+  "confidence": "catalog"
+ },
+ "blancpain-swatch-scuba-fifty-fathoms-2023": {
+  "file": "img-catalog/blancpain-swatch-scuba-fifty-fathoms-2023.jpg",
+  "credit": "WatchCharts consignment photo — Ocean of Storms edition",
+  "license": "Unlicensed — personal prototype; clear before publishing",
+  "source": "https://www.swatch.com/en-us/bioceramic-scuba-fifty-fathoms.html",
+  "confidence": "editorial"
  }
 }

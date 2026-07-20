@@ -4581,7 +4581,7 @@
   "parents": [
    "rolex-submariner-16610-1988"
   ],
-  "significance": "The 'Marlin' \u2014 a sub-$50 quartz diver with a coin-edge bezel and Submariner silhouette that became the internet's default first dive watch, and, like the cheap Casios worn by the likes of Bill Gates, proof that horological joy needn't cost a fortune.",
+  "significance": "The 'Marlin' — a sub-$50 quartz diver with a coin-edge bezel and Submariner silhouette that became the internet's default first dive watch, and, like the cheap Casios worn by the likes of Bill Gates, proof that horological joy needn't cost a fortune.",
   "priceBandUsd": [
    40,
    60
@@ -4592,6 +4592,68 @@
    "heliumValve": false,
    "handsStyle": "broad-arrow",
    "lumePlots": "round"
+  }
+ },
+ {
+  "id": "scurfa-diver-one-titanium-2025",
+  "brand": "Scurfa",
+  "model": "Diver One D1-500 ND Titanium",
+  "reference": "D1-500 ND",
+  "year": 2025,
+  "country": "GB",
+  "diameterMm": 40,
+  "waterResistanceM": 500,
+  "bezelType": "rotating",
+  "bezelColor": "#111111",
+  "dialColor": "#0d0d0d",
+  "accentColor": "#dfe7ee",
+  "caseShape": "round",
+  "movement": "quartz",
+  "designFamily": "microbrand-modern",
+  "parents": [],
+  "significance": "Designed and dive-tested by a working North Sea saturation diver — Paul Scurfield proved this titanium quartz tool on the job, riding its helium valve through a 154-metre decompression to the surface.",
+  "priceBandUsd": [
+   250,
+   350
+  ],
+  "features": {
+   "crownGuard": true,
+   "dateWindow": false,
+   "heliumValve": true,
+   "handsStyle": "sword",
+   "lumePlots": "mixed"
+  }
+ },
+ {
+  "id": "blancpain-swatch-scuba-fifty-fathoms-2023",
+  "brand": "Blancpain × Swatch",
+  "model": "Bioceramic Scuba Fifty Fathoms",
+  "reference": "SO35 series",
+  "year": 2023,
+  "country": "CH",
+  "diameterMm": 42.3,
+  "waterResistanceM": 91,
+  "bezelType": "rotating",
+  "bezelColor": "#111111",
+  "dialColor": "#0d0d0d",
+  "accentColor": "#e8eaec",
+  "caseShape": "round",
+  "movement": "automatic",
+  "designFamily": "fifty-fathoms-lineage",
+  "parents": [
+   "blancpain-fifty-fathoms-1953"
+  ],
+  "significance": "The 1953 archetype reborn as a Bioceramic Swatch — a Sistem51 automatic rated to exactly fifty fathoms, it put the founding dive watch's pattern on more wrists in one year than Blancpain managed in seventy.",
+  "priceBandUsd": [
+   350,
+   450
+  ],
+  "features": {
+   "crownGuard": false,
+   "dateWindow": true,
+   "heliumValve": false,
+   "handsStyle": "sword",
+   "lumePlots": "mixed"
   }
  }
 ]

@@ -1232,6 +1232,10 @@ footer {
   line-height: 1.5;
   display: flex; align-items: baseline; gap: 12px;
 }
+/* the bar's own connective between the gauge and the attribution — same "·"
+   the gauge already uses internally. Gated on :not(:empty) so it never dangles
+   before the gauge first paints, and it dies with the gauge on mobile. */
+#footer-gauge:not(:empty)::after { content: "·"; margin-left: 12px; }
 /* lowercase, untracked, weight 500 — the same register as the wordmark, the
    projection toggle and the CTA. Tracked uppercase was the odd one out.
    text-transform rather than lowercase in the markup, so the DOM and the
@@ -1550,10 +1554,12 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
   #footer-gauge { display: none; }
   #footer-left { pointer-events: none; }
   #colophon-open {
-    /* hard stop = half the bar minus the centred CTA's half-width (~69px)
-       and breathing room — the earlier calc(50% - 82px) still allowed 11px
-       of overlap at 360 */
-    max-width: calc(50% - 101px);
+    /* hard stop = half the VIEWPORT minus the centred CTA's half-width and
+       breathing room. vw, NOT % — a percentage here resolves against
+       #footer-left (a shrink-to-fit flex item ~81px wide), so calc(50% - 101px)
+       went NEGATIVE, clamped to 0, and overflow:hidden ate the whole label.
+       That was the invisible-attribution bug: present, visible, 0px wide. */
+    max-width: calc(50vw - 101px);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   /* footer keeps space-between: the name holds the LEFT corner. The old

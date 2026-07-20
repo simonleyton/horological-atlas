@@ -27,7 +27,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "none"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "panerai-radiomir-1936",
@@ -57,7 +58,8 @@
    "heliumValve": false,
    "handsStyle": "cathedral",
    "lumePlots": "sandwich"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "panerai-luminor-1950",
@@ -89,7 +91,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "sandwich"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "blancpain-fifty-fathoms-1953",
@@ -119,7 +122,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-submariner-6204-1953",
@@ -149,7 +153,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "zodiac-sea-wolf-1953",
@@ -179,7 +184,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-submariner-6200-1954",
@@ -211,7 +217,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "tudor-submariner-7922-1954",
@@ -243,7 +250,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-submariner-6538-1956",
@@ -275,7 +283,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "blancpain-bathyscaphe-1956",
@@ -307,7 +316,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "blancpain-fifty-fathoms-milspec-1957",
@@ -339,7 +349,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "omega-seamaster-300-ck2913-1957",
@@ -371,7 +382,8 @@
    "heliumValve": false,
    "handsStyle": "broad-arrow",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "breitling-superocean-1957",
@@ -401,7 +413,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "longines-nautilus-skin-diver-1958",
@@ -431,7 +444,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-submariner-5512-1959",
@@ -463,7 +477,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "tudor-submariner-7928-1959",
@@ -495,7 +510,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "jlc-deep-sea-alarm-1959",
@@ -525,7 +541,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "longines-legend-diver-7042-1960",
@@ -557,7 +574,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "vulcain-cricket-nautical-1961",
@@ -587,7 +605,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "nivada-chronomaster-1961",
@@ -617,7 +636,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rado-captain-cook-1962",
@@ -647,7 +667,8 @@
    "heliumValve": false,
    "handsStyle": "broad-arrow",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-submariner-5513-1962",
@@ -679,7 +700,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "yema-superman-1963",
@@ -709,7 +731,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "enicar-sherpa-super-dive-1964",
@@ -739,7 +762,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "eterna-kontiki-super-1964",
@@ -769,7 +793,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "zrc-grands-fonds-300-1964",
@@ -799,7 +824,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "jenny-caribbean-1000-1964",
@@ -829,7 +855,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "tornek-rayville-tr900-1964",
@@ -861,7 +888,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "omega-seamaster-300-165024-1964",
@@ -893,7 +921,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-62mas-1965",
@@ -926,7 +955,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "aquastar-deepstar-1965",
@@ -956,7 +986,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "universal-polerouter-sub-1965",
@@ -986,7 +1017,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "orient-king-diver-1965",
@@ -1016,7 +1048,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "tissot-seastar-1965",
@@ -1046,7 +1079,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "omega-seamaster-120-1966",
@@ -1078,7 +1112,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-6215-1967",
@@ -1110,7 +1145,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-sea-dweller-1665-1967",
@@ -1142,7 +1178,8 @@
    "heliumValve": true,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "doxa-sub-300-1967",
@@ -1172,7 +1209,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "certina-ds-ph200m-1967",
@@ -1202,7 +1240,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "vostok-amphibia-1967",
@@ -1232,7 +1271,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "lip-nautic-ski-1967",
@@ -1262,7 +1302,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "iwc-aquatimer-812ad-1967",
@@ -1292,7 +1333,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "rectangular"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "doxa-sub-300t-1968",
@@ -1324,7 +1366,8 @@
    "heliumValve": true,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "jlc-memovox-polaris-1968",
@@ -1356,7 +1399,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-6159-1968",
@@ -1388,7 +1432,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "favre-leuba-bathy-50-1968",
@@ -1418,7 +1463,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "bulova-oceanographer-1968",
@@ -1448,7 +1494,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "longines-ultra-chron-diver-1968",
@@ -1478,7 +1525,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-submariner-1680-1969",
@@ -1510,7 +1558,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "tudor-submariner-7016-1969",
@@ -1542,7 +1591,8 @@
    "heliumValve": false,
    "handsStyle": "snowflake",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "zenith-defy-a3648-1969",
@@ -1572,7 +1622,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "rectangular"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "glashutte-spezimatic-rp-ts-200-1969",
@@ -1602,7 +1653,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-6105-1970",
@@ -1634,7 +1686,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "alsta-nautoscaph-1970",
@@ -1664,7 +1717,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "omega-ploprof-600-1970",
@@ -1696,7 +1750,8 @@
    "heliumValve": false,
    "handsStyle": "plongeur",
    "lumePlots": "rectangular"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "omega-seamaster-1000-1971",
@@ -1728,7 +1783,8 @@
    "heliumValve": false,
    "handsStyle": "plongeur",
    "lumePlots": "rectangular"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "benrus-type-i-1972",
@@ -1760,7 +1816,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "aquadive-bathyscaphe-100-1972",
@@ -1790,7 +1847,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-tuna-6159-7010-1975",
@@ -1822,7 +1880,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "titanium"
  },
  {
   "id": "seiko-6309-1976",
@@ -1854,7 +1913,8 @@
    "heliumValve": false,
    "handsStyle": "syringe",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "citizen-challenge-diver-1977",
@@ -1884,7 +1944,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-7548-1978",
@@ -1916,7 +1977,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-golden-tuna-7549-1978",
@@ -1948,7 +2010,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "titanium"
  },
  {
   "id": "squale-1521-1978",
@@ -1978,7 +2041,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "heuer-844-1978",
@@ -2008,7 +2072,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "cwc-royal-navy-diver-1980",
@@ -2040,7 +2105,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-arnie-h558-1982",
@@ -2072,7 +2138,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "citizen-professional-diver-1300m-1982",
@@ -2104,7 +2171,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "titanium"
  },
  {
   "id": "iwc-ocean-2000-1982",
@@ -2134,7 +2202,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "titanium"
  },
  {
   "id": "citizen-aqualand-1985",
@@ -2166,7 +2235,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-submariner-16610-1988",
@@ -2198,7 +2268,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-submariner-14060-1990",
@@ -2230,7 +2301,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "casio-gshock-frogman-dw6300-1993",
@@ -2260,7 +2332,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "none"
-  }
+  },
+  "caseMaterial": "composite"
  },
  {
   "id": "omega-seamaster-professional-2531-1993",
@@ -2293,7 +2366,8 @@
    "handsStyle": "sword",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/omega/seamaster-diver-300m/2531-80-00"
+  "watchbase": "https://watchbase.com/omega/seamaster-diver-300m/2531-80-00",
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-skx007-1996",
@@ -2325,7 +2399,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "citizen-promaster-ny0040-1997",
@@ -2357,7 +2432,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "panerai-luminor-submersible-1998",
@@ -2390,7 +2466,8 @@
    "handsStyle": "sword",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/panerai/submersible/pam00024"
+  "watchbase": "https://watchbase.com/panerai/submersible/pam00024",
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-monster-skx779-2000",
@@ -2422,7 +2499,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-marinemaster-sbdx001-2000",
@@ -2454,7 +2532,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "marathon-gsar-2002",
@@ -2484,7 +2563,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "sinn-ezm3-2004",
@@ -2514,7 +2594,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "tag-heuer-aquaracer-2004",
@@ -2546,7 +2627,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "citizen-ecozilla-bj8050-2004",
@@ -2578,7 +2660,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-samurai-sbda001-2004",
@@ -2610,7 +2693,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "omega-planet-ocean-2005",
@@ -2643,7 +2727,8 @@
    "handsStyle": "broad-arrow",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/omega/seamaster-planet-ocean/2900-50-91"
+  "watchbase": "https://watchbase.com/omega/seamaster-planet-ocean/2900-50-91",
+  "caseMaterial": "steel"
  },
  {
   "id": "sinn-u1-2005",
@@ -2674,7 +2759,8 @@
    "handsStyle": "pencil",
    "lumePlots": "rectangular"
   },
-  "watchbase": "https://watchbase.com/sinn/diving-watches/1010-010"
+  "watchbase": "https://watchbase.com/sinn/diving-watches/1010-010",
+  "caseMaterial": "steel"
  },
  {
   "id": "steinhart-ocean-one-2006",
@@ -2706,7 +2792,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "stowa-prodiver-2006",
@@ -2736,7 +2823,8 @@
    "heliumValve": true,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "blancpain-fifty-fathoms-5015-2007",
@@ -2768,7 +2856,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "longines-legend-diver-2007",
@@ -2801,7 +2890,8 @@
    "handsStyle": "sword",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/longines/legend-diver/l3-674-4-50-0"
+  "watchbase": "https://watchbase.com/longines/legend-diver/l3-674-4-50-0",
+  "caseMaterial": "steel"
  },
  {
   "id": "longines-hydroconquest-2007",
@@ -2832,7 +2922,8 @@
    "handsStyle": "sword",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/longines/hydroconquest/l3-742-4-56-6"
+  "watchbase": "https://watchbase.com/longines/hydroconquest/l3-742-4-56-6",
+  "caseMaterial": "steel"
  },
  {
   "id": "breitling-superocean-heritage-2007",
@@ -2864,7 +2955,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-sumo-sbdc001-2007",
@@ -2896,7 +2988,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "grand-seiko-sbga029-2008",
@@ -2928,7 +3021,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "titanium"
  },
  {
   "id": "rolex-deepsea-116660-2008",
@@ -2960,7 +3054,8 @@
    "heliumValve": true,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "christopher-ward-c60-trident-2009",
@@ -2990,7 +3085,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "omega-ploprof-1200-2009",
@@ -3023,7 +3119,8 @@
    "handsStyle": "plongeur",
    "lumePlots": "rectangular"
   },
-  "watchbase": "https://watchbase.com/omega/seamaster-ploprof/224-30-55-21-04-001"
+  "watchbase": "https://watchbase.com/omega/seamaster-ploprof/224-30-55-21-04-001",
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-submariner-116610ln-2010",
@@ -3056,7 +3153,8 @@
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/rolex/submariner/116610ln-0001"
+  "watchbase": "https://watchbase.com/rolex/submariner/116610ln-0001",
+  "caseMaterial": "steel"
  },
  {
   "id": "richard-mille-rm028-2010",
@@ -3086,7 +3184,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "none"
-  }
+  },
+  "caseMaterial": "titanium"
  },
  {
   "id": "bremont-supermarine-s500-2010",
@@ -3116,7 +3215,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "oris-aquis-2011",
@@ -3146,7 +3246,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "tudor-black-bay-2012",
@@ -3180,7 +3281,8 @@
    "handsStyle": "snowflake",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/tudor/black-bay/79220r-0002"
+  "watchbase": "https://watchbase.com/tudor/black-bay/79220r-0002",
+  "caseMaterial": "steel"
  },
  {
   "id": "tudor-pelagos-2012",
@@ -3213,7 +3315,8 @@
    "handsStyle": "snowflake",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/tudor/pelagos/25500tn-0001"
+  "watchbase": "https://watchbase.com/tudor/pelagos/25500tn-0001",
+  "caseMaterial": "titanium"
  },
  {
   "id": "blancpain-bathyscaphe-2013",
@@ -3246,7 +3349,8 @@
    "handsStyle": "pencil",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/blancpain/fifty-fathoms/5000-1110-b52a"
+  "watchbase": "https://watchbase.com/blancpain/fifty-fathoms/5000-1110-b52a",
+  "caseMaterial": "steel"
  },
  {
   "id": "omega-seamaster-300-master-2014",
@@ -3279,7 +3383,8 @@
    "handsStyle": "broad-arrow",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/omega/seamaster-300/233-30-41-21-01-001"
+  "watchbase": "https://watchbase.com/omega/seamaster-300/233-30-41-21-01-001",
+  "caseMaterial": "steel"
  },
  {
   "id": "iwc-aquatimer-2014",
@@ -3312,7 +3417,8 @@
    "handsStyle": "sword",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/iwc/gst-aquatimer/iw3290-01"
+  "watchbase": "https://watchbase.com/iwc/gst-aquatimer/iw3290-01",
+  "caseMaterial": "steel"
  },
  {
   "id": "oris-divers-sixty-five-2015",
@@ -3342,7 +3448,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "unimatic-u1-2015",
@@ -3374,7 +3481,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "zodiac-super-sea-wolf-2015",
@@ -3406,7 +3514,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-srp777-2016",
@@ -3439,7 +3548,8 @@
    "handsStyle": "syringe",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/seiko/prospex-divers/srp777"
+  "watchbase": "https://watchbase.com/seiko/prospex-divers/srp777",
+  "caseMaterial": "steel"
  },
  {
   "id": "damasko-dsub1-2016",
@@ -3469,7 +3579,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "monta-oceanking-2016",
@@ -3499,7 +3610,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "nth-subs-2016",
@@ -3531,7 +3643,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "zelos-mako-2016",
@@ -3561,7 +3674,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "bronze"
  },
  {
   "id": "eterna-super-kontiki-2016",
@@ -3593,7 +3707,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-sla017-2017",
@@ -3625,7 +3740,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rado-captain-cook-2017",
@@ -3658,7 +3774,8 @@
    "handsStyle": "broad-arrow",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/rado/captain-cook/r32500315"
+  "watchbase": "https://watchbase.com/rado/captain-cook/r32500315",
+  "caseMaterial": "steel"
  },
  {
   "id": "halios-seaforth-2017",
@@ -3688,7 +3805,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "farer-aqua-compressor-2017",
@@ -3720,7 +3838,8 @@
    "heliumValve": false,
    "handsStyle": "syringe",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-sea-dweller-126600-2017",
@@ -3753,7 +3872,8 @@
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/rolex/sea-dweller/126600-0001"
+  "watchbase": "https://watchbase.com/rolex/sea-dweller/126600-0001",
+  "caseMaterial": "steel"
  },
  {
   "id": "doxa-sub-300-2017",
@@ -3785,7 +3905,8 @@
    "heliumValve": false,
    "handsStyle": "baton",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "omega-seamaster-300m-2018",
@@ -3818,7 +3939,8 @@
    "handsStyle": "sword",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/omega/seamaster-diver-300m/210-30-42-20-01-001"
+  "watchbase": "https://watchbase.com/omega/seamaster-diver-300m/210-30-42-20-01-001",
+  "caseMaterial": "steel"
  },
  {
   "id": "tudor-black-bay-58-2018",
@@ -3852,7 +3974,8 @@
    "handsStyle": "snowflake",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/tudor/black-bay-58/79030n-0002"
+  "watchbase": "https://watchbase.com/tudor/black-bay-58/79030n-0002",
+  "caseMaterial": "steel"
  },
  {
   "id": "certina-ds-ph200m-2018",
@@ -3884,7 +4007,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "tissot-seastar-1000-2018",
@@ -3917,7 +4041,8 @@
    "handsStyle": "sword",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/tissot/seastar/t120-407-11-041-00"
+  "watchbase": "https://watchbase.com/tissot/seastar/t120-407-11-041-00",
+  "caseMaterial": "steel"
  },
  {
   "id": "lorier-neptune-2018",
@@ -3949,7 +4074,8 @@
    "heliumValve": false,
    "handsStyle": "cathedral",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "baltic-aquascaphe-2019",
@@ -3981,7 +4107,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "glashutte-original-seaq-2019",
@@ -4013,7 +4140,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "casio-gshock-frogman-gwfa1000-2020",
@@ -4045,7 +4173,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "composite"
  },
  {
   "id": "rolex-submariner-126610ln-2020",
@@ -4078,7 +4207,8 @@
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/rolex/submariner/126610ln-0001"
+  "watchbase": "https://watchbase.com/rolex/submariner/126610ln-0001",
+  "caseMaterial": "steel"
  },
  {
   "id": "seiko-spb143-2020",
@@ -4110,7 +4240,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "mido-ocean-star-tribute-2020",
@@ -4141,7 +4272,8 @@
    "handsStyle": "sword",
    "lumePlots": "round"
   },
-  "watchbase": "https://watchbase.com/mido/ocean-star/m026-830-11-041-00"
+  "watchbase": "https://watchbase.com/mido/ocean-star/m026-830-11-041-00",
+  "caseMaterial": "steel"
  },
  {
   "id": "serica-5303-2021",
@@ -4171,7 +4303,8 @@
    "heliumValve": false,
    "handsStyle": "syringe",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "tudor-pelagos-fxd-2021",
@@ -4203,7 +4336,8 @@
    "heliumValve": false,
    "handsStyle": "snowflake",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "titanium"
  },
  {
   "id": "citizen-fujitsubo-nb6021-2021",
@@ -4235,7 +4369,8 @@
    "heliumValve": false,
    "handsStyle": "pencil",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "omega-ultra-deep-2022",
@@ -4268,7 +4403,8 @@
    "handsStyle": "broad-arrow",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/omega/seamaster-planet-ocean/215-30-46-21-06-001"
+  "watchbase": "https://watchbase.com/omega/seamaster-planet-ocean/215-30-46-21-06-001",
+  "caseMaterial": "steel"
  },
  {
   "id": "tudor-pelagos-39-2022",
@@ -4301,7 +4437,8 @@
    "handsStyle": "snowflake",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/tudor/pelagos/25407n-0001"
+  "watchbase": "https://watchbase.com/tudor/pelagos/25407n-0001",
+  "caseMaterial": "titanium"
  },
  {
   "id": "panerai-radiomir-3646-1940",
@@ -4333,7 +4470,8 @@
    "heliumValve": false,
    "handsStyle": "cathedral",
    "lumePlots": "sandwich"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "panerai-egiziano-1956",
@@ -4365,7 +4503,8 @@
    "heliumValve": false,
    "handsStyle": "cathedral",
    "lumePlots": "sandwich"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "panerai-slytech-submersible-1993",
@@ -4397,7 +4536,8 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "sandwich"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "panerai-luminor-marina-pam111-2002",
@@ -4430,7 +4570,8 @@
    "handsStyle": "baton",
    "lumePlots": "mixed"
   },
-  "watchbase": "https://watchbase.com/panerai/luminor/pam00111"
+  "watchbase": "https://watchbase.com/panerai/luminor/pam00111",
+  "caseMaterial": "steel"
  },
  {
   "id": "panerai-submersible-bronzo-2011",
@@ -4463,7 +4604,8 @@
    "handsStyle": "sword",
    "lumePlots": "sandwich"
   },
-  "watchbase": "https://watchbase.com/panerai/submersible/pam00382"
+  "watchbase": "https://watchbase.com/panerai/submersible/pam00382",
+  "caseMaterial": "bronze"
  },
  {
   "id": "panerai-submersible-quarantaquattro-2022",
@@ -4496,7 +4638,8 @@
    "handsStyle": "sword",
    "lumePlots": "sandwich"
   },
-  "watchbase": "https://watchbase.com/panerai/submersible/pam01229"
+  "watchbase": "https://watchbase.com/panerai/submersible/pam01229",
+  "caseMaterial": "steel"
  },
  {
   "id": "rolex-deepsea-challenge-2022",
@@ -4528,7 +4671,8 @@
    "heliumValve": true,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "titanium"
  },
  {
   "id": "invicta-pro-diver-8926-2004",
@@ -4560,7 +4704,8 @@
    "heliumValve": false,
    "handsStyle": "mercedes",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "casio-duro-mdv106-2009",
@@ -4592,7 +4737,8 @@
    "heliumValve": false,
    "handsStyle": "broad-arrow",
    "lumePlots": "round"
-  }
+  },
+  "caseMaterial": "steel"
  },
  {
   "id": "scurfa-diver-one-titanium-2025",
@@ -4622,7 +4768,8 @@
    "heliumValve": true,
    "handsStyle": "sword",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "titanium"
  },
  {
   "id": "blancpain-swatch-scuba-fifty-fathoms-2023",
@@ -4654,6 +4801,7 @@
    "heliumValve": false,
    "handsStyle": "sword",
    "lumePlots": "mixed"
-  }
+  },
+  "caseMaterial": "ceramic"
  }
 ]

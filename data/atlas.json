@@ -30,6 +30,7 @@
         "handsStyle": "baton",
         "lumePlots": "none"
       },
+      "caseMaterial": "steel",
       "x": -728.36,
       "y": -347.47
     },
@@ -62,6 +63,7 @@
         "handsStyle": "cathedral",
         "lumePlots": "sandwich"
       },
+      "caseMaterial": "steel",
       "x": -926.1,
       "y": 77.46
     },
@@ -96,6 +98,7 @@
         "handsStyle": "baton",
         "lumePlots": "sandwich"
       },
+      "caseMaterial": "steel",
       "x": -952.38,
       "y": 129.01
     },
@@ -128,6 +131,7 @@
         "handsStyle": "sword",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": -128.37,
       "y": 456.87
     },
@@ -160,6 +164,7 @@
         "handsStyle": "pencil",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 168.02,
       "y": 394.84
     },
@@ -192,6 +197,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -221.58,
       "y": -33.36
     },
@@ -226,6 +232,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 168.04,
       "y": 483.92
     },
@@ -260,6 +267,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 454.03,
       "y": 348.95
     },
@@ -294,6 +302,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 138.34,
       "y": 577.6
     },
@@ -328,6 +337,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -151.84,
       "y": 379.01
     },
@@ -362,6 +372,7 @@
         "handsStyle": "sword",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": -227.84,
       "y": 428.24
     },
@@ -396,6 +407,7 @@
         "handsStyle": "broad-arrow",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": -155.62,
       "y": -298.74
     },
@@ -428,6 +440,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -178.77,
       "y": 208.01
     },
@@ -460,6 +473,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -44.17,
       "y": 240.83
     },
@@ -494,6 +508,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 239.56,
       "y": 589.28
     },
@@ -528,6 +543,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 541.07,
       "y": 333.04
     },
@@ -560,6 +576,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -664.93,
       "y": 227.33
     },
@@ -594,6 +611,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -490.19,
       "y": 403.28
     },
@@ -626,6 +644,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -489.43,
       "y": 39.07
     },
@@ -658,6 +677,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -321.12,
       "y": 168.72
     },
@@ -690,6 +710,7 @@
         "handsStyle": "broad-arrow",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -109.89,
       "y": 303.74
     },
@@ -724,6 +745,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 142.8,
       "y": 515.19
     },
@@ -756,6 +778,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -194.02,
       "y": 276.7
     },
@@ -788,6 +811,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -304.59,
       "y": 365.67
     },
@@ -820,6 +844,7 @@
         "handsStyle": "baton",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": -247.39,
       "y": 194.87
     },
@@ -852,6 +877,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -132.9,
       "y": 253.71
     },
@@ -884,6 +910,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -146.49,
       "y": -1.92
     },
@@ -918,6 +945,7 @@
         "handsStyle": "sword",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": -179.94,
       "y": 458.67
     },
@@ -952,6 +980,7 @@
         "handsStyle": "sword",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": -155.54,
       "y": -406.39
     },
@@ -987,6 +1016,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 131.04,
       "y": -281.05
     },
@@ -1019,6 +1049,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -290.94,
       "y": -214.88
     },
@@ -1051,6 +1082,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -48.98,
       "y": 49.68
     },
@@ -1083,6 +1115,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -216.48,
       "y": -151.46
     },
@@ -1115,6 +1148,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -117.54,
       "y": -75.44
     },
@@ -1149,6 +1183,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -100.51,
       "y": -652.87
     },
@@ -1183,6 +1218,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 206.86,
       "y": -300.23
     },
@@ -1217,6 +1253,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 236.27,
       "y": 505.75
     },
@@ -1249,6 +1286,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -471.36,
       "y": -195.39
     },
@@ -1281,6 +1319,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -96.23,
       "y": 22.54
     },
@@ -1313,6 +1352,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 136.47,
       "y": -133.18
     },
@@ -1345,6 +1385,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -549.52,
       "y": -113.53
     },
@@ -1377,6 +1418,7 @@
         "handsStyle": "sword",
         "lumePlots": "rectangular"
       },
+      "caseMaterial": "steel",
       "x": -420.91,
       "y": 345.84
     },
@@ -1411,6 +1453,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -558.98,
       "y": -215.91
     },
@@ -1445,6 +1488,7 @@
         "handsStyle": "sword",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": -428.98,
       "y": 478.27
     },
@@ -1479,6 +1523,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 95.12,
       "y": -352.29
     },
@@ -1511,6 +1556,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -287.68,
       "y": -82.82
     },
@@ -1543,6 +1589,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -210.16,
       "y": -77.01
     },
@@ -1575,6 +1622,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -419.06,
       "y": -3.13
     },
@@ -1609,6 +1657,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 191.3,
       "y": 516.51
     },
@@ -1643,6 +1692,7 @@
         "handsStyle": "snowflake",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 682.77,
       "y": -60.13
     },
@@ -1675,6 +1725,7 @@
         "handsStyle": "baton",
         "lumePlots": "rectangular"
       },
+      "caseMaterial": "steel",
       "x": -677.61,
       "y": -610.41
     },
@@ -1707,6 +1758,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 469.46,
       "y": -403.58
     },
@@ -1741,6 +1793,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -279.84,
       "y": -300.02
     },
@@ -1773,6 +1826,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -167.9,
       "y": -93.25
     },
@@ -1807,6 +1861,7 @@
         "handsStyle": "plongeur",
         "lumePlots": "rectangular"
       },
+      "caseMaterial": "steel",
       "x": -583.08,
       "y": -654.24
     },
@@ -1841,6 +1896,7 @@
         "handsStyle": "plongeur",
         "lumePlots": "rectangular"
       },
+      "caseMaterial": "steel",
       "x": -493.09,
       "y": -654.24
     },
@@ -1875,6 +1931,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -482.64,
       "y": 119.49
     },
@@ -1907,6 +1964,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -510.98,
       "y": -101.66
     },
@@ -1941,6 +1999,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "titanium",
       "x": 68.75,
       "y": -321.32
     },
@@ -1975,6 +2034,7 @@
         "handsStyle": "syringe",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -353.18,
       "y": -283.74
     },
@@ -2007,6 +2067,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 83.98,
       "y": -284.14
     },
@@ -2041,6 +2102,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 102.14,
       "y": -196.19
     },
@@ -2075,6 +2137,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "titanium",
       "x": 20.93,
       "y": -312.78
     },
@@ -2107,6 +2170,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 134.12,
       "y": -67.57
     },
@@ -2139,6 +2203,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -60.28,
       "y": -11.83
     },
@@ -2173,6 +2238,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 168.39,
       "y": 436.14
     },
@@ -2207,6 +2273,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 24.63,
       "y": -243.21
     },
@@ -2241,6 +2308,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "titanium",
       "x": 149.89,
       "y": -345.46
     },
@@ -2273,6 +2341,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "titanium",
       "x": 711.63,
       "y": -358.04
     },
@@ -2307,6 +2376,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -281.84,
       "y": -487.1
     },
@@ -2341,6 +2411,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 387,
       "y": 579.64
     },
@@ -2375,6 +2446,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 371.6,
       "y": 492.56
     },
@@ -2407,6 +2479,7 @@
         "handsStyle": "baton",
         "lumePlots": "none"
       },
+      "caseMaterial": "composite",
       "x": -896.11,
       "y": -498.04
     },
@@ -2442,6 +2515,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/omega/seamaster-diver-300m/2531-80-00",
+      "caseMaterial": "steel",
       "x": 133.6,
       "y": -653.78
     },
@@ -2476,6 +2550,7 @@
         "handsStyle": "sword",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 55.89,
       "y": 103.31
     },
@@ -2510,6 +2585,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 108.41,
       "y": -243.56
     },
@@ -2545,6 +2621,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/panerai/submersible/pam00024",
+      "caseMaterial": "steel",
       "x": -510.32,
       "y": 217.1
     },
@@ -2579,6 +2656,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 100.4,
       "y": -3.84
     },
@@ -2613,6 +2691,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 279.85,
       "y": -92.57
     },
@@ -2645,6 +2724,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 514.97,
       "y": -251.61
     },
@@ -2677,6 +2757,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 806.14,
       "y": -101.78
     },
@@ -2711,6 +2792,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 448.85,
       "y": -190.56
     },
@@ -2745,6 +2827,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -40.82,
       "y": -374.89
     },
@@ -2779,6 +2862,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 36.99,
       "y": 15.32
     },
@@ -2814,6 +2898,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/omega/seamaster-planet-ocean/2900-50-91",
+      "caseMaterial": "steel",
       "x": -34.28,
       "y": -420.82
     },
@@ -2847,6 +2932,7 @@
         "lumePlots": "rectangular"
       },
       "watchbase": "https://watchbase.com/sinn/diving-watches/1010-010",
+      "caseMaterial": "steel",
       "x": 581.14,
       "y": -131.52
     },
@@ -2881,6 +2967,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 408.08,
       "y": 274.37
     },
@@ -2913,6 +3000,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 798.49,
       "y": -385.68
     },
@@ -2947,6 +3035,7 @@
         "handsStyle": "sword",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": -105.06,
       "y": 407.26
     },
@@ -2982,6 +3071,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/longines/legend-diver/l3-674-4-50-0",
+      "caseMaterial": "steel",
       "x": -388.65,
       "y": 397.82
     },
@@ -3015,6 +3105,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/longines/hydroconquest/l3-742-4-56-6",
+      "caseMaterial": "steel",
       "x": 453.12,
       "y": -316.18
     },
@@ -3049,6 +3140,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 197.99,
       "y": -47.26
     },
@@ -3083,6 +3175,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 273.2,
       "y": 13.34
     },
@@ -3117,6 +3210,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "titanium",
       "x": 189.15,
       "y": 17.13
     },
@@ -3151,6 +3245,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 544.61,
       "y": 448.57
     },
@@ -3183,6 +3278,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 325.67,
       "y": 249.23
     },
@@ -3218,6 +3314,7 @@
         "lumePlots": "rectangular"
       },
       "watchbase": "https://watchbase.com/omega/seamaster-ploprof/224-30-55-21-04-001",
+      "caseMaterial": "steel",
       "x": -403.09,
       "y": -654.24
     },
@@ -3253,6 +3350,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/rolex/submariner/116610ln-0001",
+      "caseMaterial": "steel",
       "x": 409.49,
       "y": 472.1
     },
@@ -3285,6 +3383,7 @@
         "handsStyle": "baton",
         "lumePlots": "none"
       },
+      "caseMaterial": "titanium",
       "x": -321.71,
       "y": -425.21
     },
@@ -3317,6 +3416,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 410.08,
       "y": 47.01
     },
@@ -3349,6 +3449,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 417.79,
       "y": 0.9
     },
@@ -3385,6 +3486,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/tudor/black-bay/79220r-0002",
+      "caseMaterial": "steel",
       "x": 528.8,
       "y": 173.42
     },
@@ -3420,6 +3522,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/tudor/pelagos/25500tn-0001",
+      "caseMaterial": "titanium",
       "x": 737.82,
       "y": -27.29
     },
@@ -3455,6 +3558,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/blancpain/fifty-fathoms/5000-1110-b52a",
+      "caseMaterial": "steel",
       "x": 133.01,
       "y": 91.06
     },
@@ -3490,6 +3594,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/omega/seamaster-300/233-30-41-21-01-001",
+      "caseMaterial": "steel",
       "x": -83.73,
       "y": -352.66
     },
@@ -3525,6 +3630,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/iwc/gst-aquatimer/iw3290-01",
+      "caseMaterial": "steel",
       "x": 209.84,
       "y": 84.71
     },
@@ -3557,6 +3663,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 271.37,
       "y": -300.97
     },
@@ -3591,6 +3698,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 145.81,
       "y": 241.51
     },
@@ -3625,6 +3733,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 148.35,
       "y": -241.27
     },
@@ -3660,6 +3769,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/seiko/prospex-divers/srp777",
+      "caseMaterial": "steel",
       "x": -349.69,
       "y": -61.16
     },
@@ -3692,6 +3802,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 669.33,
       "y": -149.48
     },
@@ -3724,6 +3835,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 378.43,
       "y": 182.9
     },
@@ -3758,6 +3870,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 167.95,
       "y": 316.64
     },
@@ -3790,6 +3903,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "bronze",
       "x": 338.6,
       "y": -41.26
     },
@@ -3824,6 +3938,7 @@
         "handsStyle": "baton",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 66.61,
       "y": -55.02
     },
@@ -3858,6 +3973,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 176.2,
       "y": -269.97
     },
@@ -3893,6 +4009,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/rado/captain-cook/r32500315",
+      "caseMaterial": "steel",
       "x": 215.16,
       "y": -191.21
     },
@@ -3925,6 +4042,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 350.47,
       "y": -135.77
     },
@@ -3959,6 +4077,7 @@
         "handsStyle": "syringe",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -134.08,
       "y": 36.3
     },
@@ -3994,6 +4113,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/rolex/sea-dweller/126600-0001",
+      "caseMaterial": "steel",
       "x": 295.59,
       "y": 478.4
     },
@@ -4028,6 +4148,7 @@
         "handsStyle": "baton",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": -423.74,
       "y": -123.2
     },
@@ -4063,6 +4184,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/omega/seamaster-diver-300m/210-30-42-20-01-001",
+      "caseMaterial": "steel",
       "x": 185.33,
       "y": -648.42
     },
@@ -4099,6 +4221,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/tudor/black-bay-58/79030n-0002",
+      "caseMaterial": "steel",
       "x": 494.81,
       "y": 256.07
     },
@@ -4133,6 +4256,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 265.42,
       "y": -206.43
     },
@@ -4168,6 +4292,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/tissot/seastar/t120-407-11-041-00",
+      "caseMaterial": "steel",
       "x": 387.16,
       "y": -256.09
     },
@@ -4202,6 +4327,7 @@
         "handsStyle": "cathedral",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": -147.77,
       "y": 336.04
     },
@@ -4236,6 +4362,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 165.27,
       "y": 164.25
     },
@@ -4270,6 +4397,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 594.52,
       "y": -42.44
     },
@@ -4304,6 +4432,7 @@
         "handsStyle": "sword",
         "lumePlots": "round"
       },
+      "caseMaterial": "composite",
       "x": -754.12,
       "y": -413.43
     },
@@ -4339,6 +4468,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/rolex/submariner/126610ln-0001",
+      "caseMaterial": "steel",
       "x": 526.09,
       "y": 543.96
     },
@@ -4373,6 +4503,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 115.72,
       "y": -318
     },
@@ -4406,6 +4537,7 @@
         "lumePlots": "round"
       },
       "watchbase": "https://watchbase.com/mido/ocean-star/m026-830-11-041-00",
+      "caseMaterial": "steel",
       "x": 227.54,
       "y": -244.8
     },
@@ -4438,6 +4570,7 @@
         "handsStyle": "syringe",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 42.7,
       "y": 200.66
     },
@@ -4472,6 +4605,7 @@
         "handsStyle": "snowflake",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "titanium",
       "x": 742.1,
       "y": -96.54
     },
@@ -4506,6 +4640,7 @@
         "handsStyle": "pencil",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 161.54,
       "y": -307.19
     },
@@ -4541,6 +4676,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/omega/seamaster-planet-ocean/215-30-46-21-06-001",
+      "caseMaterial": "steel",
       "x": -8.01,
       "y": -636.89
     },
@@ -4576,6 +4712,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/tudor/pelagos/25407n-0001",
+      "caseMaterial": "titanium",
       "x": 807.45,
       "y": 29.73
     },
@@ -4610,6 +4747,7 @@
         "handsStyle": "cathedral",
         "lumePlots": "sandwich"
       },
+      "caseMaterial": "steel",
       "x": -952.36,
       "y": 348.69
     },
@@ -4644,6 +4782,7 @@
         "handsStyle": "cathedral",
         "lumePlots": "sandwich"
       },
+      "caseMaterial": "steel",
       "x": -906.53,
       "y": 298.31
     },
@@ -4678,6 +4817,7 @@
         "handsStyle": "sword",
         "lumePlots": "sandwich"
       },
+      "caseMaterial": "steel",
       "x": -602.72,
       "y": 241.63
     },
@@ -4713,6 +4853,7 @@
         "lumePlots": "mixed"
       },
       "watchbase": "https://watchbase.com/panerai/luminor/pam00111",
+      "caseMaterial": "steel",
       "x": -952.34,
       "y": 217.13
     },
@@ -4748,6 +4889,7 @@
         "lumePlots": "sandwich"
       },
       "watchbase": "https://watchbase.com/panerai/submersible/pam00382",
+      "caseMaterial": "bronze",
       "x": -576.09,
       "y": 155.66
     },
@@ -4783,6 +4925,7 @@
         "lumePlots": "sandwich"
       },
       "watchbase": "https://watchbase.com/panerai/submersible/pam01229",
+      "caseMaterial": "steel",
       "x": -532.05,
       "y": -45.43
     },
@@ -4817,6 +4960,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "titanium",
       "x": 456.08,
       "y": 464.78
     },
@@ -4851,6 +4995,7 @@
         "handsStyle": "mercedes",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "steel",
       "x": 443.24,
       "y": 508.81
     },
@@ -4885,6 +5030,7 @@
         "handsStyle": "broad-arrow",
         "lumePlots": "round"
       },
+      "caseMaterial": "steel",
       "x": 391.4,
       "y": 410.07
     },
@@ -4917,6 +5063,7 @@
         "handsStyle": "sword",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "titanium",
       "x": 291.74,
       "y": 186.87
     },
@@ -4951,6 +5098,7 @@
         "handsStyle": "sword",
         "lumePlots": "mixed"
       },
+      "caseMaterial": "ceramic",
       "x": 103.58,
       "y": 413.62
     }

@@ -550,6 +550,10 @@ function initData(data) {
       size: !isFinite(w.diameterMm) ? 's3' : w.diameterMm < 38.5 ? 's1' : w.diameterMm < 39.5 ? 's39' : w.diameterMm < 40.5 ? 's40' : w.diameterMm < 41.5 ? 's41' : w.diameterMm < 42.5 ? 's42' : 's3',
       origin: w.country || null,
       era: w.year ? String(Math.floor(w.year / 10) * 10) : null,
+      /* authored per-watch; steel is the fallback because it is true for the
+         overwhelming share of the corpus. 'composite' (G-Shock resin) matches
+         no chip on purpose — the four options are the four honest materials. */
+      material: w.caseMaterial || 'steel',
     };
   }
   buildLens();
@@ -1300,6 +1304,7 @@ const LENS_GROUPS = [
   { key: 'dial', label: 'DIAL' },
   { key: 'movement', label: 'MOVEMENT' },
   { key: 'size', label: 'CASE SIZE' },
+  { key: 'material', label: 'CASE MATERIAL' },
   { key: 'origin', label: 'ORIGIN' },
 ];
 const LENS_CHIPS = {
@@ -1308,6 +1313,7 @@ const LENS_CHIPS = {
   movement: [['automatic', 'Automatic'], ['manual', 'Hand-wound'], ['quartz', 'Quartz'],
              ['digital', 'Digital'], ['solar', 'Solar'], ['spring-drive', 'Spring Drive']],
   size: [['s1', '≤ 38 mm'], ['s39', '39 mm'], ['s40', '40 mm'], ['s41', '41 mm'], ['s42', '42 mm'], ['s3', '43 mm +']],
+  material: [['steel', 'Stainless steel'], ['titanium', 'Titanium'], ['bronze', 'Bronze'], ['ceramic', 'Ceramic']],
   origin: [['CH', 'Switzerland'], ['DE', 'Germany'], ['JP', 'Japan'], ['FR', 'France'],
            ['GB', 'United Kingdom'], ['US', 'United States'], ['RU', 'Russia'], ['IT', 'Italy']],
   /* Year as ERA — the meaningful axis for a curated field is the decade, not the
@@ -1316,8 +1322,8 @@ const LENS_CHIPS = {
         ['1970', '1970s'], ['1980', '1980s'], ['1990', '1990s'], ['2000', '2000s'],
         ['2010', '2010s'], ['2020', '2020s']],
 };
-const SET_KEYS = ['era', 'dial', 'movement', 'size', 'origin'];
-const lensSel = { era: new Set(), dial: new Set(), movement: new Set(), size: new Set(), origin: new Set() };
+const SET_KEYS = ['era', 'dial', 'movement', 'size', 'material', 'origin'];
+const lensSel = { era: new Set(), dial: new Set(), movement: new Set(), size: new Set(), material: new Set(), origin: new Set() };
 /* price is a continuous range on a log scale — min/max = data domain, lo/hi = handles */
 const lensPrice = { min: 100, max: 1000000, lo: 100, hi: 1000000 };
 let lensGhost = null;             /* outgoing selection, so the release fades rather than pops */

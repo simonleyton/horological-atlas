@@ -6352,6 +6352,11 @@ function bindFitting() {
       if (btn) fitChannel(btn.dataset.ch);
     });
     document.addEventListener('click', e => {
+      /* a pinned preview dismisses on the next tap anywhere else — the way a
+         popover should, since there is no cursor to leave on a touch screen */
+      if (fitAltPinned && !e.target.closest('.fr-alt-link') && !e.target.closest('#watch-preview')) {
+        fitAltUnpin();
+      }
       if (!fitSheetOpen) return;
       if (e.target.closest('#fr-sheet') || e.target.closest('#fr-share')) return;
       fitSheetToggle(false);
@@ -6426,6 +6431,7 @@ function openFitting(opts) {
 
 function closeFitting() {
   if (!fitOpen) return;
+  fitAltUnpin();          /* a pinned preview must not outlive the panel it belongs to */
   fitOpen = false;
   clearTimeout(fitTurnTimer); clearTimeout(fitAdvTimer);
   fitEl.root.classList.remove('on');
@@ -6699,16 +6705,36 @@ function renderReveal(opts) {
     fitEl.alt.innerHTML = lead + '<em></em>.';
     const em = fitEl.alt.querySelector('em');
     em.textContent = raw;
-    /* the archetype previews the runner-up watch on hover/focus */
+    /* The archetype previews the runner-up. It used to bind hover and focus
+       ONLY, which made it a lie on a phone: underlined, role="button", and
+       completely inert to a tap. Pointer-independent activation now drives it,
+       and hover stays as the desktop shortcut. */
     const ruId = fitResult.runnerUp.id;
     em.className = 'fr-alt-link';
     em.tabIndex = 0;
     em.setAttribute('role', 'button');
+    em.setAttribute('aria-expanded', 'false');
     em.setAttribute('aria-label', 'Preview ' + ru.name);
-    em.onmouseenter = () => fitPreviewShow(ruId, em);
-    em.onmouseleave = () => hideWatchPreview();
-    em.onfocus = () => fitPreviewShow(ruId, em);
-    em.onblur = () => hideWatchPreview();
+    fitAltPinned = false;
+
+    const setPinned = on => {
+      fitAltPinned = on;
+      em.setAttribute('aria-expanded', on ? 'true' : 'false');
+      if (on) fitPreviewShow(ruId, em); else hideWatchPreview();
+    };
+    em.onclick = e => { e.preventDefault(); setPinned(!fitAltPinned); };
+    /* a span with role="button" gets no synthesised click from the keyboard —
+       Enter and Space have to be wired by hand */
+    em.onkeydown = e => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault(); setPinned(!fitAltPinned);
+      }
+    };
+    em.onmouseenter = () => { if (!fitAltPinned) fitPreviewShow(ruId, em); };
+    em.onmouseleave = () => { if (!fitAltPinned) hideWatchPreview(); };
+    em.onfocus = () => { if (!fitAltPinned) fitPreviewShow(ruId, em); };
+    em.onblur = () => { if (!fitAltPinned) hideWatchPreview(); };
+    fitEl.altLink = em;
     fitEl.alt.hidden = false;
   } else {
     fitEl.alt.hidden = true;
@@ -6839,6 +6865,15 @@ function fitShare() {
 
 /* ---- THE SHEET ---------------------------------------------------------- */
 let fitSheetOpen = false;
+/* the runner-up preview, held open by tap/Enter rather than by a hovering cursor */
+let fitAltPinned = false;
+
+function fitAltUnpin() {
+  if (!fitAltPinned) return;
+  fitAltPinned = false;
+  if (fitEl.altLink) fitEl.altLink.setAttribute('aria-expanded', 'false');
+  hideWatchPreview();
+}
 
 function fitSheetToggle(force) {
   const sheet = $('fr-sheet');
@@ -6907,6 +6942,7 @@ function fitRestart() {
   fitResult = null;
   for (const k in fitAnswers) delete fitAnswers[k];
   fitExtras.clear();
+  fitAltUnpin();
   /* a new fitting is a new watch — the old engraving does not follow it */
   fitInscription = '';
   fitPaintInscription();
@@ -7263,7 +7299,8 @@ function onFitKey(e) {
   if (!fitOpen) return;
   if (e.key === 'Escape') {
     e.preventDefault(); e.stopPropagation();
-    /* Escape unwinds one layer at a time — the sheet before the fitting itself */
+    /* Escape unwinds one layer at a time — preview, then sheet, then the fitting */
+    if (fitAltPinned) { fitAltUnpin(); return; }
     if (fitSheetOpen) { fitSheetToggle(false); return; }
     closeFitting();
     return;

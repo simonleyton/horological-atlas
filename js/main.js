@@ -543,9 +543,10 @@ function initData(data) {
       dial: cn === 'Black' ? 'black'
         : (cn === 'Blue' || cn === 'Navy' || cn === 'Teal' || cn === 'Purple') ? 'blue'
         : cn === 'Green' ? 'green'
-        : (cn === 'Orange' || cn === 'Red' || cn === 'Burgundy' || cn === 'Yellow') ? 'warm'
+        : (cn === 'Orange' || cn === 'Red' || cn === 'Burgundy' || cn === 'Yellow'
+           || cn === 'Gold' || cn === 'Brown') ? 'warm'   /* gilt folded in — one member didn't earn a chip */
         : (cn === 'White' || cn === 'Cream' || cn === 'Silver' || cn === 'Grey') ? 'light'
-        : (cn === 'Gold' || cn === 'Brown') ? 'gilt' : null,
+        : null,
       /* solar folds into quartz (an Eco-Drive is solar-charged quartz) and
          spring-drive into automatic (it winds itself) — the chips went, the
          watches stay filterable instead of orphaned */
@@ -1314,7 +1315,7 @@ const LENS_GROUPS = [
 ];
 const LENS_CHIPS = {
   dial: [['black', 'Black', '#14171b'], ['blue', 'Blue', '#2c4f7d'], ['green', 'Green', '#2e5a44'],
-         ['warm', 'Orange & red', '#c2632e'], ['light', 'White & silver', '#c9ced4'], ['gilt', 'Gold & brown', '#8a6b45']],
+         ['warm', 'Orange & red', '#c2632e'], ['light', 'White & silver', '#c9ced4']],
   movement: [['automatic', 'Automatic'], ['manual', 'Hand-wound'], ['quartz', 'Quartz'],
              ['digital', 'Digital']],
   size: [['s1', '≤ 38 mm'], ['s39', '39 mm'], ['s40', '40 mm'], ['s41', '41 mm'], ['s42', '42 mm'], ['s3', '43 mm +']],

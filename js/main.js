@@ -546,7 +546,12 @@ function initData(data) {
         : (cn === 'Orange' || cn === 'Red' || cn === 'Burgundy' || cn === 'Yellow') ? 'warm'
         : (cn === 'White' || cn === 'Cream' || cn === 'Silver' || cn === 'Grey') ? 'light'
         : (cn === 'Gold' || cn === 'Brown') ? 'gilt' : null,
-      movement: w.movement || null,
+      /* solar folds into quartz (an Eco-Drive is solar-charged quartz) and
+         spring-drive into automatic (it winds itself) — the chips went, the
+         watches stay filterable instead of orphaned */
+      movement: w.movement === 'solar' ? 'quartz'
+        : w.movement === 'spring-drive' ? 'automatic'
+        : w.movement || null,
       size: !isFinite(w.diameterMm) ? 's3' : w.diameterMm < 38.5 ? 's1' : w.diameterMm < 39.5 ? 's39' : w.diameterMm < 40.5 ? 's40' : w.diameterMm < 41.5 ? 's41' : w.diameterMm < 42.5 ? 's42' : 's3',
       origin: w.country || null,
       era: w.year ? String(Math.floor(w.year / 10) * 10) : null,
@@ -1311,7 +1316,7 @@ const LENS_CHIPS = {
   dial: [['black', 'Black', '#14171b'], ['blue', 'Blue', '#2c4f7d'], ['green', 'Green', '#2e5a44'],
          ['warm', 'Orange & red', '#c2632e'], ['light', 'White & silver', '#c9ced4'], ['gilt', 'Gold & brown', '#8a6b45']],
   movement: [['automatic', 'Automatic'], ['manual', 'Hand-wound'], ['quartz', 'Quartz'],
-             ['digital', 'Digital'], ['solar', 'Solar'], ['spring-drive', 'Spring Drive']],
+             ['digital', 'Digital']],
   size: [['s1', '≤ 38 mm'], ['s39', '39 mm'], ['s40', '40 mm'], ['s41', '41 mm'], ['s42', '42 mm'], ['s3', '43 mm +']],
   material: [['steel', 'Stainless steel'], ['titanium', 'Titanium'], ['bronze', 'Bronze'], ['ceramic', 'Ceramic']],
   origin: [['CH', 'Switzerland'], ['DE', 'Germany'], ['JP', 'Japan'], ['FR', 'France'],

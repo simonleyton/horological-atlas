@@ -6196,7 +6196,13 @@ function drawSurfaceCeiling(c, w_, h_, cy, Y0, aMul) {
    ====================================================================== */
 
 function resize() {
-  dpr = Math.min(window.devicePixelRatio || 1, 3);
+  /* capped at 2, not 3. The atlas fills the viewport, so every extra DPR step
+     is quadratic: a 1440x900 window is 5.2M pixels at 2x and 11.7M at 3x, and
+     each of those frames also carries marine snow, the bubble column and up to
+     ~160 live sprites. 3x buys detail almost nobody can resolve on a scene
+     like this, and it costs the most on exactly the 3x phones least able to
+     pay it. Text and card art stay crisp at 2x. */
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth;
   H = window.innerHeight;
   canvas.width = Math.max(1, Math.round(W * dpr));

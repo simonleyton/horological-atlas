@@ -1942,7 +1942,13 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
   padding-bottom: 11px;
   border-bottom: 1px solid var(--line-1);
 }
-#fr-ledger .fr-lrow:last-child { border-bottom: none; }
+/* the rule under the last VISIBLE row is the one that has to go. :last-child is
+   structural — it still matches the inscription row while it is hidden — so the
+   border is assigned explicitly per state instead. */
+#fr-ledger .fr-lrow[hidden] { display: none; }
+#fr-ledger .fr-lrow:nth-child(2) { border-bottom: none; }
+#fr-ledger.has-inscription .fr-lrow:nth-child(2) { border-bottom: 1px solid var(--line-1); }
+#fr-ledger.has-inscription .fr-lrow:nth-child(3) { border-bottom: none; }
 #fr-ledger dt {
   font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase;
   color: var(--text-3); font-weight: 500;
@@ -1972,7 +1978,12 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
   font-size: 14px; line-height: 1.55; letter-spacing: 0.01em;
   color: var(--text-1);
   margin: 0;
+  /* mirrors the PNG's line budget (buildPoster) — the plate is a fixed height
+     and the prose is what yields, so the foot rule is never crossed */
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6;
+  overflow: hidden;
 }
+#fr-ledger.has-inscription ~ #fr-why #fr-why-text { -webkit-line-clamp: 5; }
 
 /* the caption fills the freed space between the hero window and the plate foot.
    (was margin-bottom:auto, which anchored a bottomless plate — with the foot
@@ -1999,7 +2010,15 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 }
 
 /* reveal actions */
+/* explicit rows — primary, sheet, alternatives. Not flex-wrap: a wrapped row
+   let Save slide up beside the primary as soon as it became visible, which
+   flattened the hierarchy the whole layout exists to state. */
 #fr-actions {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px;
+}
+#fr-act-primary { display: flex; justify-content: center; gap: 12px; }
+#fr-act-quiet {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
   gap: 12px;
 }
@@ -2023,9 +2042,7 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
    reveal. The rest sit under it as quiet alternatives, not as peers; four
    equal pills meant nothing was actually being recommended. */
 #fr-share, #fr-take {
-  flex: 0 0 100%;
-  max-width: 320px;
-  margin: 0 auto 2px;
+  min-width: 320px;              /* the sheet below is cut to the same measure */
   background: var(--text-1) !important;
   color: var(--field-0) !important;
   border-color: var(--text-1) !important;
@@ -2034,6 +2051,86 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 #fr-save, #fr-see { color: var(--text-2) !important; }
 #fr-restart { color: var(--text-3) !important; border-color: transparent !important; }
 #fr-restart:hover { color: var(--text-2) !important; background: transparent !important; }
+
+/* ---- THE ENGRAVING CONTROL ----
+   One quiet line until it is taken up. The field, when it opens, is a ruled
+   line and a caret — no box, no chrome. You are engraving, not filling a form. */
+#fr-inscribe { margin: 0 0 18px; text-align: center; }
+#fr-inscribe-toggle {
+  background: none; border: 0; padding: 4px 6px;
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color 160ms var(--ease-out);
+}
+#fr-inscribe-toggle:hover { color: var(--text-2); }
+#fr-inscribe-toggle:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
+#fr-inscribe-row {
+  display: flex; align-items: baseline; justify-content: center; gap: 12px;
+  margin-top: 10px;
+}
+/* display:flex outranks the hidden attribute's UA display:none — without this
+   the field is open on arrival, which is the one thing the design refuses */
+#fr-inscribe-row[hidden] { display: none; }
+#fr-inscribe-input {
+  width: 260px;
+  background: none; border: 0; border-bottom: 1px solid var(--line-2);
+  padding: 4px 2px;
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 500;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-1);
+  text-align: center;
+  transition: border-color 200ms var(--ease-out);
+}
+#fr-inscribe-input::placeholder { color: var(--text-3); letter-spacing: 0.16em; }
+#fr-inscribe-input:focus { outline: none; border-bottom-color: #F6935D; }
+#fr-inscribe-count {
+  font-size: 11px; letter-spacing: 0.2em; color: var(--text-3);
+  font-variant-numeric: tabular-nums; min-width: 2ch;
+}
+#fr-inscribe-done {
+  background: none; border: 0; padding: 4px 6px; cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 11px; font-weight: 500; letter-spacing: 0.32em; text-transform: uppercase;
+  color: var(--text-2);
+}
+#fr-inscribe-done:hover { color: var(--text-1); }
+#fr-inscribe-done:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
+
+/* ---- THE SHEET — named channels, set as words ----
+   No brand glyphs, no colour: four foreign logos would be the loudest thing on
+   a page built to feel like a museum plate. The panel borrows the plate's own
+   materials — mat gradient, hairline, ruled rows. */
+#fr-sheet {
+  width: 320px;                  /* flush with the primary above it */
+  border: 1px solid var(--line-2);
+  background: linear-gradient(180deg, rgba(16,21,28,0.55), rgba(9,12,17,0.80));
+  text-align: left;
+}
+#fr-sheet .fr-ch {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  width: 100%; padding: 13px 16px;
+  background: none; border: 0; border-bottom: 1px solid var(--line-1);
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: background 160ms var(--ease-out);
+}
+#fr-sheet .fr-ch:last-child { border-bottom: none; }
+#fr-sheet .fr-ch:hover { background: rgba(233,237,242,0.045); }
+#fr-sheet .fr-ch:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.fr-ch-name {
+  font-size: 13px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-1);
+}
+/* the honest small print — Instagram cannot take a post from the web, and the
+   row says so rather than looking identical to the ones that can */
+.fr-ch-note {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--text-3); text-align: right;
+}
 
 /* "A fitting, shared with you" — the received plate says whose it is before
    the viewer mistakes the result for their own */

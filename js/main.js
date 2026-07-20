@@ -6324,6 +6324,50 @@ function bindFitting() {
   fitEl.restart.addEventListener('click', fitRestart);
   if (fitEl.take) fitEl.take.addEventListener('click', fitTake);
 
+  /* the sheet — channel rows, Escape, and click-away. Non-modal by choice: it
+     is a short list of links, not a task, and a focus trap would be heavier
+     machinery than the thing it guards. */
+  { const sheet = $('fr-sheet');
+    if (sheet) sheet.addEventListener('click', e => {
+      const btn = e.target.closest('.fr-ch');
+      if (btn) fitChannel(btn.dataset.ch);
+    });
+    document.addEventListener('click', e => {
+      if (!fitSheetOpen) return;
+      if (e.target.closest('#fr-sheet') || e.target.closest('#fr-share')) return;
+      fitSheetToggle(false);
+    });
+  }
+
+  /* the engraving */
+  { const tog = $('fr-inscribe-toggle'), row = $('fr-inscribe-row'),
+          inp = $('fr-inscribe-input'), cnt = $('fr-inscribe-count'), done = $('fr-inscribe-done');
+    if (tog && row && inp) {
+      tog.addEventListener('click', () => {
+        const open = row.hidden;
+        row.hidden = !open;
+        tog.setAttribute('aria-expanded', open ? 'true' : 'false');
+        tog.textContent = open ? 'Inscription' : (fitInscription ? 'Edit inscription' : 'Add an inscription');
+        if (open) requestAnimationFrame(() => { try { inp.focus(); } catch (e) {} });
+      });
+      /* live: it appears on the plate as it is typed — the whole point */
+      inp.addEventListener('input', () => {
+        fitSetInscription(inp.value);
+        if (cnt) cnt.textContent = String(32 - inp.value.length);
+      });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); done && done.click(); }
+        if (e.key === 'Escape') { e.preventDefault(); inp.value = ''; fitSetInscription(''); done && done.click(); }
+      });
+      if (done) done.addEventListener('click', () => {
+        row.hidden = true;
+        tog.setAttribute('aria-expanded', 'false');
+        tog.textContent = fitInscription ? 'Edit inscription' : 'Add an inscription';
+        try { tog.focus(); } catch (e) {}
+      });
+    }
+  }
+
   /* keyboard: overlay owns keys while open (mirrors lightbox pattern) */
   fitEl.root.addEventListener('keydown', onFitKey);
 }
@@ -6656,6 +6700,10 @@ function renderReveal(opts) {
      whose plate this is, and collapses the action row to a single invitation. */
   fitEl.root.classList.toggle('received', received);
   if (received) fitEl.alt.hidden = true;
+  /* a received plate is someone else's — you do not engrave another man's watch */
+  { const insc = $('fr-inscribe'); if (insc) insc.hidden = received; }
+  fitSheetToggle(false);
+  fitPaintInscription();
   if (fitEl.recv) fitEl.recv.hidden = !received;
   if (fitEl.take) fitEl.take.hidden = !received;
   fitEl.share.hidden = received;
@@ -6735,36 +6783,89 @@ function fitSeeInAtlas() {
   invalidate();
 }
 
-function fitShare() {
-  if (!fitResult || !fitResult.best) return;
+/* the phone's own sheet beats anything we can draw — it holds Instagram, X,
+   Threads, WhatsApp and Messages in the user's own app order, and it can carry
+   the PNG. Our sheet exists for the desktop, where no such thing is offered. */
+function prefersOSSheet() {
+  return canShareFiles() &&
+    (window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false);
+}
+
+function fitShareText() {
   const b = fitWatchMeta(fitResult.best.id);
   const count = (S.watches && S.watches.length) || Object.keys(FITTING).length;
-  const url = fitShareURL(b.id);
   /* written as the sender, in the site's register — no "check out", no hype */
-  const text = 'The Fitting put me on the ' + b.name + '. ' + count + ' dive watches, one plate.';
+  return { b, url: fitShareURL(b.id),
+           text: 'The Fitting put me on the ' + b.name + '. ' + count + ' dive watches, one plate.' };
+}
 
-  /* the OS sheet already contains Instagram, X, Threads, WhatsApp, Messages —
-     in the user's own app order. Adding our own row of brand glyphs would put
-     foreign logos inside a frame built to feel like a museum plate, and split
-     the tap across eight targets instead of one. */
-  const blob = (fitPoster.id === b.id) ? fitPoster.blob : null;
-  if (blob && canShareFiles()) {
-    const file = new File([blob], 'the-fitting-' + b.id + '.png', { type: 'image/png' });
-    navigator.share({ files: [file], text, url })
-      .then(() => { elLive.textContent = 'Shared.'; })
-      .catch(() => {});   /* AbortError = user dismissed the sheet; say nothing */
-    return;
-  }
-  /* no file support (or the plate isn't drawn yet): share the link if the sheet
-     exists at all, otherwise copy it — Save poster carries the image on desktop */
-  if (navigator.share) {
+function fitShare() {
+  if (!fitResult || !fitResult.best) return;
+  const { b, url, text } = fitShareText();
+
+  if (prefersOSSheet()) {
+    const blob = (fitPoster.id === b.id) ? fitPoster.blob : null;
+    if (blob) {
+      const file = new File([blob], 'the-fitting-' + b.id + '.png', { type: 'image/png' });
+      navigator.share({ files: [file], text, url })
+        .then(() => { elLive.textContent = 'Shared.'; })
+        .catch(() => {});   /* AbortError = user dismissed the sheet; say nothing */
+      return;
+    }
     navigator.share({ text, url }).catch(() => {});
     return;
   }
-  const done = () => { elLive.textContent = 'Link copied.'; flashBtn(fitEl.share, 'Copied'); };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(done).catch(() => fallbackCopy(url, done));
-  } else fallbackCopy(url, done);
+  fitSheetToggle();          /* desktop: our own, named */
+}
+
+/* ---- THE SHEET ---------------------------------------------------------- */
+let fitSheetOpen = false;
+
+function fitSheetToggle(force) {
+  const sheet = $('fr-sheet');
+  if (!sheet) return;
+  const open = force === undefined ? !fitSheetOpen : force;
+  if (open === fitSheetOpen) return;
+  fitSheetOpen = open;
+  sheet.hidden = !open;
+  fitEl.share.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) {
+    const first = sheet.querySelector('.fr-ch');
+    if (first) requestAnimationFrame(() => { try { first.focus(); } catch (e) {} });
+  } else {
+    try { fitEl.share.focus(); } catch (e) {}      /* focus goes back where it came from */
+  }
+}
+
+function fitChannel(ch) {
+  if (!fitResult || !fitResult.best) return;
+  const { b, url, text } = fitShareText();
+  const enc = encodeURIComponent;
+  let href = '';
+  if (ch === 'instagram') {
+    /* Instagram publishes NO web intent — there is no URL that opens a composer
+       with an image. Pretending otherwise with a button that goes nowhere is the
+       one thing worse than not offering it. So we do the only true thing: hand
+       over the plate and say plainly what happens next. */
+    fitSavePoster();
+    elLive.textContent = 'Plate saved. Post it to Instagram from your photos.';
+    fitSheetToggle(false);
+    return;
+  }
+  if (ch === 'copy') {
+    const done = () => { elLive.textContent = 'Link copied.'; fitSheetToggle(false); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done).catch(() => fallbackCopy(url, done));
+    } else fallbackCopy(url, done);
+    return;
+  }
+  if (ch === 'x')        href = 'https://x.com/intent/tweet?text=' + enc(text) + '&url=' + enc(url);
+  else if (ch === 'reddit')   href = 'https://www.reddit.com/submit?url=' + enc(url) + '&title=' + enc(text);
+  else if (ch === 'whatsapp') href = 'https://wa.me/?text=' + enc(text + ' ' + url);
+  if (!href) return;
+  window.open(href, '_blank', 'noopener,noreferrer');
+  elLive.textContent = 'Opening ' + ch + '.';
+  fitSheetToggle(false);
 }
 function fallbackCopy(text, done) {
   try {
@@ -6787,6 +6888,16 @@ function fitRestart() {
   fitResult = null;
   for (const k in fitAnswers) delete fitAnswers[k];
   fitExtras.clear();
+  /* a new fitting is a new watch — the old engraving does not follow it */
+  fitInscription = '';
+  fitPaintInscription();
+  fitSheetToggle(false);
+  { const inp = $('fr-inscribe-input'), row = $('fr-inscribe-row'),
+          tog = $('fr-inscribe-toggle'), cnt = $('fr-inscribe-count');
+    if (inp) inp.value = '';
+    if (cnt) cnt.textContent = '32';
+    if (row) row.hidden = true;
+    if (tog) { tog.textContent = 'Add an inscription'; tog.setAttribute('aria-expanded', 'false'); } }
   fitEl.reveal.hidden = true;
   fitEl.reveal.classList.remove('fr-bloom');
   fitEl.quiz.style.display = '';
@@ -6887,6 +6998,8 @@ function buildPoster(opts) {
       ['REFERENCE', b.name.toUpperCase(), 15, 0.14],
       ['PROVENANCE', b.ref.toUpperCase(), 13, 0.16],
     ];
+    /* the engraving takes its place in the ledger, on the same rules */
+    if (fitInscription) rows.push(['INSCRIPTION', fitInscription.toUpperCase(), 13, 0.16]);
     rows.forEach((r, i) => {
       const rowY = y + i * 34;
       c.textAlign = 'left';
@@ -6903,16 +7016,24 @@ function buildPoster(opts) {
     c.textAlign = 'left';
     y += (rows.length - 1) * 34 + 40;            /* → insight label baseline (mt18) */
 
+    /* the foot's position is fixed, so it sets the prose's budget — computed
+       BEFORE the prose is drawn. The plate is a fixed 1350 tall: a third ledger
+       row plus the longest insight in the corpus (the Fifty Fathoms, ~5 lines)
+       leaves ~21px of air, and anything longer would run through the rule. The
+       prose yields, never the frame. */
+    const footBaseY = H0 - HAIR - PAD_BOT;          /* 1350 − 74 − 34 = 1242 */
+    const footDivY = footBaseY - 22;
+    const proseTop = y + 9 + 14;
+    const maxLines = Math.max(2, Math.floor((footDivY - 16 - proseTop) / (14 * 1.55)) + 1);
+
     /* WHY THIS WATCH, RIGHT NOW — orange left-aligned label + prose (ledger format) */
-    fitDrawWhy(c, lx, y, ledgerW, b.insight);
+    fitDrawWhy(c, lx, y, ledgerW, b.insight, maxLines);
 
     /* ---- PLATE FOOT — the return path, bracketed by the serial.
        Set in the same engraved caps as the ledger labels so it reads as part
        of the plate's own typography, not as a watermark stuck on top of it.
        This is the only thing on the poster that tells a stranger where the
        fitting came from — without it the plate is a beautiful dead end. */
-    const footBaseY = H0 - HAIR - PAD_BOT;          /* 1350 − 74 − 34 = 1242 */
-    const footDivY = footBaseY - 22;
     c.strokeStyle = 'rgba(233,237,242,0.08)'; c.lineWidth = 1;
     c.beginPath(); c.moveTo(contentL, footDivY); c.lineTo(contentR, footDivY); c.stroke();
     fitSetType(c, 11, 500, 0.32);
@@ -6981,6 +7102,41 @@ function buildPoster(opts) {
   /* if cached and already complete, onload may not fire */
   if (img.complete && img.naturalWidth) drawStage(img);
   });
+}
+
+/* ---- THE ENGRAVING ------------------------------------------------------
+   A caseback inscription: the one thing on the plate that is the owner's and
+   not the watch's. It lands as a THIRD LEDGER ROW rather than a rendered
+   caseback disc — the plate already has a language for "a fact about this
+   watch", and inventing a second one to say something smaller would be
+   decoration. Clarity over complexity, and it survives being 200px wide.
+
+   It rides in the PNG and never in the deep link: user text in a URL means a
+   stranger can craft a link that renders arbitrary words on our page and pass
+   it off as ours. The image is flat and self-contained; the link stays clean. */
+let fitInscription = '';
+
+function fitSetInscription(raw) {
+  /* one line, collapsed, trimmed to the caseback's worth of room */
+  const v = String(raw || '').replace(/\s+/g, ' ').trim().slice(0, 32);
+  if (v === fitInscription) return;
+  fitInscription = v;
+  fitPaintInscription();
+  /* the cached PNG is now stale — rebuild it, or Share would hand over a plate
+     that does not match the one on screen */
+  if (fitResult && fitResult.best) {
+    fitPoster = { id: null, blob: null };
+    fitPrimePoster(fitResult.best.id);
+  }
+}
+
+function fitPaintInscription() {
+  const row = $('fr-lrow-inscription'), val = $('fr-inscription'), led = $('fr-ledger');
+  if (!row || !val) return;
+  const on = !!fitInscription;
+  row.hidden = !on;
+  val.textContent = fitInscription;
+  if (led) led.classList.toggle('has-inscription', on);
 }
 
 /* ---- THE PLATE IS THE SHARE ---------------------------------------------
@@ -7052,7 +7208,7 @@ function fitShareURL(id) {
 
 /* draw the "why this watch, right now" insight, LEFT-ALIGNED (ledger format):
    orange label (#F6935D) + wrapped prose. lx = left edge of the ledger column. */
-function fitDrawWhy(c, lx, y, maxW, insight) {
+function fitDrawWhy(c, lx, y, maxW, insight, maxLines) {
   c.save();
   c.textAlign = 'left';
   /* label — sea-time orange, letter-spaced caps (mirrors #fr-why-label) */
@@ -7071,6 +7227,11 @@ function fitDrawWhy(c, lx, y, maxW, insight) {
     else line = test;
   }
   if (line) lines.push(line);
+  /* the frame wins — trim to the budget and mark the cut honestly */
+  if (maxLines && lines.length > maxLines) {
+    lines.length = maxLines;
+    lines[maxLines - 1] = lines[maxLines - 1].replace(/[,;:.\s]+$/, '') + '…';
+  }
   const lh = 14 * 1.55;
   c.fillStyle = INK;
   lines.forEach((ln, i) => c.fillText(ln, lx, proseY + i * lh));
@@ -7083,7 +7244,9 @@ function onFitKey(e) {
   if (!fitOpen) return;
   if (e.key === 'Escape') {
     e.preventDefault(); e.stopPropagation();
-    if (!fitEl.reveal.hidden) closeFitting(); else closeFitting();
+    /* Escape unwinds one layer at a time — the sheet before the fitting itself */
+    if (fitSheetOpen) { fitSheetToggle(false); return; }
+    closeFitting();
     return;
   }
   /* reveal screen: let Tab/Enter work natively on the action row */

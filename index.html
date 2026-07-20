@@ -23,7 +23,7 @@
   <link rel="icon" href="favicon-16.png?v=2" sizes="16x16" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
   <meta name="theme-color" content="#06080B">
-  <link rel="stylesheet" href="app.css?v=80">
+  <link rel="stylesheet" href="app.css?v=84">
   <script>/* skip the surface hero for returning visitors + shared deep links (no flash).
        #fit and #fit&r=<id> count: both open the fitting overlay immediately, so
        landing on the hero would bury a shared plate behind a full-screen scroll. */
@@ -278,6 +278,9 @@
             <dl id="fr-ledger">
               <div class="fr-lrow"><dt>Reference</dt><dd id="fr-name"></dd></div>
               <div class="fr-lrow"><dt>Provenance</dt><dd id="fr-ref"></dd></div>
+              <!-- the caseback engraving — a third ledger row, because the plate
+                   already has a language for "a fact about this watch" -->
+              <div class="fr-lrow" id="fr-lrow-inscription" hidden><dt>Inscription</dt><dd id="fr-inscription"></dd></div>
             </dl>
             <div id="fr-why">
               <span id="fr-why-label">Why this watch, right now</span>
@@ -292,16 +295,61 @@
         </div>
       </div>
       <p id="fr-alt"></p>
+
+      <!-- THE ENGRAVING — closed by default. An empty field on arrival would
+           ask a question nobody came here to answer; the offer is one quiet line
+           until it is taken up. -->
+      <div id="fr-inscribe">
+        <button id="fr-inscribe-toggle" type="button" aria-expanded="false" aria-controls="fr-inscribe-row">Add an inscription</button>
+        <div id="fr-inscribe-row" hidden>
+          <label for="fr-inscribe-input" class="vh">Caseback inscription, 32 characters</label>
+          <input id="fr-inscribe-input" type="text" maxlength="32" autocomplete="off"
+                 spellcheck="false" placeholder="For the one who goes first">
+          <span id="fr-inscribe-count" aria-hidden="true">32</span>
+          <button id="fr-inscribe-done" type="button">Done</button>
+        </div>
+      </div>
+
+      <!-- one primary on its own line, the sheet directly beneath it, then the
+           quiet alternatives. Explicit rows rather than flex-wrap: a wrapped
+           layout let Save creep up alongside the primary the moment it showed. -->
       <div id="fr-actions">
-        <button id="fr-share" type="button">Share your plate</button>
-        <button id="fr-take" type="button" hidden>Take the fitting</button>
-        <button id="fr-save" type="button">Save poster</button>
-        <button id="fr-see" type="button">See it in the index</button>
-        <button id="fr-restart" type="button">Start over</button>
+        <div id="fr-act-primary">
+          <button id="fr-share" type="button" aria-expanded="false" aria-controls="fr-sheet">Share your plate</button>
+          <button id="fr-take" type="button" hidden>Take the fitting</button>
+        </div>
+
+        <!-- THE CHANNELS — words, not logos. Four foreign brand marks inside a
+             frame built to feel like a museum plate would be the loudest thing on
+             the page. Set in the plate's own engraved caps, they disappear into it.
+             Desktop only: on a phone the OS sheet already holds these and more. -->
+        <div id="fr-sheet" hidden aria-label="Share your plate">
+          <button class="fr-ch" type="button" data-ch="instagram">
+            <span class="fr-ch-name">Instagram</span><span class="fr-ch-note">Save, then post</span>
+          </button>
+          <button class="fr-ch" type="button" data-ch="x">
+            <span class="fr-ch-name">X</span><span class="fr-ch-note">Link + preview</span>
+          </button>
+          <button class="fr-ch" type="button" data-ch="reddit">
+            <span class="fr-ch-name">Reddit</span><span class="fr-ch-note">Link + preview</span>
+          </button>
+          <button class="fr-ch" type="button" data-ch="whatsapp">
+            <span class="fr-ch-name">WhatsApp</span><span class="fr-ch-note">Link</span>
+          </button>
+          <button class="fr-ch" type="button" data-ch="copy">
+            <span class="fr-ch-name">Copy link</span><span class="fr-ch-note"></span>
+          </button>
+        </div>
+
+        <div id="fr-act-quiet">
+          <button id="fr-save" type="button">Save poster</button>
+          <button id="fr-see" type="button">See it in the index</button>
+          <button id="fr-restart" type="button">Start over</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=81"></script>
+  <script type="module" src="js/main.js?v=83"></script>
 </body>
 </html>

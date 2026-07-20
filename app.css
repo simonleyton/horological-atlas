@@ -2504,3 +2504,81 @@ html.no-hero #hero { display: none; }
   .chip-time .colon { animation: none; }
 }
 
+
+/* ---- THE SHEET'S SCRIM, GRABBER AND FOOTER ---- */
+
+/* scrim — phone only; on desktop the popover coexists with the live field */
+#lens-scrim {
+  position: fixed; inset: 0; z-index: 4;
+  background: rgba(4, 5, 10, 0.5);
+  opacity: 0;
+  transition: opacity 240ms var(--ease-out);
+}
+#lens-scrim.on { opacity: 1; }
+#lens-scrim[hidden] { display: none; }
+@media (min-width: 761px) { #lens-scrim { display: none; } }
+
+/* the grabber — desktop hides it; the sheet's ::before nub is replaced by
+   this real control so it can take a tap and a drag */
+#lens-grab { display: none; }
+@media (max-width: 760px) {
+  #lens-panel::before { content: none; }
+  #lens-grab {
+    display: block;
+    width: 100%; height: 28px;                 /* generous touch target */
+    margin: -4px 0 4px;
+    background: none; border: 0; padding: 0;
+    cursor: grab;
+    touch-action: none;                        /* the drag owns the gesture */
+  }
+  #lens-grab span {
+    display: block;
+    width: 36px; height: 4px;
+    margin: 10px auto 0;
+    border-radius: 999px;
+    background: var(--line-2);
+  }
+  #lens-grab:focus-visible { outline: none; }
+  #lens-grab:focus-visible span { box-shadow: var(--focus-ring); }
+}
+
+/* the footer — Reset undoes, the primary answers "then what?" with a number */
+#lens-foot {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 14px;
+}
+#lens-clear {
+  flex: 0 0 auto;
+  background: none; border: 0; padding: 8px 4px;
+  font-family: var(--font-ui);
+  font-size: 12px; font-weight: 500;
+  color: var(--text-2); cursor: pointer;
+  transition: color 160ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+#lens-clear:hover { color: var(--text-1); }
+#lens-clear:disabled { opacity: 0.35; cursor: default; }
+#lens-clear:disabled:hover { color: var(--text-2); }
+#lens-clear:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
+#lens-see {
+  flex: 1 1 auto;
+  height: 40px; border-radius: 999px;
+  border: 1px solid var(--text-1);
+  background: var(--text-1); color: var(--field-0);
+  font-family: var(--font-ui);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: background 160ms var(--ease-out);
+}
+#lens-see:hover { background: #fff; }
+#lens-see:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+@media (max-width: 760px) {
+  /* pinned inside the scroll, always reachable — the sheet's decision bar */
+  #lens-foot {
+    position: sticky; bottom: calc(-16px - env(safe-area-inset-bottom, 0px));
+    z-index: 1;
+    background: var(--surface-1);
+    margin: 14px -16px 0;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line-1);
+  }
+}

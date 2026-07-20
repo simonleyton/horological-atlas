@@ -202,7 +202,8 @@ const elLightbox = $('lightbox'), elLbImg = $('lb-img'), elLbClose = $('lb-close
       elLbPrev = $('lb-prev'), elLbNext = $('lb-next'),
       elLbTitle = $('lb-title'), elLbCredit = $('lb-credit'), elLbCount = $('lb-count');
 const elLensChip = $('lens-chip'), elLensPanel = $('lens-panel'),
-      elLensGroups = $('lens-groups'), elLensClear = $('lens-clear');
+      elLensGroups = $('lens-groups'), elLensClear = $('lens-clear'),
+      elLensScrim = $('lens-scrim'), elLensSee = $('lens-see'), elLensGrab = $('lens-grab');
 const elNoMatch = $('no-match'), elNmClear = $('nm-clear');
 let nmHideTimer = null;
 /* the over-filtered empty state — a designed destination, not a dead end.
@@ -1460,7 +1461,14 @@ function updateLensChrome() {
   }
   elLensChip.classList.toggle('has-count', n > 0);
   elLensChip.setAttribute('aria-label', n > 0 ? `Filter the field — ${n} active` : 'Filter the field');
-  elLensClear.hidden = n === 0;
+  elLensClear.disabled = n === 0;
+  if (elLensSee) {
+    const total = (S.watches && S.watches.length) || 0;
+    const k = n > 0 ? lensCount() : total;
+    elLensSee.textContent = n > 0
+      ? ('See ' + k + (k === 1 ? ' watch' : ' watches'))
+      : ('See all ' + total + ' watches');
+  }
 }
 function lensToggle(groupKey, value, btn) {
   const before = lensSnapshot();
@@ -1738,19 +1746,25 @@ function openLensPanel() {
   if (lensOpen || !S.loaded) return;
   lensOpen = true;
   elLensPanel.hidden = false;
+  if (elLensScrim) elLensScrim.hidden = false;
   elLensChip.setAttribute('aria-expanded', 'true');
   requestAnimationFrame(() => {
     elLensPanel.classList.add('on');
+    if (elLensScrim) elLensScrim.classList.add('on');
     syncPriceUI(false);   /* histogram canvas has real width only once visible */
   });
-  if (lpEls) lpEls.lo.focus({ preventScroll: true });
+  updateLensChrome();      /* the See-count is stale if filters changed while closed */
+  /* desktop only: focusing the price input on a phone summons the keyboard
+     over the sheet that just opened */
+  if (lpEls && window.innerWidth > 760) lpEls.lo.focus({ preventScroll: true });
 }
 function closeLensPanel() {
   if (!lensOpen) return;
   lensOpen = false;
   elLensPanel.classList.remove('on');
+  if (elLensScrim) elLensScrim.classList.remove('on');
   elLensChip.setAttribute('aria-expanded', 'false');
-  setTimeout(() => { elLensPanel.hidden = true; }, REDUCED ? 90 : 250);
+  setTimeout(() => { elLensPanel.hidden = true; if (elLensScrim) elLensScrim.hidden = true; }, REDUCED ? 90 : 250);
   if (elLensPanel.contains(document.activeElement)) elLensChip.focus({ preventScroll: true });
   updateNoMatch();   /* if the filters left the field empty, surface the empty-state now */
 }
@@ -1765,6 +1779,46 @@ document.addEventListener('pointerdown', e => {
   if (elLensPanel.contains(e.target) || elLensChip.contains(e.target)) return;
   closeLensPanel();
 }, true);
+
+/* the CTA closes the sheet — the count told you what you're returning to */
+if (elLensSee) elLensSee.addEventListener('click', () => { anyInput(); closeLensPanel(); });
+
+/* ---- GRABBER: tap closes; drag-down dismisses past 96px or a flick.
+   Direct manipulation — the sheet follows the finger 1:1, the scrim thins as
+   it goes, and an aborted drag springs back on the sheet's own curve. */
+(function sheetDrag() {
+  if (!elLensGrab) return;
+  let dragging = false, y0 = 0, t0 = 0, dy = 0;
+  elLensGrab.addEventListener('pointerdown', e => {
+    if (window.innerWidth > 760) return;
+    dragging = true; y0 = e.clientY; t0 = performance.now(); dy = 0;
+    elLensPanel.style.transition = 'none';
+    if (elLensScrim) elLensScrim.style.transition = 'none';
+    elLensGrab.setPointerCapture(e.pointerId);
+  });
+  elLensGrab.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    dy = Math.max(0, e.clientY - y0);
+    elLensPanel.style.transform = 'translateY(' + dy + 'px)';
+    if (elLensScrim) elLensScrim.style.opacity =
+      String(Math.max(0, 1 - dy / (elLensPanel.offsetHeight || 400)));
+  });
+  const settle = () => {
+    elLensPanel.style.transition = '';
+    elLensPanel.style.transform = '';
+    if (elLensScrim) { elLensScrim.style.transition = ''; elLensScrim.style.opacity = ''; }
+  };
+  const end = e => {
+    if (!dragging) return;
+    dragging = false;
+    const v = dy / Math.max(performance.now() - t0, 1);   /* px per ms */
+    settle();
+    if (dy > 96 || v > 0.55) closeLensPanel();
+    else if (dy < 6) closeLensPanel();                    /* a tap on the grabber */
+  };
+  elLensGrab.addEventListener('pointerup', end);
+  elLensGrab.addEventListener('pointercancel', () => { dragging = false; settle(); });
+})();
 
 /* ======================================================================
    10 · HOVER

@@ -1439,7 +1439,9 @@ footer {
 @media (max-width: 760px) {
   #lens-panel {
     left: 0; right: 0; bottom: 0; width: auto;
-    max-height: 78vh; max-height: 78dvh;
+    /* ONE detent for every sheet in the app — the detail panel set it at 92,
+       and two sheets with two heights read as two different components */
+    max-height: 92vh; max-height: 92dvh;
     overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
     border-radius: 16px 16px 0 0;
     border-bottom: none;

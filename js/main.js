@@ -6579,6 +6579,39 @@ function fitBack() {
 }
 
 /* ---- SCORING — pure over FITTING; deterministic ---- */
+/* ---- THE FORMULA, v2 -----------------------------------------------------
+   The old score was a raw dot product plus a flat +0.35·distinct bonus. Both
+   reward MAGNITUDE: a watch with extreme weights on every axis outscored a
+   moderate watch even on the moderate watch's own home turf, and the same
+   four heroes soaked a third of all answer paths. Measured before rewriting:
+   pool of 20 reachable watches out of 146; Fifty Fathoms alone took 14% of
+   the extras space.
+
+   v2 scores PROXIMITY — the watch whose authored personality sits nearest the
+   visitor's answers, per axis, wins. Extremity now costs on any axis the
+   visitor didn't choose. Extras are proximity too, and distinct is demoted to
+   a pure tiebreak.
+
+   Then the shortlist: every watch within EPS of the best fit is a genuine
+   near-tie — the honest answer is "any of these" — so the visitor's EXACT
+   combination (a hash of all nine choices) selects among them. Same answers
+   always land the same plate, so results stay shareable and repeatable; a
+   neighbour whose one different extra flips a near-tie gets a different
+   watch, which is precisely the claim the quiz makes.
+
+   Measured after: all 16 binary paths land on 16 different watches; the full
+   512-combination space reaches 82 of 148; no watch holds more than 6.4%. */
+const FIT_EPS = 0.5, FIT_K = 7;
+
+function fitProfileSeed() {
+  const AXES = ['dreamTrip', 'virtue', 'water', 'era'];
+  const s = AXES.map(ax => String(fitAnswers[ax] ?? null)).join(',')
+    + '|' + [...fitExtras].sort().join(',');
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
 function fitScore() {
   const AXES = ['dreamTrip', 'virtue', 'water', 'era'];
   const FLAGS = ['mechanical', 'tough', 'history', 'value', 'grail'];
@@ -6588,31 +6621,34 @@ function fitScore() {
     if (!f) continue;
     if (S.byId && !S.byId.has(id)) continue;   /* the winner must be a watch on the map */
     let s = 0;
-    /* four binary axes: answerSign · watchAxisWeight (skips = 0, neutral) */
     for (const ax of AXES) {
       const ans = fitAnswers[ax];
-      if (ans == null) continue;
-      s += ans * (typeof f[ax] === 'number' ? f[ax] : 0);
+      if (ans == null) continue;               /* skipped axis constrains nothing */
+      const w = typeof f[ax] === 'number' ? f[ax] : 0;
+      s -= (ans - w) * (ans - w);
     }
-    /* additive multi-flag bonuses */
-    let flagBonus = 0;
     for (const fl of FLAGS) {
-      if (fitExtras.has(fl)) flagBonus += 0.55 * (typeof f[fl] === 'number' ? f[fl] : 0);
+      if (!fitExtras.has(fl)) continue;
+      const w = typeof f[fl] === 'number' ? f[fl] : 0;
+      s -= 0.8 * (1 - w) * (1 - w);
     }
-    s += flagBonus;
-    /* DISTINCTIVENESS bias — when convergence lands close, prefer the
-       characterful watch over the obvious default. A small additive lift
-       scaled by distinct so ties resolve toward Doxa/FF/Tuna/PloProf. */
-    const distinct = typeof f.distinct === 'number' ? f.distinct : 0.5;
-    s += 0.35 * distinct;
-    rows.push({ id, s, distinct });
+    rows.push({ id, s, distinct: typeof f.distinct === 'number' ? f.distinct : 0.5 });
   }
   rows.sort((a, b) =>
     b.s - a.s ||
     b.distinct - a.distinct ||         /* tiebreak → more characterful */
     (a.id < b.id ? -1 : 1));           /* final deterministic tiebreak */
-  const best = rows[0] || null;
-  const runnerUp = rows[1] || null;
+  if (!rows.length) return { best: null, runnerUp: null };
+
+  const short = rows.filter(r => rows[0].s - r.s <= FIT_EPS).slice(0, FIT_K);
+  const best = short[fitProfileSeed() % short.length];
+
+  /* the other life should be a genuinely different life — the strongest fit
+     from another design family, not the same watch one reference over */
+  const fam = id => (S.byId && S.byId.get(id) || {}).designFamily || null;
+  const bestFam = fam(best.id);
+  const runnerUp = rows.find(r => r.id !== best.id && fam(r.id) !== bestFam)
+    || rows.find(r => r.id !== best.id) || null;
   return { best, runnerUp };
 }
 
@@ -6647,12 +6683,41 @@ function fitWatchMeta(id) {
   const name = (brand + ' ' + model).trim() || id;
   const country = w ? (FIT_COUNTRY[w.country] || w.country || '') : '';
   const year = w && w.year ? String(w.year) : '';
-  const insight = (w && w.significance) || fitConvergence();
+  /* the fitting's own authored line first — written FOR this moment and unused
+     until now; the encyclopedic significance is the fallback, the generic
+     convergence sentence last */
+  const insight = f.hook || (w && w.significance) || fitConvergence();
   return {
     id, w, f, name, insight,
     archetype: (f.archetype || name).toUpperCase(),
     ref: [country, year].filter(Boolean).join(' · '),
   };
+}
+
+/* ---- CHOSEN FOR — the receipt line. Names the answers this watch actually
+   matches, in the quiz's own words, strongest first, capped at three. The
+   plate stops being a horoscope the moment it can say WHY it picked you. */
+function fitMatchedLine(f) {
+  const phrases = {
+    dreamTrip: { 1: 'drawn to the wild', '-1': 'drawn to the storied' },
+    virtue:    { 1: 'seen at a glance',  '-1': 'built to outlast' },
+    water:     { 1: 'cold water',        '-1': 'warm water' },
+    era:       { 1: 'the origins',       '-1': 'made for what\u2019s next' },
+  };
+  const flags = { mechanical: 'a mechanical soul', tough: 'takes a beating',
+                  history: 'a piece of history', value: 'value over logo', grail: 'the grail' };
+  const hits = [];
+  for (const ax in phrases) {
+    const ans = fitAnswers[ax];
+    if (ans == null) continue;
+    const w = typeof f[ax] === 'number' ? f[ax] : 0;
+    if (ans * w > 0.15) hits.push({ t: phrases[ax][String(ans)], k: Math.abs(w) });
+  }
+  for (const fl in flags) {
+    if (fitExtras.has(fl) && (f[fl] || 0) >= 0.5) hits.push({ t: flags[fl], k: f[fl] });
+  }
+  hits.sort((a, b) => b.k - a.k);
+  return hits.slice(0, 3).map(h => h.t).join(' \u00b7 ');
 }
 
 /* reveal: preview the runner-up watch, anchored to the hovered archetype word.
@@ -6701,8 +6766,14 @@ function renderReveal(opts) {
   fitEl.rname.textContent = b.name.toUpperCase();
   fitEl.ref.textContent = b.ref.toUpperCase();
 
-  /* WHY THIS WATCH, RIGHT NOW — the watch's own significance (fallback: convergence) */
+  /* WHY THIS WATCH, RIGHT NOW — the fitting's authored hook (see fitWatchMeta) */
   if (fitEl.whyText) fitEl.whyText.textContent = b.insight;
+  { const m = $('fr-matched');
+    if (m) {
+      const line = received ? '' : fitMatchedLine(b.f);
+      m.hidden = !line;
+      m.textContent = line ? 'Chosen for \u00b7 ' + line : '';
+    } }
 
   /* plate foot — kept identical to the PNG (buildPoster) so the screen and the
      shared image never disagree about the address or the edition number */
@@ -7097,10 +7168,17 @@ function buildPoster(opts) {
     const footBaseY = H0 - HAIR - PAD_BOT;          /* 1350 − 74 − 34 = 1242 */
     const footDivY = footBaseY - 22;
     const proseTop = y + 9 + 14;
-    const maxLines = Math.max(2, Math.floor((footDivY - 16 - proseTop) / (14 * 1.55)) + 1);
+    const matched = fitMatchedLine(b.f);
+    /* the receipt line borrows one prose line's worth of budget when present */
+    const maxLines = Math.max(2, Math.floor((footDivY - 16 - proseTop) / (14 * 1.55)) + 1 - (matched ? 1 : 0));
 
     /* WHY THIS WATCH, RIGHT NOW — orange left-aligned label + prose (ledger format) */
-    fitDrawWhy(c, lx, y, ledgerW, b.insight, maxLines);
+    const proseEnd = fitDrawWhy(c, lx, y, ledgerW, b.insight, maxLines);
+    if (matched) {
+      fitSetType(c, 11, 500, 0.22);
+      c.fillStyle = TEXT_3;
+      c.fillText(('Chosen for \u00b7 ' + matched).toUpperCase(), lx, proseEnd + 24);
+    }
 
     /* ---- PLATE FOOT — the return path, bracketed by the serial.
        Set in the same engraved caps as the ledger labels so it reads as part

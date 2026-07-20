@@ -2473,3 +2473,12 @@ html.no-hero #hero { display: none; }
   #colophon { transition: none; }
   .chip-time .colon { animation: none; }
 }
+
+/* the receipt line — the visitor's own answers, engraved small under the why */
+#fr-matched {
+  margin: 10px 0 0;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--text-3);
+}
+#fr-matched[hidden] { display: none; }

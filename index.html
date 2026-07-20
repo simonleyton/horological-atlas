@@ -29,7 +29,7 @@
   <link rel="icon" href="favicon-16.png?v=2" sizes="16x16" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
   <meta name="theme-color" content="#06080B">
-  <link rel="stylesheet" href="app.css?v=98">
+  <link rel="stylesheet" href="app.css?v=99">
   <script>/* skip the surface hero for returning visitors + shared deep links (no flash).
        #fit and #fit&r=<id> count: both open the fitting overlay immediately, so
        landing on the hero would bury a shared plate behind a full-screen scroll. */
@@ -343,6 +343,8 @@
             <div id="fr-why">
               <span id="fr-why-label">Why this watch, right now</span>
               <p id="fr-why-text"></p>
+              <!-- the receipt: which of the visitor's answers this watch matched -->
+              <p id="fr-matched" hidden></p>
             </div>
           </div>
           <!-- the return path — mirrors the PNG's plate foot exactly -->
@@ -408,6 +410,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=91"></script>
+  <script type="module" src="js/main.js?v=92"></script>
 </body>
 </html>

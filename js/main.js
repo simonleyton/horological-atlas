@@ -190,7 +190,7 @@ const elStatus = $('status'), elS1 = $('status-1'), elS2 = $('status-2');
 const elSearch = $('search'), elSearchToggle = $('search-toggle'),
       elSearchInput = $('search-input'), elSearchResults = $('search-results');
 const elPanel = $('panel'), elPanelClose = $('panel-close'), elPanelContent = $('panel-content');
-const elFooterLeft = $('footer-left'),
+const elFooterGauge = $('footer-gauge'),
       elFitChip = $('fit-chip'), elCartouche = $('cartouche'), elCart2 = $('cart-2'), elLive = $('live');
 const elTimeline = $('timeline'), elTlPlay = $('tl-play'), elTlTrack = $('tl-track'),
       elTlRuler = $('tl-ruler'), elTlThumb = $('tl-thumb'), elTlReadout = $('tl-readout'),
@@ -560,7 +560,7 @@ function initData(data) {
   sizeRuler();
 
   /* chrome copy computed from data */
-  elFooterLeft.textContent = `${S.yearMin} — ${S.yearMax} · ${S.watches.length} watches`;
+  elFooterGauge.textContent = `${S.yearMin} — ${S.yearMax} · ${S.watches.length} watches`;
   elCart2.textContent = `${S.yearMin} — ${S.yearMax} · ${S.watches.length} WATCHES`;
   canvas.setAttribute('aria-label',
     `The Horological Atlas — a map of ${S.watches.length} dive watches, ${S.yearMin}–${S.yearMax}`);
@@ -1211,15 +1211,15 @@ function maybeTimeChrome(TY) {
   if (engaged) {
     const vis = countBorn(yr);
     const suffix = lensOn ? ` · ${lensCount()} in lens` : '';
-    elFooterLeft.textContent = `${S.yearMin} — ${yr} · ${vis} of ${total} watches${suffix}`;
+    elFooterGauge.textContent = `${S.yearMin} — ${yr} · ${vis} of ${total} watches${suffix}`;
     elCart2.textContent = `AS OF ${yr} · ${vis} OF ${total} WATCHES${lensOn ? ` · LENS ${lensCount()}` : ''}`;
     elTlTrack.setAttribute('aria-valuetext', `${yr} — ${vis} of ${total} watches`);
   } else if (lensOn) {
-    elFooterLeft.textContent = `${lensCount()} of ${total} · ${lensSummaryText()}`;
+    elFooterGauge.textContent = `${lensCount()} of ${total} · ${lensSummaryText()}`;
     elCart2.textContent = `${lensCount()} OF ${total} · ${lensSummaryText().toUpperCase()}`;
     elTlTrack.setAttribute('aria-valuetext', `Now — all ${total} watches`);
   } else {
-    elFooterLeft.textContent = `${S.yearMin} — ${S.yearMax} · ${total} watches`;
+    elFooterGauge.textContent = `${S.yearMin} — ${S.yearMax} · ${total} watches`;
     elCart2.textContent = `${S.yearMin} — ${S.yearMax} · ${total} WATCHES`;
     elTlTrack.setAttribute('aria-valuetext', `Now — all ${total} watches`);
   }
@@ -4434,7 +4434,7 @@ function applyDescentNarrow(animated) {
   } else {
     DS.reflow = null;
   }
-  if (descentChromeOn) elFooterLeft.textContent = DS.gaugeText;
+  if (descentChromeOn) elFooterGauge.textContent = DS.gaugeText;
   updateNoMatch();
   invalidate();
 }
@@ -4704,7 +4704,7 @@ function refreshFocus() {
     DS.pillText = '';
     DS.gaugeText = 'No watches match — clear a filter';
     DS.lastFocus = -1;
-    if (descentChromeOn) elFooterLeft.textContent = DS.gaugeText;
+    if (descentChromeOn) elFooterGauge.textContent = DS.gaugeText;
     return;
   }
   const n = clamp(Math.round(DS.s), 0, DS.n - 1);
@@ -4720,7 +4720,7 @@ function refreshFocus() {
   DS.pillText = `${String(w.brand || '').toUpperCase()} ${String(w.model || '').toUpperCase()}${pillRef} · ${fmtM(w.waterResistanceM)} M`;
   const cnt = DS.wrCount.get(w.waterResistanceM) || 1;
   DS.gaugeText = `−${fmtM(w.waterResistanceM)} M · ${cnt} ${cnt === 1 ? 'watch' : 'watches'} at this depth`;
-  if (descentChromeOn) elFooterLeft.textContent = DS.gaugeText;
+  if (descentChromeOn) elFooterGauge.textContent = DS.gaugeText;
 }
 
 /* --- scripted flights — keyboard steps, strata jumps, search ------------ */
@@ -5266,7 +5266,7 @@ function applyDescentChrome(on) {
   if (typeof updateNoMatch === 'function') updateNoMatch();
   if (elTagline) elTagline.textContent = on ? TAGLINE_DESCENT : TAGLINE_SKY;
   if (on) {
-    elFooterLeft.textContent = DS.gaugeText || '';
+    elFooterGauge.textContent = DS.gaugeText || '';
     elCart2.textContent = `BY WATER RESISTANCE · ${S.watches.length} WATCHES`;
   } else {
     lastTlYear = null;           /* force the sky footer/cartouche to re-derive */
@@ -7478,4 +7478,161 @@ function heroPullCheck(dsIntent) {
   heroFxSetup();
   heroFxStart();
   window.addEventListener('resize', heroFxResize);
+})();
+
+/* ======================================================================
+   THE COLOPHON — the site footer, in an overlay because this document does
+   not scroll (html/body are overflow:hidden; the atlas owns the viewport).
+
+   The mono clock is ported from simonleyton.com with its geometry intact —
+   the same G table, the same knockout of the seconds disc where it crosses a
+   hand — and re-inked for a dark ground. GROUND must equal the panel's own
+   background or the knockout punches the wrong colour.
+   ====================================================================== */
+(function colophon() {
+  const root = $('colophon'), openBtn = $('colophon-open'), closeBtn = $('cph-close');
+  if (!root || !openBtn) return;
+
+  const cv = root.querySelector('.mono-clock');
+  const INK = '#5C6672', GROUND = '#06080B', STROKE = 1, CSS = 64;
+  const G = { DIAL: 1, CAP: 0.32, HOUR_LEN: 0.70, MIN_LEN: 0.96, BATON_W: 0.13,
+              SEC_R: 0.295, SEC_ORBIT: 0.64 };
+  const reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  let ctx = null, raf = null, iv = null, prevFocus = null;
+
+  if (cv) {
+    const DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    cv.width = Math.round(CSS * DPR); cv.height = Math.round(CSS * DPR);
+    cv.style.width = CSS + 'px'; cv.style.height = CSS + 'px';
+    ctx = cv.getContext('2d');
+    ctx._dpr = DPR;
+  }
+
+  const ang = t => -Math.PI / 2 + t * Math.PI * 2;
+  /* Miami time, read from the zone rather than the visitor's clock */
+  function miami() {
+    const n = new Date();
+    const o = {};
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour12: false,
+      hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      .formatToParts(n).forEach(p => { o[p.type] = p.value; });
+    return { h: (+o.hour) % 24, m: +o.minute,
+             s: (+o.second) + (reduce ? 0 : n.getMilliseconds() / 1000) };
+  }
+
+  const elH = root.querySelector('.t-h'), elM = root.querySelector('.t-m'),
+        elAP = root.querySelector('.t-ap'), elTemp = root.querySelector('.chip-temp');
+  function updateChip(t) {
+    let h = t.h % 12; if (h === 0) h = 12;
+    const mm = ('0' + t.m).slice(-2), ap = t.h < 12 ? 'AM' : 'PM';
+    if (elH && elH.textContent !== String(h)) elH.textContent = h;
+    if (elM && elM.textContent !== mm) elM.textContent = mm;
+    if (elAP && elAP.textContent !== ap) elAP.textContent = ap;
+  }
+
+  function baton(a, L, W) {
+    const hw = W / 2, back = W * 0.6;
+    ctx.save(); ctx.rotate(a); ctx.beginPath(); ctx.rect(-back, -hw, L + back, W); ctx.restore();
+  }
+  function batonInto(a, L, W) {
+    const hw = W / 2, back = W * 0.6;
+    ctx.save(); ctx.rotate(a); ctx.rect(-back, -hw, L + back, W); ctx.restore();
+  }
+
+  function render() {
+    if (!ctx) return;
+    const t = miami(), W = CSS, H = CSS, DPR = ctx._dpr;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+    const R = Math.min(W, H) * 0.48;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.translate(W / 2, H / 2);
+    ctx.lineWidth = STROKE; ctx.strokeStyle = INK; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const aH = ang(((t.h % 12) + t.m / 60 + t.s / 3600) / 12),
+          aM = ang((t.m + t.s / 60) / 60),
+          aS = ang((t.s % 60) / 60), bw = G.BATON_W * R;
+    ctx.beginPath(); ctx.arc(0, 0, G.DIAL * R + STROKE / 2, 0, Math.PI * 2); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, G.DIAL * R, 0, Math.PI * 2); ctx.clip();
+    ctx.lineCap = 'butt'; ctx.beginPath();
+    ctx.moveTo(0, -R); ctx.lineTo(0, R); ctx.moveTo(-R, 0); ctx.lineTo(R, 0);
+    ctx.stroke(); ctx.restore(); ctx.lineCap = 'round';
+    baton(aH, G.HOUR_LEN * R, bw); ctx.fillStyle = INK; ctx.fill();
+    baton(aM, G.MIN_LEN * R, bw); ctx.fillStyle = INK; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, G.CAP * R, 0, Math.PI * 2); ctx.fillStyle = GROUND; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, G.CAP * R - STROKE / 2, 0, Math.PI * 2);
+    ctx.lineWidth = STROKE; ctx.strokeStyle = INK; ctx.stroke();
+    const sx = Math.cos(aS) * G.SEC_ORBIT * R, sy = Math.sin(aS) * G.SEC_ORBIT * R, br = G.SEC_R * R;
+    ctx.beginPath(); ctx.arc(sx, sy, br, 0, Math.PI * 2); ctx.fillStyle = INK; ctx.fill();
+    /* where the seconds disc crosses a hand it knocks back to the ground and
+       draws its own outline — the detail that makes the lockup read as drawn */
+    ctx.save(); ctx.beginPath();
+    batonInto(aH, G.HOUR_LEN * R, bw); batonInto(aM, G.MIN_LEN * R, bw); ctx.clip();
+    ctx.beginPath(); ctx.arc(sx, sy, br, 0, Math.PI * 2);
+    ctx.fillStyle = GROUND; ctx.fill();
+    ctx.lineWidth = STROKE; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.restore();
+    updateChip(t);
+  }
+
+  function loop() { render(); if (!root.hidden && !reduce) raf = requestAnimationFrame(loop); }
+  function startClock() {
+    if (reduce) { render(); if (!iv) iv = setInterval(render, 1000); }
+    else if (!raf) loop();
+  }
+  function stopClock() {
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+    if (iv) { clearInterval(iv); iv = null; }
+  }
+
+  let wxTimer = null;
+  function weather() {
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=25.7617&longitude=-80.1918&current=temperature_2m&temperature_unit=fahrenheit')
+      .then(r => r.json())
+      .then(d => { if (elTemp && d && d.current && d.current.temperature_2m != null)
+        elTemp.textContent = Math.round(d.current.temperature_2m) + '°F'; })
+      .catch(() => {});
+  }
+
+  function open() {
+    prevFocus = document.activeElement;
+    root.hidden = false;
+    openBtn.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('on')));
+    startClock();
+    weather();
+    if (!wxTimer) wxTimer = setInterval(weather, 600000);
+    requestAnimationFrame(() => { try { closeBtn.focus(); } catch (e) {} });
+  }
+  function close() {
+    root.classList.remove('on');
+    openBtn.setAttribute('aria-expanded', 'false');
+    stopClock();
+    if (wxTimer) { clearInterval(wxTimer); wxTimer = null; }
+    const done = () => { root.hidden = true; };
+    if (reduce) done(); else setTimeout(done, 260);
+    if (prevFocus && prevFocus.focus) { try { prevFocus.focus(); } catch (e) {} }
+  }
+
+  openBtn.addEventListener('click', open);
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  root.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+  });
+  /* The in-site nav drives the app DIRECTLY. There is no hashchange listener
+     here, so an href="#m=descent" would rewrite the URL and change nothing —
+     a link that looks live and is inert. Each one closes the colophon and
+     presses the control the user would otherwise have pressed. */
+  const NAV = {
+    descent: () => { if (S.mode !== 'descent') elMtDescent.click(); },
+    sky:     () => { if (S.mode !== 'sky') elMtSky.click(); },
+    fit:     () => openFitting(),
+  };
+  root.querySelectorAll('[data-cph-nav]').forEach(a => {
+    a.addEventListener('click', e => {
+      const fn = NAV[a.dataset.cphNav];
+      if (!fn) return;                  /* mailto and external links pass through */
+      e.preventDefault();
+      close();
+      /* let the overlay's fade finish before the projection morphs underneath */
+      setTimeout(fn, reduce ? 0 : 280);
+    });
+  });
 })();

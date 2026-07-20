@@ -1230,7 +1230,18 @@ footer {
 #footer-left {
   font-size: 11px; color: var(--text-3);
   line-height: 1.5;
+  display: flex; align-items: baseline; gap: 12px;
 }
+#colophon-open {
+  pointer-events: auto;
+  background: none; border: 0; padding: 0;
+  font-family: var(--font-ui);
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-3); cursor: pointer;
+  transition: color 160ms var(--ease-out);
+}
+#colophon-open:hover { color: var(--text-1); }
+#colophon-open:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 3px; }
 #footer-right { display: flex; align-items: center; gap: 12px; pointer-events: auto; }
 /* Action buttons, bottom-right — the pacomepertant "sound" / "menu" language:
    a white circle for the Fit action, a white pill for the labeled Lens. Both
@@ -1526,7 +1537,10 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 /* mobile: yield the secondary date label; center the "find your watch" CTA and
    keep the frame/filter circles right-aligned */
 @media (max-width: 620px) {
-  #footer-left { display: none; }
+  /* the gauge goes, the colophon stays — attribution is the one thing that
+     must survive the small breakpoint, and the bottom-left is free here */
+  #footer-gauge { display: none; }
+  #footer-left { pointer-events: none; }
   footer { justify-content: flex-end; }   /* push the frame/filter circles to the right */
   #footer-right { gap: 10px; }
   #fitting-chip {                          /* the CTA, dead-centered; sized to clear the circles */
@@ -2325,4 +2339,104 @@ html.no-hero #hero { display: none; }
   #hero.diving #hero-watch { transform: none; }
   #hero-descend .hd-caret { animation: none; }
   #hero-lume { animation: none; opacity: 0.5; }
+}
+
+/* ======================================================================
+   THE COLOPHON — the site footer, ported 1:1 in structure from
+   simonleyton.com and rebranded to sea time.
+
+   Source measurements kept verbatim: 64px clock square, 64px time chip with
+   a 10px radius and 10px/6px padding, a 64px-tall made-block whose rule sits
+   between two lines, 34px lockup gap, 14px nav gap.
+
+   Rebranded: #faf5f0 ground -> the atlas field, #777270 ink -> --text-3,
+   #ece6df hairline -> --line-1, the name takes the sea-time orange at the
+   wordmark's own weight rather than the source's 700/-0.02em.
+   ====================================================================== */
+#colophon {
+  position: fixed; inset: 0; z-index: 60;
+  background: var(--field-0);
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 72px 0;
+  overflow-y: auto;
+  opacity: 0;
+  transition: opacity 260ms var(--ease-out);
+}
+#colophon.on { opacity: 1; }
+#cph-close {
+  position: absolute; top: 24px; right: 24px;
+  width: 32px; height: 32px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: 1px solid var(--line-2); color: var(--text-2);
+  cursor: pointer;
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+#cph-close:hover { color: var(--text-1); border-color: var(--lume-dim); }
+#cph-close:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.cph-wrap {
+  max-width: 1180px; width: 100%; box-sizing: border-box;
+  margin: 0 auto; padding: 0 30px;
+  display: flex; justify-content: space-between; gap: 48px; flex-wrap: wrap;
+}
+.cph-left { display: flex; flex-direction: column; gap: 34px; flex: 1; min-width: 0; }
+.cph-name {
+  font-family: var(--font-ui);
+  font-size: 26px; font-weight: 500; letter-spacing: 0;
+  color: #F6935D;                       /* the wordmark's own colour and weight */
+}
+
+.clock-widget { display: flex; align-items: stretch; gap: 10px; }
+.mono-clock { display: block; flex: 0 0 auto; width: 64px; height: 64px; }
+.time-chip {
+  box-sizing: border-box; flex: 0 0 auto;
+  width: 64px; height: 64px;
+  border: 1px solid var(--line-2); border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  padding: 10px 6px;
+}
+.time-chip span {
+  font-family: var(--font-ui); color: var(--text-3);
+  line-height: 1; letter-spacing: 0; white-space: nowrap;
+}
+.chip-loc { font-size: 9px; }
+.chip-time { font-size: 11px; }
+.chip-temp { font-size: 9px; }
+/* the source's staccato blink — holds, then snaps, on a 1.4s cadence */
+.chip-time .colon { display: inline-block; animation: colonBlink 1.4s linear infinite; }
+@keyframes colonBlink { 0%, 62% { opacity: 1; } 63%, 100% { opacity: 0.15; } }
+
+.made-block {
+  display: flex; flex-direction: column; justify-content: space-between;
+  height: 64px; min-width: 0; margin-left: 15px; align-self: center;
+}
+.made-line { display: block; font-size: 14px; color: var(--text-3); line-height: 1.35; }
+.made-block .foot-rule { display: block; height: 1px; width: 100%; background: var(--line-1); }
+.copy { display: block; font-size: 14px; color: var(--text-3); line-height: 1; }
+.copy a {
+  color: var(--text-2); text-decoration: none;
+  border-bottom: 1px solid var(--line-2);
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.copy a:hover { color: var(--text-1); border-bottom-color: var(--lume-dim); }
+.copy a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 2px; }
+
+.cph-col { display: flex; flex-direction: column; gap: 14px; min-width: 170px; }
+.cph-col a {
+  font-size: 17px; color: var(--text-2); text-decoration: none;
+  width: fit-content;
+  transition: color 160ms var(--ease-out);
+}
+.cph-col a:hover { color: var(--text-1); }
+.cph-col a:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 3px; }
+
+@media (max-width: 760px) {
+  #colophon { padding: 88px 0 48px; }
+  .cph-wrap { gap: 36px; padding: 0 24px; }
+  .made-block { margin-left: 0; height: auto; gap: 10px; align-self: stretch; }
+  .clock-widget { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #colophon { transition: none; }
+  .chip-time .colon { animation: none; }
 }

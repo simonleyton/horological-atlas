@@ -29,7 +29,7 @@
   <link rel="icon" href="favicon-16.png?v=2" sizes="16x16" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
   <meta name="theme-color" content="#06080B">
-  <link rel="stylesheet" href="app.css?v=89">
+  <link rel="stylesheet" href="app.css?v=90">
   <script>/* skip the surface hero for returning visitors + shared deep links (no flash).
        #fit and #fit&r=<id> count: both open the fitting overlay immediately, so
        landing on the hero would bury a shared plate behind a full-screen scroll. */
@@ -115,7 +115,10 @@
   </div>
 
   <footer class="chrome">
-    <div id="footer-left"></div>
+    <div id="footer-left">
+      <span id="footer-gauge"></span>
+      <button id="colophon-open" type="button" aria-haspopup="dialog" aria-expanded="false">Colophon</button>
+    </div>
     <div id="footer-right">
       <button id="fitting-chip" type="button" aria-label="Find your watch — take the fitting" title="Find your watch">
         find your watch<span class="fic-dot" aria-hidden="true"></span>
@@ -226,6 +229,43 @@
     <h2 id="nm-title">Nothing down here. Yet.</h2>
     <p id="nm-body">Your filters have narrowed the field to nothing. Loosen one and the watches surface again.</p>
     <button id="nm-clear" type="button">Clear the filters</button>
+  </div>
+
+  <!-- THE COLOPHON — the site footer. Structure ported 1:1 from
+       simonleyton.com (lockup · clock · time chip · rule · copyright | nav);
+       palette, type and the clock's own ink rebranded to sea time. It lives in
+       an overlay because this document does not scroll: html/body are
+       overflow:hidden and the atlas owns the viewport. -->
+  <div id="colophon" role="dialog" aria-modal="true" aria-labelledby="cph-name" hidden>
+    <button id="cph-close" type="button" aria-label="Close colophon">
+      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+        <path d="M1 1 L11 11 M11 1 L1 11" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <div class="cph-wrap">
+      <div class="cph-left">
+        <div class="cph-name" id="cph-name">sea time</div>
+        <div class="clock-widget">
+          <canvas class="mono-clock" width="64" height="64" role="img" aria-label="Clock showing Miami time"></canvas>
+          <div class="time-chip">
+            <span class="chip-loc">MIA</span>
+            <span class="chip-time"><span class="t-h">—</span><span class="colon">:</span><span class="t-m">—</span> <span class="t-ap"></span></span>
+            <span class="chip-temp">—°F</span>
+          </div>
+          <div class="made-block">
+            <span class="made-line">A field guide to the dive watch.</span>
+            <span class="foot-rule"></span>
+            <span class="copy">All rights reserved. Copyright © 2026 <a href="https://simonleyton.com/" target="_blank" rel="noopener">Simon Leyton</a>.</span>
+          </div>
+        </div>
+      </div>
+      <nav class="cph-col" aria-label="Colophon">
+        <a href="#m=descent" data-cph-nav="descent">Descent</a>
+        <a href="#m=sky" data-cph-nav="sky">Surface</a>
+        <a href="#fit" data-cph-nav="fit">The Fitting</a>
+        <a href="mailto:simonleyton@gmail.com">Email</a>
+      </nav>
+    </div>
   </div>
 
   <div id="live" aria-live="polite" class="vh"></div>
@@ -360,6 +400,6 @@
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=86"></script>
+  <script type="module" src="js/main.js?v=87"></script>
 </body>
 </html>

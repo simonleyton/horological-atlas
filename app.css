@@ -1550,10 +1550,17 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
   #footer-gauge { display: none; }
   #footer-left { pointer-events: none; }
   #colophon-open {
-    max-width: calc(50% - 82px);
+    /* hard stop = half the bar minus the centred CTA's half-width (~69px)
+       and breathing room — the earlier calc(50% - 82px) still allowed 11px
+       of overlap at 360 */
+    max-width: calc(50% - 101px);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  footer { justify-content: flex-end; }   /* push the frame/filter circles to the right */
+  /* footer keeps space-between: the name holds the LEFT corner. The old
+     flex-end here predated the trigger — it pushed #footer-left to the right,
+     where the absolutely-positioned CTA pill (positioned = paints above
+     in-flow siblings) sat directly on top of it. The name was invisible not
+     because it was hidden but because it was UNDERNEATH the white pill. */
   #footer-right { gap: 10px; }
   #fitting-chip {                          /* the CTA, dead-centered; sized to clear the circles */
     position: absolute;
@@ -1561,6 +1568,12 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
     transform: translateX(-50%);
     font-size: 12px; padding: 0 15px; gap: 6px;
   }
+}
+/* smallest phones: 11px runs ~86px against a ~79px cap and would ellipsize;
+   one step down keeps the whole name. Separate block, AFTER the 620 query —
+   splicing into it is how the CTA rules got trapped last time. */
+@media (max-width: 400px) {
+  #colophon-open { font-size: 10px; }
 }
 
 /* ---------- OVERLAY SHELL ---------- */

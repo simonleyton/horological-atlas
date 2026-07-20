@@ -25,6 +25,11 @@ Two things make a silver watch on white harder than it looks:
 --alpha  trust the source's own alpha channel as the mask — no flood fill, no
          erosion (a real matte has no contaminated ring), no shadow cut.
 
+REPLACING an existing plate? RENAME the output id (e.g. append -b) and update
+catalog.json — plates are cached at the edge for a day (vercel.json), so an
+in-place overwrite leaves returning visitors on the old image until it
+expires. New filename = instant everywhere. Adding a new watch: no rule.
+
 The corpus has two committed formats, measured across all 146 plates:
   900x900  116 plates, subject wholly inside the frame (the specimen cut)
   900x600   30 plates, of which 15 run the bracelet cleanly off BOTH the top

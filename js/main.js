@@ -411,7 +411,7 @@ async function loadData() {
     .catch(() => { /* no manifest yet — glyphs carry the panel */ });
   fetch('./data/catalog.json', { cache: 'no-cache' })
     .then(r => r.ok ? r.json() : null)
-    .then(j => { if (j && typeof j === 'object') CATALOG = j; })
+    .then(j => { if (j && typeof j === 'object') { CATALOG = j; scheduleWarmShelf(); } })
     .catch(() => { /* no catalog layer yet */ });
   fetch('./data/lore.json', { cache: 'no-cache' })
     .then(r => r.ok ? r.json() : null)
@@ -634,6 +634,32 @@ function urlFromState() {
   if (S.mode === 'sky' && timeEngaged()) p.push('y=' + Math.round(curTY));
   return '#' + p.join('&');
 }
+/* ---- THE WARM SHELF ------------------------------------------------------
+   While the hero holds the eye, the first cards of the descent fetch at idle,
+   so arrival shows plates instead of glyphs popping in. The browser's HTTP
+   cache is the hand-off: the sprite loader later requests the same URLs and
+   hits it. Deliberately at idle (never competing with boot for the thing the
+   visitor is looking at), skipped under Data Saver, and capped at ten — the
+   first viewport and a half, not the corpus. */
+let warmShelfDone = false;
+function warmFirstShelf() {
+  if (warmShelfDone) return;
+  if (navigator.connection && navigator.connection.saveData) { warmShelfDone = true; return; }
+  if (!DS.order || !DS.order.length || !CATALOG || !Object.keys(CATALOG).length) {
+    setTimeout(warmFirstShelf, 1200);            /* a layer is still landing — retry */
+    return;
+  }
+  warmShelfDone = true;
+  for (const w of DS.order.slice(0, 10)) {
+    const c = CATALOG[w.id];
+    if (c && c.file) { const im = new Image(); im.src = './data/' + c.file; }
+  }
+}
+function scheduleWarmShelf() {
+  if ('requestIdleCallback' in window) requestIdleCallback(warmFirstShelf, { timeout: 5000 });
+  else setTimeout(warmFirstShelf, 2500);
+}
+
 function writeURL() {
   urlTimer = null;
   if (!S.loaded || S.morph) return;

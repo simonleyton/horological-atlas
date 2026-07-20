@@ -6694,32 +6694,6 @@ function fitWatchMeta(id) {
   };
 }
 
-/* ---- CHOSEN FOR — the receipt line. Names the answers this watch actually
-   matches, in the quiz's own words, strongest first, capped at three. The
-   plate stops being a horoscope the moment it can say WHY it picked you. */
-function fitMatchedLine(f) {
-  const phrases = {
-    dreamTrip: { 1: 'drawn to the wild', '-1': 'drawn to the storied' },
-    virtue:    { 1: 'seen at a glance',  '-1': 'built to outlast' },
-    water:     { 1: 'cold water',        '-1': 'warm water' },
-    era:       { 1: 'the origins',       '-1': 'made for what\u2019s next' },
-  };
-  const flags = { mechanical: 'a mechanical soul', tough: 'takes a beating',
-                  history: 'a piece of history', value: 'value over logo', grail: 'the grail' };
-  const hits = [];
-  for (const ax in phrases) {
-    const ans = fitAnswers[ax];
-    if (ans == null) continue;
-    const w = typeof f[ax] === 'number' ? f[ax] : 0;
-    if (ans * w > 0.15) hits.push({ t: phrases[ax][String(ans)], k: Math.abs(w) });
-  }
-  for (const fl in flags) {
-    if (fitExtras.has(fl) && (f[fl] || 0) >= 0.5) hits.push({ t: flags[fl], k: f[fl] });
-  }
-  hits.sort((a, b) => b.k - a.k);
-  return hits.slice(0, 3).map(h => h.t).join(' \u00b7 ');
-}
-
 /* reveal: preview the runner-up watch, anchored to the hovered archetype word.
    Reuses the map's #watch-preview card but positions it off the word's rect. */
 function fitPreviewShow(id, anchorEl) {
@@ -6768,12 +6742,6 @@ function renderReveal(opts) {
 
   /* WHY THIS WATCH, RIGHT NOW — the fitting's authored hook (see fitWatchMeta) */
   if (fitEl.whyText) fitEl.whyText.textContent = b.insight;
-  { const m = $('fr-matched');
-    if (m) {
-      const line = received ? '' : fitMatchedLine(b.f);
-      m.hidden = !line;
-      m.textContent = line ? 'Chosen for \u00b7 ' + line : '';
-    } }
 
   /* plate foot — kept identical to the PNG (buildPoster) so the screen and the
      shared image never disagree about the address or the edition number */
@@ -7168,17 +7136,10 @@ function buildPoster(opts) {
     const footBaseY = H0 - HAIR - PAD_BOT;          /* 1350 − 74 − 34 = 1242 */
     const footDivY = footBaseY - 22;
     const proseTop = y + 9 + 14;
-    const matched = fitMatchedLine(b.f);
-    /* the receipt line borrows one prose line's worth of budget when present */
-    const maxLines = Math.max(2, Math.floor((footDivY - 16 - proseTop) / (14 * 1.55)) + 1 - (matched ? 1 : 0));
+    const maxLines = Math.max(2, Math.floor((footDivY - 16 - proseTop) / (14 * 1.55)) + 1);
 
     /* WHY THIS WATCH, RIGHT NOW — orange left-aligned label + prose (ledger format) */
-    const proseEnd = fitDrawWhy(c, lx, y, ledgerW, b.insight, maxLines);
-    if (matched) {
-      fitSetType(c, 11, 500, 0.22);
-      c.fillStyle = TEXT_3;
-      c.fillText(('Chosen for \u00b7 ' + matched).toUpperCase(), lx, proseEnd + 24);
-    }
+    fitDrawWhy(c, lx, y, ledgerW, b.insight, maxLines);
 
     /* ---- PLATE FOOT — the return path, bracketed by the serial.
        Set in the same engraved caps as the ledger labels so it reads as part

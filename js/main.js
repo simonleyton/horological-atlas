@@ -555,7 +555,9 @@ function initData(data) {
         : w.movement || null,
       size: !isFinite(w.diameterMm) ? 's3' : w.diameterMm < 38.5 ? 's1' : w.diameterMm < 39.5 ? 's39' : w.diameterMm < 40.5 ? 's40' : w.diameterMm < 41.5 ? 's41' : w.diameterMm < 42.5 ? 's42' : 's3',
       origin: w.country || null,
-      era: w.year ? String(Math.floor(w.year / 10) * 10) : null,
+      /* pre-1950 is three watches across two decades — two chips guarding dead
+         ends; one honest shelf instead */
+      era: !w.year ? null : w.year < 1950 ? 'pre' : String(Math.floor(w.year / 10) * 10),
       /* authored per-watch; steel is the fallback because it is true for the
          overwhelming share of the corpus. 'composite' (G-Shock resin) matches
          no chip on purpose — the four options are the four honest materials. */
@@ -1350,7 +1352,7 @@ const LENS_CHIPS = {
            ['GB', 'United Kingdom'], ['US', 'United States'], ['RU', 'Russia'], ['IT', 'Italy']],
   /* Year as ERA — the meaningful axis for a curated field is the decade, not the
      exact year; matches the Lens's chip grammar (not a 90-row checkbox wall) */
-  era: [['1930', '1930s'], ['1940', '1940s'], ['1950', '1950s'], ['1960', '1960s'],
+  era: [['pre', 'Pre-1950'], ['1950', '1950s'], ['1960', '1960s'],
         ['1970', '1970s'], ['1980', '1980s'], ['1990', '1990s'], ['2000', '2000s'],
         ['2010', '2010s'], ['2020', '2020s']],
 };

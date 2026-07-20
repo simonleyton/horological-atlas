@@ -1431,8 +1431,38 @@ footer {
 }
 #lp-fields input:focus { color: var(--text-1); border-color: var(--line-2); }
 .lp-dash { font-size: 11px; color: var(--text-3); }
+/* On a phone the popover becomes a SHEET — the platform's own pattern for a
+   tall control surface on compact width (Maps, Find My). The full filter
+   vocabulary stays visible and SCROLLS; compressing the language to fit a
+   fixed box would trade meaning for geometry. Grabber, rounded top, internal
+   momentum scroll, safe-area floor. Desktop popover untouched. */
 @media (max-width: 760px) {
-  #lens-panel { right: 16px; left: 16px; width: auto; }
+  #lens-panel {
+    left: 0; right: 0; bottom: 0; width: auto;
+    max-height: 78vh; max-height: 78dvh;
+    overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+    padding: 10px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateY(14px);
+  }
+  #lens-panel.on { transform: none; }
+  /* the grabber — the sheet says what it is */
+  #lens-panel::before {
+    content: "";
+    display: block;
+    width: 36px; height: 4px;
+    margin: 0 auto 12px;
+    border-radius: 999px;
+    background: var(--line-2);
+  }
+  /* the head rides the scroll — FILTERS + CLEAR always in reach */
+  #lens-panel .lens-head {
+    position: sticky; top: -10px;               /* cancels the panel's top padding */
+    z-index: 1;
+    background: var(--surface-1);
+    margin: 0 -16px; padding: 8px 16px 10px;
+  }
 }
 
 /* ---------- EXPORT CARTOUCHE ---------- */

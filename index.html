@@ -29,7 +29,7 @@
   <link rel="icon" href="favicon-16.png?v=2" sizes="16x16" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
   <meta name="theme-color" content="#06080B">
-  <link rel="stylesheet" href="app.css?v=91">
+  <link rel="stylesheet" href="app.css?v=93">
   <script>/* skip the surface hero for returning visitors + shared deep links (no flash).
        #fit and #fit&r=<id> count: both open the fitting overlay immediately, so
        landing on the hero would bury a shared plate behind a full-screen scroll. */
@@ -117,7 +117,10 @@
   <footer class="chrome">
     <div id="footer-left">
       <span id="footer-gauge"></span>
-      <button id="colophon-open" type="button" aria-haspopup="dialog" aria-expanded="false">Colophon</button>
+      <!-- proper casing in the DOM; CSS lowercases it for display, so screen
+           readers and copy-paste still get the real name -->
+      <button id="colophon-open" type="button" aria-haspopup="dialog" aria-expanded="false"
+              aria-label="Colophon — by Simon Leyton">by Simon Leyton</button>
     </div>
     <div id="footer-right">
       <button id="fitting-chip" type="button" aria-label="Find your watch — take the fitting" title="Find your watch">

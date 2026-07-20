@@ -1232,11 +1232,16 @@ footer {
   line-height: 1.5;
   display: flex; align-items: baseline; gap: 12px;
 }
+/* lowercase, untracked, weight 500 — the same register as the wordmark, the
+   projection toggle and the CTA. Tracked uppercase was the odd one out.
+   text-transform rather than lowercase in the markup, so the DOM and the
+   accessible name keep the real casing of a person's name. */
 #colophon-open {
   pointer-events: auto;
   background: none; border: 0; padding: 0;
   font-family: var(--font-ui);
-  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  font-size: 11px; font-weight: 500; letter-spacing: 0;
+  text-transform: lowercase;
   color: var(--text-3); cursor: pointer;
   transition: color 160ms var(--ease-out);
 }
@@ -1537,10 +1542,17 @@ body.pre-reveal #fitting-chip, body.observatory #fitting-chip, body.export #fitt
 /* mobile: yield the secondary date label; center the "find your watch" CTA and
    keep the frame/filter circles right-aligned */
 @media (max-width: 620px) {
-  /* the gauge goes, the colophon stays — attribution is the one thing that
-     must survive the small breakpoint, and the bottom-left is free here */
+  /* the gauge goes, the attribution stays — the name is the one thing that
+     must survive the small breakpoint. Lowercase and untracked it runs ~77px
+     against a centred CTA that starts near 111px even at 360, so it needs no
+     shrinking; the max-width is only a hard stop against font metrics I
+     cannot measure here. */
   #footer-gauge { display: none; }
   #footer-left { pointer-events: none; }
+  #colophon-open {
+    max-width: calc(50% - 82px);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
   footer { justify-content: flex-end; }   /* push the frame/filter circles to the right */
   #footer-right { gap: 10px; }
   #fitting-chip {                          /* the CTA, dead-centered; sized to clear the circles */

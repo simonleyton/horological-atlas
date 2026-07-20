@@ -2623,3 +2623,9 @@ html.no-hero #hero { display: none; }
 @media (prefers-reduced-motion: reduce) {
   #panel-scrim { transition: none; }
 }
+
+/* the eyebrow stacks beside the body copy on desktop; on a phone the columns
+   are gone and the stack reads as a typo — one line there */
+@media (max-width: 760px) {
+  #hero-eyebrow br { display: none; }
+}

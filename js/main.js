@@ -4856,8 +4856,11 @@ function refreshFocus() {
     if (wm) { wm.classList.toggle('at-surface', n === 0);
               wm.setAttribute('aria-disabled', n === 0 ? 'true' : 'false'); } }
   const w = DS.order[n];
-  const pillRef = w.reference ? ` · REF. ${String(w.reference).toUpperCase()}` : '';
-  DS.pillText = `${String(w.brand || '').toUpperCase()} ${String(w.model || '').toUpperCase()}${pillRef} · ${fmtM(w.waterResistanceM)} M`;
+  /* the card pill carries the NAME alone — the ref belongs to the detail
+     panel's ledger, and the depth is already spoken twice at this moment (the
+     ruler behind the card and the gauge bottom-left). Saying it a third time
+     on the pill was inventory, not caption. */
+  DS.pillText = `${String(w.brand || '').toUpperCase()} ${String(w.model || '').toUpperCase()}`;
   const cnt = DS.wrCount.get(w.waterResistanceM) || 1;
   DS.gaugeText = `−${fmtM(w.waterResistanceM)} M · ${cnt} ${cnt === 1 ? 'watch' : 'watches'} at this depth`;
   if (descentChromeOn) elFooterGauge.textContent = DS.gaugeText;

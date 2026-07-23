@@ -96,6 +96,11 @@ if use_alpha:
 else:
     im = Image.open(src_path).convert('RGB')
     a = np.asarray(im)
+    if bleed:
+        # a bleed subject runs off top and bottom; the erode below would
+        # otherwise pull its silhouette a few px short of both edges
+        a = np.pad(a, ((8, 8), (0, 0), (0, 0)), mode='edge')
+        im = Image.fromarray(a)
     H, W = a.shape[:2]
     tol = int(sys.argv[sys.argv.index('--tol') + 1]) if '--tol' in sys.argv else 14
     bg = flood_background(a, tol)
@@ -177,6 +182,14 @@ if bleed:
     canvas = Image.new('RGB', (CW, CH), GROUND)
     ox = (CW - comp.width) // 2
     oy = round(CH / 2 - (head_y * scale))   # head on the frame's horizon
+    # a bleed subject must reach the top edge — if the flood ate bright
+    # bracelet highlights there, nudge up by the measured gap (the head
+    # drifts by the same few px, imperceptible). The 1-2px of FEATHER at
+    # the edge after this is soft-edge, not a gap.
+    rows_any = subj.any(axis=1)
+    top_gap = int(np.argmax(rows_any)) if rows_any.any() else 0
+    if 0 < top_gap * scale < 14:
+        oy -= int(np.ceil(top_gap * scale)) + 1
     canvas.paste(comp, (ox, oy))
 else:
     target = OUT * SUBJECT_FRAC
@@ -185,6 +198,20 @@ else:
         (max(1, round(sw * scale)), max(1, round(sh * scale))), Image.LANCZOS)
     canvas = Image.new('RGB', (OUT, OUT), GROUND)
     canvas.paste(comp, ((OUT - comp.width) // 2, (OUT - comp.height) // 2))
+
+# --dehaze: soft lightbox shadows survive any sane flood tolerance (grey, not
+# near-white) and read as smudges on the plate. Faint pixels are legitimate
+# ONLY as anti-aliasing beside strong subject edges, so anything faint that is
+# not within ~7px of a strong pixel snaps to ground. Flag-gated: a dark fabric
+# strap on the dark ground is itself faint, and a blanket pass would eat it.
+if '--dehaze' in sys.argv:
+    cv = np.asarray(canvas).astype(np.int16)
+    dev = np.abs(cv - np.array(GROUND, np.int16)).sum(axis=2)
+    strong = Image.fromarray(((dev > 50) * 255).astype('uint8')).filter(ImageFilter.MaxFilter(15))
+    keep = np.asarray(strong) > 127
+    faint = (dev > 0) & (dev <= 50) & ~keep
+    cv[faint] = GROUND
+    canvas = Image.fromarray(cv.astype('uint8'))
 
 dst = os.path.join(ROOT, 'data', 'img-catalog', out_id + '.jpg')
 canvas.save(dst, 'JPEG', quality=92)

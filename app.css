@@ -2330,9 +2330,10 @@ html.no-hero #hero { display: none; }
 }
 @keyframes hero-lume-breath { 0%,100% { opacity: 0.28; } 50% { opacity: 0.9; } }
 
-#hero.diving {                 /* the dive — sink up, darken to the deep, fade */
+#hero.diving {                 /* the dive — sink up, darken into the SHALLOW water it
+                                  hands off to (§18g: the blue must not drain at the cut) */
   opacity: 0; transform: translateY(-5%);
-  background: #06080B; pointer-events: none;
+  background: #0B1A24; pointer-events: none;
 }
 /* the dive choreography — light recedes, the watch sinks and blurs into the deep */
 #hero.diving::before, #hero.diving #hero-fx, #hero.diving #hero-lume { opacity: 0; }

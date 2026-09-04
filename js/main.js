@@ -4443,6 +4443,7 @@ const DS = {
   pillText: '', gaugeText: '',
   rects: [],                     /* hit rects this frame — pooled objects, rear→front */
   annRectN: 0, annHover: -1,     /* life-ladder marks — clickable engravings (§18e) */
+  sunOn: false,                  /* §18f — surface light on screen last frame; feeds the tail law */
   cx: 0, cxA: null, cy: 0, cyA: null,   /* 400ms panel-offset glides */
   rampUntil: 0,                  /* image alpha-ramp horizon for the scheduler */
   hintSeen: false, hintT0: 0,    /* wheel affordance — whispers until the first dive gesture */
@@ -4484,6 +4485,7 @@ function initDescent() {
   initMarineSnow();                 /* seeded once — view-independent drift */
   initBubbles();                    /* §18c amendment — the wake, seeded once */
   initBiolum();                     /* §18c amendment — the deep's own light, seeded once */
+  initShafts();                     /* §18f — the sun's beams, seeded once */
   /* §18d — the sounding line must be measurable BEFORE descentDerive sizes it:
      a display:none rail reads 0×0 and the canvas/labels build empty (v35 bug) */
   elSounding.hidden = false;
@@ -5256,7 +5258,9 @@ function drawDescent(c, w_, h_, now, isExport) {
   const dF = (1 + Math.cos(phiF)) / 2;
   const scF = (0.40 + 0.60 * Math.pow(dF, 1.5)) * bloomOf(Math.max(0, 1 - Math.abs(n - s))) * cardK;
   const vy = -(dYs(s + 0.01) - dYs(s - 0.01)) / 0.02;   /* screen-px per card unit, shared */
-  drawSurfaceCeiling(c, w_, h_, cy, Y0, 1);
+  drawPhoticGlow(c, w_, h_, 1);                  /* §18g — direction outlives position */
+  drawSurfaceCeiling(c, w_, h_, cy, Y0, 1, now);
+  drawSunShafts(c, w_, h_, cy, Y0, 1, now);      /* §18f — behind the instrument ink */
   drawDescentRulers(c, w_, h_, cy, Y0, 1);
   drawDepthAnnotations(c, w_, h_, cx, cy, Y0, 1, scF, s, !isExport);
   drawMarineSnow(c, w_, h_, Y0, 1, vy);
@@ -5674,7 +5678,9 @@ function drawMorph(c, w_, h_, now, isExport) {
     const nF = clamp(Math.round(DS.s), 0, DS.n - 1);
     const dF = (1 + Math.cos((nF - DS.s) * HELIX_DTH)) / 2;
     const scF = (0.40 + 0.60 * Math.pow(dF, 1.5)) * bloomOf(Math.max(0, 1 - Math.abs(nF - DS.s)));
-    drawSurfaceCeiling(c, w_, h_, DS.cy, Y0, descA);
+    drawPhoticGlow(c, w_, h_, descA);                  /* §18g rides the same envelope */
+    drawSurfaceCeiling(c, w_, h_, DS.cy, Y0, descA, now);
+    drawSunShafts(c, w_, h_, DS.cy, Y0, descA, now);   /* §18f rides the same envelope */
     drawDescentRulers(c, w_, h_, DS.cy, Y0, descA);
     drawDepthAnnotations(c, w_, h_, DS.cx, DS.cy, Y0, descA, scF, DS.s);
     drawMarineSnow(c, w_, h_, Y0, descA, 0);     /* frozen mid-morph — never streaked */
@@ -5772,7 +5778,19 @@ elMtDescent.addEventListener('click', () => {
    escence encodes life where light ends (>1000m — the one place the
    column makes its own color, because down there light IS data about
    life). Both deterministic (fixed seeds), both parked when idle.
-   Still refused: waves, creatures, sound — imagery, not physics.
+   Amended again (§18f): the sun is an OBJECT in the world, not a mood —
+   its shafts hang from the 0M line like the ceiling does, and die by
+   geometry (scroll them off the top and they are gone). No new depth
+   tables: attenuation IS the distance to the surface.
+   Amended again (§18g): the INTERFACE may move — a waterline is the one
+   place a wave is physics, so the ceiling and every beam anchor ride one
+   deterministic swell; instruments stay straight (the sea moves, the
+   measurement does not). Below the surface band, direction outlives
+   position: a downwelling glow hangs from the top of the frame and dies
+   at the midnight line. One sun ink everywhere (WC_SUN — the hero hands
+   its light to the column); biolum is greener because it is life, not sun.
+   Still refused: waves BELOW the interface, creatures, sound — and the
+   caustic web (cut 2026-09-04: pool-floor lace read as decoration).
    In the sky waterT is 0 and every path short-circuits — bit-identical.
    ====================================================================== */
 
@@ -5786,10 +5804,15 @@ function dM(s) {
 const sstep = t => t * t * (3 - 2 * t);   /* smoothstep — zero-slope at knots */
 
 /* --- light attenuation — the real optical zones, smoothly interpolated.
-   Base FIELD_RGB [6,8,11] sits between the 200m and 1000m anchors: the
-   sky's ground already reads as shallow water, so entry never pops. ------ */
+   The shallow anchors carry the HERO's water (#0A1C26 family): the cover,
+   the surface and the first shelves are ONE sea, and diving is the color
+   draining out of it — blue holds through the photic zone, is nearly gone
+   by the midnight line, and the hadal anchors are untouched night. The
+   surface projection still sits on exact FIELD_RGB (waterT 0); the morph's
+   300ms envelope carries the bloom, and the hero dive lands on the shallow
+   water it hands off to. ------------------------------------------------- */
 const WC_ZONE_D = [0, 200, 1000, 4000, 11000];
-const WC_ZONE_RGB = [[9, 12, 14], [7, 9, 12], [5, 7, 10], [4, 5, 8], [3, 4, 6]];
+const WC_ZONE_RGB = [[12, 30, 41], [9, 20, 29], [6, 10, 15], [4, 6, 9], [3, 4, 6]];
 const wcZoneOut = [0, 0, 0];
 function wcZone(d) {
   let k = WC_ZONE_D.length - 2;
@@ -5862,10 +5885,12 @@ function dTau(d) {
   return 0.150 + 0.030 * (1 - Math.pow(d / 11000, 0.35));
 }
 
-/* --- marine snow — 28 single-pixel motes, whisper alpha, seeded once.
-   Deterministic per session (mulberry32, fixed seed); zero per-frame
-   allocation; parallax 0.35 so descending streams them gently upward. ---- */
-const WC_SNOW_N = 28, WC_SNOW_P = 0.35;
+/* --- marine snow — two layers of the same fall, whisper alpha, seeded
+   once. Deterministic per session (mulberry32, fixed seed); zero per-frame
+   allocation. The far layer (parallax 0.22, 1px, dimmer) and the near
+   layer (parallax 0.55, up to 2px, a shade brighter) give the dive its
+   parallax: scrolling shears the two sheets of the same snowfall. ------- */
+const WC_SNOW_N = 56, WC_SNOW_FAR = 34;   /* motes 0–33 far, 34–55 near */
 function mulberry32(a) {
   return function () {
     a |= 0; a = a + 0x6D2B79F5 | 0;
@@ -5876,19 +5901,23 @@ function mulberry32(a) {
 }
 function initMarineSnow() {
   const rnd = mulberry32(10911);                 /* fixed seed — same sea every session */
-  const sn = DS.snow = new Float32Array(WC_SNOW_N * 4);
+  const sn = DS.snow = new Float32Array(WC_SNOW_N * 6);
   for (let j = 0; j < WC_SNOW_N; j++) {
-    sn[j * 4] = 0.02 + 0.96 * rnd();             /* xFrac */
-    sn[j * 4 + 1] = rnd();                       /* yFrac */
-    sn[j * 4 + 2] = 0.04 + 0.06 * rnd();         /* alpha 0.04–0.10 */
-    sn[j * 4 + 3] = 2 + 3 * rnd();               /* fall 2–5 px/s, world, downward */
+    const far = j < WC_SNOW_FAR;
+    sn[j * 6] = 0.02 + 0.96 * rnd();             /* xFrac */
+    sn[j * 6 + 1] = rnd();                       /* yFrac */
+    sn[j * 6 + 2] = (far ? 0.03 : 0.05) + (far ? 0.04 : 0.05) * rnd();   /* alpha — near a shade brighter */
+    sn[j * 6 + 3] = 2 + 3 * rnd();               /* fall 2–5 px/s, world, downward */
+    sn[j * 6 + 4] = far ? 0.22 : 0.55;           /* parallax — two sheets of one snowfall */
+    sn[j * 6 + 5] = far ? 1 : (rnd() < 0.4 ? 2 : 1);   /* size — a few near motes carry 2px */
   }
 }
-/* density thins with depth — near-none below the midnight line, hadal empty */
+/* density thins with depth — richer through the twilight than before (the
+   150–1000m act was reading as emptiness), a trace to 3800m, hadal empty */
 function wcSnowK(d) {
-  if (d <= 200) return 1;
-  if (d <= 1000) return 1 - 0.85 * sstep((d - 200) / 800);
-  if (d <= 2500) return 0.15 * (1 - sstep((d - 1000) / 1500));
+  if (d <= 250) return 1;
+  if (d <= 1000) return 1 - 0.75 * sstep((d - 250) / 750);
+  if (d <= 3800) return 0.25 * (1 - sstep((d - 1000) / 2800));
   return 0;
 }
 function drawMarineSnow(c, w_, h_, Y0, aMul, vy) {
@@ -5896,34 +5925,36 @@ function drawMarineSnow(c, w_, h_, Y0, aMul, vy) {
   const k = wcSnowK(dM(DS.s));
   if (k <= 0.001) return;                        /* hadal water is empty — skip the loop */
   const WRAP = DS.snowWrap || h_ + 240;
-  const sn = DS.snow, clockPx = DS.snowClock, par = WC_SNOW_P * Y0;
+  const sn = DS.snow, clockPx = DS.snowClock;
   /* fast scroll: the card-ghost grammar, actually honored — the ghosts'
      energy is taken FROM the main mote (composite alpha stays a through
      the whole transition) and the ghost share ramps in from the |gy|
      threshold, so streak onset never steps brightness. vy is the caller's
      shared derivative — never resampled here. */
-  let gy = 0, gsh = 0;
-  if (!REDUCED && vy && Math.abs(DS.v) > BLUR_V) {
-    gy = clamp(vy * DS.v * 0.006 * WC_SNOW_P, -12, 12);
-    gsh = 0.25 * clamp((Math.abs(gy) - 0.5) / 1.5, 0, 1);
-  }
+  const streaking = !REDUCED && vy && Math.abs(DS.v) > BLUR_V;
   c.save();
   c.fillStyle = THREAD_INK;
   for (let j = 0; j < WC_SNOW_N; j++) {
-    const a = sn[j * 4 + 2] * k * aMul;
+    const a = sn[j * 6 + 2] * k * aMul;
     if (a < 0.004) continue;
-    const raw = sn[j * 4 + 1] * WRAP + sn[j * 4 + 3] * clockPx - par;
+    const par = sn[j * 6 + 4], sz = sn[j * 6 + 5];
+    const raw = sn[j * 6 + 1] * WRAP + sn[j * 6 + 3] * clockPx - par * Y0;
     const sy = ((raw % WRAP) + WRAP) % WRAP - 120;
-    const sx = sn[j * 4] * w_;
+    const sx = sn[j * 6] * w_;
+    let gy = 0, gsh = 0;
+    if (streaking) {
+      gy = clamp(vy * DS.v * 0.006 * par, -12, 12);
+      gsh = 0.25 * clamp((Math.abs(gy) - 0.5) / 1.5, 0, 1);
+    }
     if (gsh > 0.003) {
       c.globalAlpha = a * (1 - 2 * gsh);         /* main yields what the ghosts take */
-      c.fillRect(sx, sy, 1, 1);
+      c.fillRect(sx, sy, sz, sz);
       c.globalAlpha = a * gsh;
-      c.fillRect(sx, sy + gy, 1, 1);
-      c.fillRect(sx, sy - gy, 1, 1);
+      c.fillRect(sx, sy + gy, sz, sz);
+      c.fillRect(sx, sy - gy, sz, sz);
     } else {
       c.globalAlpha = a;
-      c.fillRect(sx, sy, 1, 1);
+      c.fillRect(sx, sy, sz, sz);
     }
   }
   c.restore();
@@ -6045,9 +6076,10 @@ function getBioSprite() {
   const g = cv.getContext('2d');
   const r = BIO_SPR * SPRS / 2;
   const grad = g.createRadialGradient(r, r, 0, r, r, r);
-  grad.addColorStop(0, 'rgba(150,200,220,1)');
-  grad.addColorStop(0.35, 'rgba(150,200,220,0.35)');
-  grad.addColorStop(1, 'rgba(150,200,220,0)');
+  /* greener than the sun ink on purpose — this light is life, not sky */
+  grad.addColorStop(0, 'rgba(140,225,200,1)');
+  grad.addColorStop(0.35, 'rgba(140,225,200,0.35)');
+  grad.addColorStop(1, 'rgba(140,225,200,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, cv.width, cv.height);
   bioSprite = cv;
@@ -6091,7 +6123,9 @@ function drawBiolum(c, w_, h_, Y0, aMul, now) {
 function scheduleWaterTail(now) {
   if (REDUCED || !DS.wrM) return;
   const d = dM(DS.s);
-  if (wcBioK(d) > 0) DS.snowUntil = Infinity;
+  /* the two ends of the column never sleep: the sun above (§18f), the
+     life below — only the middle waters go still */
+  if (wcBioK(d) > 0 || DS.sunOn) DS.snowUntil = Infinity;
   else if (wcSnowK(d) > 0) DS.snowUntil = now + 4000;
 }
 
@@ -6313,25 +6347,171 @@ function getWcStrip() {
   c.width = 1; c.height = 256;
   const g = c.getContext('2d');
   const gr = g.createLinearGradient(0, 0, 0, 256);
-  gr.addColorStop(0, 'rgba(168,188,202,0.04)');
-  gr.addColorStop(1, 'rgba(168,188,202,0)');
+  gr.addColorStop(0, `rgba(${WC_SUN},0.045)`);
+  gr.addColorStop(1, `rgba(${WC_SUN},0)`);
   g.fillStyle = gr;
   g.fillRect(0, 0, 1, 256);
   wcStrip = c;
   return c;
 }
-function drawSurfaceCeiling(c, w_, h_, cy, Y0, aMul) {
+/* §18g — the swell. One deterministic function of (xFrac, seconds); the
+   ceiling, the web and every beam anchor read it, so the whole surface
+   act breathes as one body. Two incommensurate components, ~5px total,
+   ~15s and ~20s — ocean time, not UI time. Reduced motion freezes t at 0:
+   a sea has form even in a photograph. */
+function swellY(xf, t) {
+  return 3.2 * Math.sin(6.2832 * xf * 1.15 - t * 0.42 + 0.7) +
+         1.8 * Math.sin(6.2832 * xf * 2.30 + t * 0.31);
+}
+const WC_CEIL_SLICES = 12;
+function drawSurfaceCeiling(c, w_, h_, cy, Y0, aMul, now) {
   if (aMul <= 0.01) return;
   const lineY = cy + WC_SURFACE_Y - Y0;
   if (lineY <= -h_ * 0.5) return;                /* the surface is far above — nothing prints */
+  const t = REDUCED ? 0 : now / 1000;
+  const strip = getWcStrip();
+  const sw = w_ / WC_CEIL_SLICES;
   c.save();
   c.globalAlpha = aMul;
-  c.drawImage(getWcStrip(), 0, lineY - 420, w_, 420);
+  for (let i = 0; i < WC_CEIL_SLICES; i++) {
+    const sy = swellY((i + 0.5) / WC_CEIL_SLICES, t);
+    c.drawImage(strip, 0, 0, 1, 256, i * sw, lineY + sy - 420, sw + 0.5, 420);
+  }
   if (lineY - 420 > 0) {
-    c.fillStyle = 'rgba(168,188,202,0.04)';      /* constant above the ramp — brightest at top */
-    c.fillRect(0, 0, w_, lineY - 420);
+    c.fillStyle = `rgba(${WC_SUN},0.045)`;       /* constant above the ramp — brightest at top */
+    c.fillRect(0, 0, w_, lineY - 414);           /* tucked under the slices' swell range */
   }
   c.restore();
+}
+
+/* §18g — the downwelling glow: below the web, direction outlives position.
+   Hung from the top of the FRAME (at depth, "up" survives long after the
+   surface is kilometres of scroll away), fading across the upper half of
+   the viewport, and gone entirely at the midnight line — the same 1000m
+   where bubbles lose their light and biolum begins. */
+let wcGlow = null;
+function getWcGlow() {
+  if (wcGlow) return wcGlow;
+  const c = document.createElement('canvas');
+  c.width = 1; c.height = 512;
+  const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 512);
+  gr.addColorStop(0, `rgba(${WC_SUN},0.05)`);
+  gr.addColorStop(1, `rgba(${WC_SUN},0)`);
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 1, 512);
+  wcGlow = c;
+  return c;
+}
+function wcGlowK(d) {
+  if (d <= 250) return 1;
+  if (d >= 1000) return 0;
+  return 1 - sstep((d - 250) / 750);
+}
+function drawPhoticGlow(c, w_, h_, aMul) {
+  if (aMul <= 0.01 || !DS.wrM) return;
+  const k = wcGlowK(dM(DS.s));
+  if (k <= 0.004) return;
+  c.save();
+  c.globalAlpha = aMul * k;
+  c.drawImage(getWcGlow(), 0, 0, w_, h_ * 0.55);
+  c.restore();
+}
+
+/* ======================================================================
+   18f · THE SUN — §18c amendment: refracted light at the top of the column
+   The shafts: the sun scattered through the first fathoms — five seeded
+   beams in the one sun ink (WC_SUN), hinged AT the surface and gone by
+   GEOMETRY when it scrolls off the top; they wax and wane on
+   incommensurate periods and reach 1.6 viewports down, the depth
+   attenuation being the sprite's own vertical fade. Deterministic (fixed
+   seeds), whisper alpha, zero per-frame allocation. The top of the column
+   never sleeps while the sun is on screen — the mirror of the deep's
+   biolum law: sun above, life below, stillness between. A caustic web
+   (pool-floor lace on the surface band) shipped here in v99–v100 and was
+   CUT by Simon's call 2026-09-04 — the lace read as decoration; the
+   beams, the swell and the glow carry the sun alone.
+   ====================================================================== */
+
+/* one sun, one ink — the hero's light and the column's light are the same
+   light (§18g): bluer than the old instrument grey, stopping short of
+   biolum's green. Every sun surface reads it: ceiling, glow, shafts,
+   and the hero-fx canvas above. */
+const WC_SUN = [165, 205, 228];
+
+/* --- the shafts — five beams hinged at the surface ---------------------
+   Anchored on the 0M line and rotated about it: a beam enters where the
+   sun refracts, so its sway PIVOTS there — the whole column swings from
+   the waterline, never slides. One shared sun angle, a small per-beam
+   spread (a high sun, not a searchlight bank), envelopes that never quite
+   reach zero — the sun does not blink. */
+const WC_SHAFT_N = 5, WC_SHAFT_REACH = 1.6, WC_SHAFT_TILT = 0.14;
+function initShafts() {
+  if (DS.shaft) return;                          /* idempotent — the hero may ask first */
+  const rnd = mulberry32(31415);                 /* fixed seed — same sun every session */
+  const sf = DS.shaft = new Float32Array(WC_SHAFT_N * 7);
+  for (let j = 0; j < WC_SHAFT_N; j++) {
+    sf[j * 7] = 0.10 + 0.80 * rnd();             /* xFrac — where the beam enters */
+    sf[j * 7 + 1] = 34 + 44 * rnd();             /* half-width 34–78 logical px — a beam, not a wash */
+    sf[j * 7 + 2] = 0.11 + 0.07 * rnd();         /* peak alpha 0.11–0.18 — reads at arm's length
+                                                    (the v36 lesson: QA presence ≠ human visibility) */
+    sf[j * 7 + 3] = 11 + 12 * rnd();             /* breathe period 11–23s — incommensurate */
+    sf[j * 7 + 4] = rnd() * Math.PI * 2;         /* breathe phase */
+    sf[j * 7 + 5] = (rnd() - 0.5) * 0.07;        /* tilt spread ±2° about the shared sun */
+    sf[j * 7 + 6] = rnd() * Math.PI * 2;         /* sway phase */
+  }
+}
+let shaftSprite = null;   /* soft-edged, fading with depth — baked once at 1×: light is soft */
+function getShaftSprite() {
+  if (shaftSprite) return shaftSprite;
+  const SW = 96, SH = 512;
+  const cv = document.createElement('canvas');
+  cv.width = SW; cv.height = SH;
+  const g = cv.getContext('2d');
+  const img = g.createImageData(SW, SH);
+  const px = img.data;
+  for (let y = 0; y < SH; y++) {
+    const vf = Math.pow(1 - y / (SH - 1), 2.0);  /* the water eats the beam on the way down —
+                                                    it DISSOLVES; it never simply ends */
+    for (let x = 0; x < SW; x++) {
+      const hf = Math.pow(Math.sin(Math.PI * x / (SW - 1)), 2.2);   /* no hard edge anywhere */
+      const o = (y * SW + x) * 4;
+      px[o] = WC_SUN[0]; px[o + 1] = WC_SUN[1]; px[o + 2] = WC_SUN[2];
+      px[o + 3] = Math.round(255 * hf * vf);
+    }
+  }
+  g.putImageData(img, 0, 0);
+  shaftSprite = cv;
+  return shaftSprite;
+}
+function drawSunShafts(c, w_, h_, cy, Y0, aMul, now) {
+  DS.sunOn = false;
+  if (aMul <= 0.01 || !DS.shaft) return;
+  const lineY = cy + WC_SURFACE_Y - Y0;
+  const reach = h_ * WC_SHAFT_REACH;
+  if (lineY + reach < 0) return;                 /* the sun cannot reach this water */
+  DS.sunOn = true;
+  const t = now / 1000, sf = DS.shaft;
+  const spr = getShaftSprite();
+  for (let j = 0; j < WC_SHAFT_N; j++) {
+    let env = 0.55;                              /* reduced motion — a steady noon */
+    let sway = 0;
+    if (!REDUCED) {
+      const s0 = 0.5 + 0.5 * Math.sin(t * BIO_TAU / sf[j * 7 + 3] + sf[j * 7 + 4]);
+      env = 0.35 + 0.65 * s0 * s0;               /* waxes and wanes — never out */
+      sway = 0.021 * Math.sin(t * 0.23 + sf[j * 7 + 6]);
+    }
+    const a = sf[j * 7 + 2] * env * aMul;
+    if (a < 0.004) continue;
+    c.save();
+    /* each beam enters at ITS point on the swell — the roots ride the sea */
+    c.translate(sf[j * 7] * w_, lineY + swellY(sf[j * 7], REDUCED ? 0 : t));
+    c.rotate(WC_SHAFT_TILT + sf[j * 7 + 5] + sway);
+    c.globalAlpha = a;
+    const hw = sf[j * 7 + 1];
+    c.drawImage(spr, -hw, 0, hw * 2, reach);
+    c.restore();
+  }
 }
 
 /* ======================================================================
@@ -7561,13 +7741,22 @@ let heroFx = null, heroFxRaf = 0;
 function heroFxSetup() {
   const cv = document.getElementById('hero-fx');
   if (!cv) return;
-  const r = () => Math.random();
+  if (!DS.shaft) initShafts();       /* the cover reads the column's sun (§18g) */
+  const rnd = mulberry32(64090);     /* fixed seed — same cover every session */
   heroFx = {
     cv, ctx: cv.getContext('2d'), DPR: Math.min(dpr, 2), W: 0, H: 0,
-    shafts: Array.from({ length: 6 }, (_, i) => ({ x0: 0.30 + i * 0.13, w: 0.11 + r() * 0.07, ang: -0.14 + r() * 0.28, ph: r() * 6.28, a: 0.055 + r() * 0.05 })),
-    dapple: Array.from({ length: 8 }, () => ({ x: 0.30 + r() * 0.7, y: r() * 0.55, r: 0.05 + r() * 0.08, ph: r() * 6.28, sp: 0.2 + r() * 0.3, a: 0.03 + r() * 0.028 })),
-    bubbles: Array.from({ length: 18 }, () => ({ x: 0.30 + r() * 0.7, y: r(), r: 1 + r() * 3.2, sp: 0.02 + r() * 0.05, ph: r() * 6.28, a: 0.07 + r() * 0.2 })),
+    /* the five §18f beams VERBATIM — same entry points, same angles, same
+       breath. When the hero dives away, its light is still standing in the
+       water behind it: that continuity IS the through-line. */
+    shafts: Array.from({ length: WC_SHAFT_N }, (_, j) => ({
+      x0: DS.shaft[j * 7], w: DS.shaft[j * 7 + 1] * 2.7, a: DS.shaft[j * 7 + 2] * 1.4,
+      per: DS.shaft[j * 7 + 3], ph: DS.shaft[j * 7 + 4],
+      ang: WC_SHAFT_TILT + DS.shaft[j * 7 + 5], swph: DS.shaft[j * 7 + 6],
+    })),
+    dapple: Array.from({ length: 8 }, () => ({ x: 0.30 + rnd() * 0.7, y: rnd() * 0.55, r: 0.05 + rnd() * 0.08, ph: rnd() * 6.28, sp: 0.2 + rnd() * 0.3, a: 0.03 + rnd() * 0.028 })),
+    bubbles: Array.from({ length: 18 }, () => ({ x0: 0.30 + rnd() * 0.7, x: 0, y: rnd(), r: 1 + rnd() * 3.2, sp: 0.02 + rnd() * 0.05, ph: rnd() * 6.28, a: 0.07 + rnd() * 0.2 })),
   };
+  for (const b of heroFx.bubbles) b.x = b.x0;
   heroFxResize();
 }
 function heroFxResize() {
@@ -7598,13 +7787,17 @@ function heroFxFrame(ms) {
   x.clearRect(0, 0, W, H);
   x.globalCompositeOperation = 'lighter';
   for (const s of st.shafts) {
-    const cx = (s.x0 + Math.sin(t * 0.22 + s.ph) * 0.03) * W, ang = s.ang + Math.sin(t * 0.16 + s.ph) * 0.05, f = lf(cx);
+    const cx = s.x0 * W, f = lf(cx);
     if (f <= 0) continue;
-    x.save(); x.translate(cx, -40); x.rotate(ang);
-    const w = s.w * W, gg = x.createLinearGradient(0, 0, 0, H * 1.25), pulse = s.a * f * (0.7 + 0.3 * Math.sin(t * 0.5 + s.ph));
-    gg.addColorStop(0, `rgba(150,205,235,${pulse})`); gg.addColorStop(0.5, `rgba(120,185,220,${pulse * 0.32})`); gg.addColorStop(1, 'rgba(120,185,220,0)');
+    /* the column's own breath and sway — §18f verbatim, softened by blur */
+    const s0 = 0.5 + 0.5 * Math.sin(t * 6.2832 / s.per + s.ph);
+    const pulse = s.a * f * (0.35 + 0.65 * s0 * s0);
+    const sway = 0.021 * Math.sin(t * 0.23 + s.swph);
+    x.save(); x.translate(cx, -40); x.rotate(s.ang + sway);
+    const w = s.w, gg = x.createLinearGradient(0, 0, 0, H * 1.25);
+    gg.addColorStop(0, `rgba(${WC_SUN},${pulse})`); gg.addColorStop(0.5, `rgba(${WC_SUN},${pulse * 0.32})`); gg.addColorStop(1, `rgba(${WC_SUN},0)`);
     x.fillStyle = gg; x.filter = 'blur(16px)';
-    x.beginPath(); x.moveTo(-w * 0.3, 0); x.lineTo(w * 0.3, 0); x.lineTo(w * 0.9, H * 1.25); x.lineTo(-w * 0.9, H * 1.25); x.closePath(); x.fill();
+    x.beginPath(); x.moveTo(-w * 0.55, 0); x.lineTo(w * 0.55, 0); x.lineTo(w * 0.95, H * 1.25); x.lineTo(-w * 0.95, H * 1.25); x.closePath(); x.fill();
     x.restore();
   }
   x.filter = 'none';
@@ -7613,11 +7806,11 @@ function heroFxFrame(ms) {
     if (f <= 0) continue;
     const r = (d.r * (0.85 + 0.25 * Math.sin(t * 0.6 + d.ph))) * W, a = d.a * f * (0.55 + 0.45 * Math.sin(t * 0.7 + d.ph));
     const rg = x.createRadialGradient(px, py, 0, px, py, r);
-    rg.addColorStop(0, `rgba(175,218,242,${Math.max(0, a)})`); rg.addColorStop(1, 'rgba(175,218,242,0)');
+    rg.addColorStop(0, `rgba(${WC_SUN},${Math.max(0, a)})`); rg.addColorStop(1, `rgba(${WC_SUN},0)`);
     x.fillStyle = rg; x.beginPath(); x.arc(px, py, r, 0, 6.2832); x.fill();
   }
   for (const b of st.bubbles) {
-    b.y -= b.sp * 0.012; if (b.y < -0.02) { b.y = 1.03; b.x = 0.30 + Math.random() * 0.7; }
+    b.y -= b.sp * 0.012; if (b.y < -0.02) { b.y = 1.03; b.x = b.x0; }   /* deterministic respawn */
     const px = (b.x + Math.sin(t * 0.6 + b.ph) * 0.006) * W, py = b.y * H, f = lf(px);
     if (f <= 0) continue;
     const rg = x.createRadialGradient(px - b.r * 0.3, py - b.r * 0.3, 0, px, py, b.r * 2.2);

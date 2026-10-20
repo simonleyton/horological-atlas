@@ -4464,7 +4464,8 @@ const DS = {
   /* the hero dive lands here: heroArr eases the arrival 0 → 1 (null = arrived),
      heroTgt is the focused plate's rect, the berth the hero watch flies into */
   heroArr: null,
-  heroTgt: { x: 0, y: 0, w: 0, h: 0, ok: false }
+  heroTgt: { x: 0, y: 0, w: 0, h: 0, ok: false },
+  surfaceY: null                 /* screen y of the 0 M line last frame — the hero's waterline lands on it */
 };
 S.descent = DS;
 
@@ -6290,6 +6291,7 @@ function drawDepthAnnotations(c, w_, h_, cx, cy, Y0, alpha, scFocus, s, live) {
     const ry = snap(cy + wy - Y0);
     if (ry < -30 || ry > h_ + 30) continue;
     const label = DS.annLabel[k];
+    if (label === WC_FACTS[0][1]) continue;   /* 0 M is the surface itself — drawSurfaceCeiling sets it on the rail */
     const tw = DS.annW[k];
     /* label yield — through the focused card's span the engraving slides
        left of the specimen instead of dying behind it. At rest it sits on
@@ -6361,20 +6363,6 @@ function drawDepthAnnotations(c, w_, h_, cx, cy, Y0, alpha, scFocus, s, live) {
 
 /* --- the surface — light as a ceiling above the 0M line, no animation.
    A 1×256 strip baked once; ≤ +7.4/255 lift, fading within ~1.5 strata. --- */
-let wcStrip = null;
-function getWcStrip() {
-  if (wcStrip) return wcStrip;
-  const c = document.createElement('canvas');
-  c.width = 1; c.height = 256;
-  const g = c.getContext('2d');
-  const gr = g.createLinearGradient(0, 0, 0, 256);
-  gr.addColorStop(0, `rgba(${WC_SUN},0.045)`);
-  gr.addColorStop(1, `rgba(${WC_SUN},0)`);
-  g.fillStyle = gr;
-  g.fillRect(0, 0, 1, 256);
-  wcStrip = c;
-  return c;
-}
 /* §18g — the swell. One deterministic function of (xFrac, seconds); the
    ceiling, the web and every beam anchor read it, so the whole surface
    act breathes as one body. Two incommensurate components, ~5px total,
@@ -6384,24 +6372,55 @@ function swellY(xf, t) {
   return 3.2 * Math.sin(6.2832 * xf * 1.15 - t * 0.42 + 0.7) +
          1.8 * Math.sin(6.2832 * xf * 2.30 + t * 0.31);
 }
-const WC_CEIL_SLICES = 12;
+/* THE SURFACE, seen from below — the same waterline the hero opens on.
+   The light is caught AT the line and thins upward to nothing, so the
+   chrome above keeps its ground; the line is one smooth 1px stroke on the
+   swell. The swell itself wakes only as the dive lands (heroArriveK): the
+   hero's line is still, so the two are identical at the hand-off. */
+const WC_BAND_H = 245;                           /* the lit band above 0 M */
+const WC_LINE_STEP = 12;                         /* px between swell samples */
+const wcLineX = new Float32Array(256), wcLineY = new Float32Array(256);
 function drawSurfaceCeiling(c, w_, h_, cy, Y0, aMul, now) {
+  DS.surfaceY = null;
   if (aMul <= 0.01) return;
   const lineY = cy + WC_SURFACE_Y - Y0;
-  if (lineY <= -h_ * 0.5) return;                /* the surface is far above — nothing prints */
+  if (lineY <= -h_ * 0.5 || lineY > h_ + WC_BAND_H) return;
+  DS.surfaceY = lineY;
   const t = REDUCED ? 0 : now / 1000;
-  const strip = getWcStrip();
-  const sw = w_ / WC_CEIL_SLICES;
+  const amp = heroArriveK(now);
+  const n = Math.min(255, Math.ceil(w_ / WC_LINE_STEP));
+  for (let i = 0; i <= n; i++) {
+    const xf = i / n;
+    wcLineX[i] = xf * w_;
+    wcLineY[i] = lineY + swellY(xf, t) * amp;
+  }
   c.save();
   c.globalAlpha = aMul;
-  for (let i = 0; i < WC_CEIL_SLICES; i++) {
-    const sy = swellY((i + 0.5) / WC_CEIL_SLICES, t);
-    c.drawImage(strip, 0, 0, 1, 256, i * sw, lineY + sy - 420, sw + 0.5, 420);
-  }
-  if (lineY - 420 > 0) {
-    c.fillStyle = `rgba(${WC_SUN},0.045)`;       /* constant above the ramp — brightest at top */
-    c.fillRect(0, 0, w_, lineY - 414);           /* tucked under the slices' swell range */
-  }
+  const top = lineY - WC_BAND_H;
+  const g = c.createLinearGradient(0, top, 0, lineY);
+  g.addColorStop(0, 'rgba(15,30,40,0)');
+  g.addColorStop(0.55, 'rgba(36,89,111,0.22)');
+  g.addColorStop(1, 'rgba(63,127,153,0.62)');
+  c.fillStyle = g;
+  c.beginPath();
+  c.moveTo(0, top); c.lineTo(w_, top);
+  for (let i = n; i >= 0; i--) c.lineTo(wcLineX[i], wcLineY[i]);
+  c.closePath(); c.fill();
+  /* the line — a breath of glow under a 1px stroke (layered strokes, no shadowBlur) */
+  const stroke = (lw, style) => {
+    c.lineWidth = lw; c.strokeStyle = style;
+    c.beginPath(); c.moveTo(wcLineX[0], wcLineY[0] + 0.5);
+    for (let i = 1; i <= n; i++) c.lineTo(wcLineX[i], wcLineY[i] + 0.5);
+    c.stroke();
+  };
+  stroke(7, `rgba(${WC_SUN},0.07)`);
+  stroke(3, `rgba(${WC_SUN},0.16)`);
+  stroke(1, 'rgba(236,234,227,0.75)');
+  /* 0 M on the depth rail, where the hero set it */
+  setType(c, 10, 500, false, 0.18);
+  c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillStyle = TEXT_2;
+  c.fillText('0 M   THE SURFACE', 42, snap(lineY + 16) + 0.5);
   c.restore();
 }
 
@@ -7739,7 +7758,7 @@ loadData();
    A DOM layer over the (already-booting) atlas; dismissing it reveals
    the descent underneath. Skipped for returning visitors + deep links.
    ====================================================================== */
-let heroEl = null, heroMedia = null, heroVisible = false, heroPullUp = 0, heroGoneTimer = 0;
+let heroEl = null, heroMedia = null, heroSea = null, heroVisible = false, heroPullUp = 0, heroGoneTimer = 0;
 
 /* THE DIVE — one continuous move, and the watch is the diver. The mark parts
    ("sea" lifts away, "time" sinks), the hero's water thins into the atlas's
@@ -7761,6 +7780,12 @@ function heroFlightTransform(r0) {
   /* origin 0 0: the scale keeps the box's corner, the translate moves it */
   return `translate(${left1 - r0.left}px, ${top1 - r0.top}px) translate(-44.5%, -46.7%) scale(${w1 / r0.width})`;
 }
+/* the sea's rise: the hero's waterline onto the atlas's 0 M line */
+function heroSeaTransform() {
+  const ln = heroSea && heroSea.querySelector('.hs-line');
+  if (!ln || DS.surfaceY == null) return '';
+  return `translateY(${Math.round(DS.surfaceY - ln.getBoundingClientRect().top)}px)`;
+}
 function heroCanFly() {
   return !REDUCED && heroMedia && S.mode === 'descent' && !S.morph && DS.heroTgt.ok && DS.s < 0.5;
 }
@@ -7771,6 +7796,7 @@ function heroDive(opts) {
   const fly = !(opts && opts.toSky) && heroCanFly();
   if (fly) {
     heroMedia.style.transform = heroFlightTransform(heroMedia.getBoundingClientRect()) || '';
+    if (heroSea) heroSea.style.transform = heroSeaTransform();
     DS.heroArr = { t0: performance.now(), dur: HERO_DIVE_MS, from: 0, to: 1 };
   } else {
     heroEl.classList.add('fade');          /* to the sky, or reduced motion: a plain dissolve */
@@ -7797,8 +7823,14 @@ function heroShow() {
     heroMedia.style.transition = 'none';
     heroMedia.style.transform = '';
     heroMedia.style.transform = heroFlightTransform(heroMedia.getBoundingClientRect()) || '';
+    if (heroSea) {
+      heroSea.style.transition = 'none';
+      heroSea.style.transform = '';
+      heroSea.style.transform = heroSeaTransform();
+    }
     void heroMedia.offsetWidth;
     heroMedia.style.transition = '';
+    if (heroSea) heroSea.style.transition = '';
     DS.heroArr = { t0: performance.now(), dur: HERO_DIVE_MS, from: 1, to: 0 };
   } else {
     DS.heroArr = { t0: 0, dur: 1, from: 0, to: 0 };
@@ -7806,6 +7838,7 @@ function heroShow() {
   void heroEl.offsetWidth;                 /* reflow so the surfacing transition plays */
   heroEl.classList.remove('diving');
   heroMedia.style.transform = '';
+  if (heroSea) heroSea.style.transform = '';
   heroLumePlace(); heroFxStart();
   try { invalidate(); } catch (e) {}
 }
@@ -7844,6 +7877,8 @@ function heroFxResize() {
   if (!heroFx) return;
   const cv = heroFx.cv;
   heroFx.W = cv.clientWidth; heroFx.H = cv.clientHeight;
+  const ln = document.querySelector('#hero-sea .hs-line');
+  heroFx.wl = ln ? ln.offsetTop : 0;      /* the light enters the water at the line */
   cv.width = Math.round(heroFx.W * heroFx.DPR);
   cv.height = Math.round(heroFx.H * heroFx.DPR);
   heroLumePlace();
@@ -7874,7 +7909,7 @@ function heroFxFrame(ms) {
     const s0 = 0.5 + 0.5 * Math.sin(t * 6.2832 / s.per + s.ph);
     const pulse = s.a * f * (0.35 + 0.65 * s0 * s0);
     const sway = 0.021 * Math.sin(t * 0.23 + s.swph);
-    x.save(); x.translate(cx, -40); x.rotate(s.ang + sway);
+    x.save(); x.translate(cx, st.wl - 2); x.rotate(s.ang + sway);
     const w = s.w, gg = x.createLinearGradient(0, 0, 0, H * 1.25);
     gg.addColorStop(0, `rgba(${WC_SUN},${pulse})`); gg.addColorStop(0.5, `rgba(${WC_SUN},${pulse * 0.32})`); gg.addColorStop(1, `rgba(${WC_SUN},0)`);
     x.fillStyle = gg; x.filter = 'blur(16px)';
@@ -7883,7 +7918,8 @@ function heroFxFrame(ms) {
   }
   x.filter = 'none';
   for (const d of st.dapple) {
-    const px = (d.x + Math.sin(t * d.sp + d.ph) * 0.03) * W, py = (d.y + Math.cos(t * d.sp * 0.8 + d.ph) * 0.03) * H, f = lf(px);
+    const px = (d.x + Math.sin(t * d.sp + d.ph) * 0.03) * W,
+          py = st.wl + (d.y + 0.06 + Math.cos(t * d.sp * 0.8 + d.ph) * 0.03) * (H - st.wl), f = lf(px);
     if (f <= 0) continue;
     const r = (d.r * (0.85 + 0.25 * Math.sin(t * 0.6 + d.ph))) * W, a = d.a * f * (0.55 + 0.45 * Math.sin(t * 0.7 + d.ph));
     const rg = x.createRadialGradient(px, py, 0, px, py, r);
@@ -7891,7 +7927,8 @@ function heroFxFrame(ms) {
     x.fillStyle = rg; x.beginPath(); x.arc(px, py, r, 0, 6.2832); x.fill();
   }
   for (const b of st.bubbles) {
-    b.y -= b.sp * 0.012; if (b.y < -0.02) { b.y = 1.03; b.x = b.x0; }   /* deterministic respawn */
+    b.y -= b.sp * 0.012;
+    if (b.y * H < st.wl + 4) { b.y = 1.03; b.x = b.x0; }   /* they break at the surface; deterministic respawn */
     const px = (b.x + Math.sin(t * 0.6 + b.ph) * 0.006) * W, py = b.y * H, f = lf(px);
     if (f <= 0) continue;
     const rg = x.createRadialGradient(px - b.r * 0.3, py - b.r * 0.3, 0, px, py, b.r * 2.2);
@@ -7921,6 +7958,7 @@ function heroPullCheck(dsIntent) {
   heroEl = document.getElementById('hero');
   if (!heroEl || document.documentElement.classList.contains('no-hero')) { heroEl = null; return; }
   heroMedia = document.getElementById('hero-media');
+  heroSea = document.getElementById('hero-sea');
   heroVisible = true;
   document.body.classList.add('hero-up');
   DS.heroArr = { t0: 0, dur: 1, from: 0, to: 0 };   /* the descent waits under the hero */

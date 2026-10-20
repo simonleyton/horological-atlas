@@ -326,6 +326,7 @@ function animating() {
     if (DS.phase !== 'rest') return true;
     if (DS.cxA || DS.cyA) return true;
     if (now < DS.rampUntil) return true;          /* image alpha-ramps over glyph plates */
+    if (DS.heroArr && now - DS.heroArr.t0 < DS.heroArr.dur) return true;   /* the hero dive's arrival */
     if (DS.hintT0 && now < DS.hintT0 + 400) return true;   /* wheel-affordance fade-out */
     if (!REDUCED && now < DS.snowUntil) return true;       /* marine-snow tail (§18c) — 10fps via snowOnly */
   }
@@ -4459,14 +4460,18 @@ const DS = {
   snowUntil: 0,                  /* the 4s post-settle tail the scheduler honors */
   snowWrap: 0,                   /* world wrap height — H + 240, kept by resize() */
   bub: null,                     /* Float32Array(18×5) — xFrac, yFrac, alpha, rise px/s, diameter */
-  bio: null                      /* Float32Array(8×6) — xFrac, yFrac, period, pulsePh, driftPh, peakA */
+  bio: null,                     /* Float32Array(8×6) — xFrac, yFrac, period, pulsePh, driftPh, peakA */
+  /* the hero dive lands here: heroArr eases the arrival 0 → 1 (null = arrived),
+     heroTgt is the focused plate's rect, the berth the hero watch flies into */
+  heroArr: null,
+  heroTgt: { x: 0, y: 0, w: 0, h: 0, ok: false }
 };
 S.descent = DS;
 
 let descDrag = null;             /* {sy, lastY, lastT, moved} — touch/drag scrub */
 
 /* preallocated draw + hit pools — a scroll frame allocates nothing */
-const dSlots = Array.from({ length: 21 }, () => ({ i: 0, phi: 0, d: 0, sc: 0, al: 0, x: 0, y: 0 }));
+const dSlots = Array.from({ length: 21 }, () => ({ i: 0, phi: 0, d: 0, sc: 0, al: 0, x: 0, y: 0, fade: 1, arr: 1 }));
 const dRectPool = Array.from({ length: 21 }, () => ({ id: null, x: 0, y: 0, w: 0, h: 0 }));
 /* life-ladder marks — at most one rect per silhouette entry per frame */
 const dAnnPool = Array.from({ length: 8 }, () => ({ k: -1, url: '', x: 0, y: 0, w: 0, h: 0 }));
@@ -5247,6 +5252,10 @@ function drawDescent(c, w_, h_, now, isExport) {
   /* the caption breathes out during motion — a label for a card not yet
      focused encodes nothing */
   const pillA = speed > BLUR_V ? 0 : clamp(1 - Math.abs(s - n) * 3, 0, 1);
+  /* the hero dive — the water is already here; the instrument assembles
+     around the watch as it lands (see heroDive) */
+  const ak = isExport ? 1 : heroArriveK(now);
+  const chromeA = ak >= 1 ? 1 : sstep(clamp((ak - 0.62) / 0.38, 0, 1));
 
   if (!isExport) { DS.rects.length = 0; DS.annRectN = 0; }
 
@@ -5261,8 +5270,8 @@ function drawDescent(c, w_, h_, now, isExport) {
   drawPhoticGlow(c, w_, h_, 1);                  /* §18g — direction outlives position */
   drawSurfaceCeiling(c, w_, h_, cy, Y0, 1, now);
   drawSunShafts(c, w_, h_, cy, Y0, 1, now);      /* §18f — behind the instrument ink */
-  drawDescentRulers(c, w_, h_, cy, Y0, 1);
-  drawDepthAnnotations(c, w_, h_, cx, cy, Y0, 1, scF, s, !isExport);
+  drawDescentRulers(c, w_, h_, cy, Y0, chromeA);
+  drawDepthAnnotations(c, w_, h_, cx, cy, Y0, chromeA, scF, s, !isExport);
   drawMarineSnow(c, w_, h_, Y0, 1, vy);
   drawBiolum(c, w_, h_, Y0, 1, now);   /* §18c amendment — the dark makes its own light */
 
@@ -5294,6 +5303,15 @@ function drawDescent(c, w_, h_, now, isExport) {
         o.y += (1 - rft) * 26;
       }
     }
+    /* the arrival: the focused plate appears under the landing watch, its
+       neighbours rise into berth one after another, shallowest first */
+    o.arr = 1;
+    if (ak < 1) {
+      const rank = Math.abs(i - n);
+      o.arr = rank === 0 ? sstep(clamp((ak - 0.58) / 0.2, 0, 1))
+                         : sstep(clamp((ak - 0.56 - 0.045 * rank) / 0.34, 0, 1));
+      if (rank) o.y += (1 - o.arr) * 28;
+    }
   }
   for (let a = 1; a < m; a++) {
     const o = dSlots[a];
@@ -5314,7 +5332,7 @@ function drawDescent(c, w_, h_, now, isExport) {
     if (y0 > h_ + 40 || y0 + ht < -40) continue;
     /* the Lens narrows the Descent (removes non-matches) rather than dimming;
        o.fade carries the reflow's arrive-in envelope */
-    let mainA = o.al * o.fade;
+    let mainA = o.al * o.fade * o.arr;
     if (ghostA > 0.003) {
       /* motion blur at speed only: two ghosts at ±v·6ms along the numeric
          motion vector, energy conserved out of the main draw */
@@ -5322,7 +5340,7 @@ function drawDescent(c, w_, h_, now, isExport) {
       let gx = vx * DS.v * 0.006, gy = vy * DS.v * 0.006;
       const gl = Math.hypot(gx, gy);
       if (gl > 24) { gx *= 24 / gl; gy *= 24 / gl; }
-      const ga = ghostA * o.al * o.fade;
+      const ga = ghostA * o.al * o.fade * o.arr;
       drawCardSprite(c, w, x0 + gx, y0 + gy, wd, ht, ga, now);
       drawCardSprite(c, w, x0 - gx, y0 - gy, wd, ht, ga, now);
       mainA = Math.max(mainA - ga, 0);
@@ -5334,7 +5352,7 @@ function drawDescent(c, w_, h_, now, isExport) {
       /* lume stays reserved for selection — same grammar as the sky ring.
          Glow comes from a baked sprite (glowSprite discipline: no shadowBlur
          per frame); the 1px stroke stays live so the hairline never softens. */
-      c.globalAlpha = o.al;
+      c.globalAlpha = o.al * o.arr;
       const lr = getLumeRingSprite();
       c.drawImage(lr, x0 - LUME_PAD * o.sc, y0 - LUME_PAD * o.sc,
         (CARD_W + LUME_PAD * 2) * o.sc, (CARD_H + LUME_PAD * 2) * o.sc);
@@ -5345,7 +5363,7 @@ function drawDescent(c, w_, h_, now, isExport) {
     } else {
       const hov = hoverProgress(w.id, now);
       const live = o.i === n ? pillA : 0;
-      const ba = Math.max(hov * 0.7, live) * o.al;
+      const ba = Math.max(hov * 0.7, live) * o.al * o.arr;
       if (ba > 0.01) {
         c.globalAlpha = ba;
         c.strokeStyle = 'rgba(233,237,242,0.16)';
@@ -5354,7 +5372,10 @@ function drawDescent(c, w_, h_, now, isExport) {
         c.stroke();
       }
     }
-    if (o.i === n) scFocus = o.sc;
+    if (o.i === n) {
+      scFocus = o.sc;
+      if (!isExport) { const t = DS.heroTgt; t.x = x0; t.y = y0; t.w = wd; t.h = ht; t.ok = true; }
+    }
     if (!isExport && o.d > 0.15 && rectN < dRectPool.length) {
       const r = dRectPool[rectN++];
       r.id = w.id; r.x = x0; r.y = y0; r.w = wd; r.h = ht;
@@ -5385,9 +5406,9 @@ function drawDescent(c, w_, h_, now, isExport) {
      Never in export — a print has no velocity. */
   if (!isExport) drawBubbles(c, w_, h_, Y0, 1, now);
 
-  drawDescentPill(c, cx, cy + 56 * scFocus + 18, pillA);
+  drawDescentPill(c, cx, cy + 56 * scFocus + 18, pillA * chromeA);
   /* the whisper is a screen affordance — a print cannot scroll */
-  if (!isExport) drawDescentHint(c, cx, cy + 56 * scFocus + 18 + 40, descentHintAlpha(now));
+  if (!isExport) drawDescentHint(c, cx, cy + 56 * scFocus + 18 + 40, descentHintAlpha(now) * chromeA);
 }
 
 /* ======================================================================
@@ -7718,22 +7739,82 @@ loadData();
    A DOM layer over the (already-booting) atlas; dismissing it reveals
    the descent underneath. Skipped for returning visitors + deep links.
    ====================================================================== */
-let heroEl = null, heroVisible = false, heroPullUp = 0;
+let heroEl = null, heroMedia = null, heroVisible = false, heroPullUp = 0, heroGoneTimer = 0;
 
-function heroDive() {
+/* THE DIVE — one continuous move, and the watch is the diver. The mark parts
+   ("sea" lifts away, "time" sinks), the hero's water thins into the atlas's
+   own, and the watch flies into the focused plate it already is in the
+   descent. The plate and its neighbours assemble around it as it lands
+   (drawDescent reads DS.heroArr). Surfacing plays the same move backward.
+
+   Landing geometry: the plate photographs the watch with its bezel at ~51%
+   of the plate width and the dial on the plate's centre; the hero render's
+   bezel spans 89% of its own width, dial at (44.5%, 46.7%). */
+const HERO_DIVE_MS = 1100;
+const HERO_LAND = { w: 0.51, dx: 0, dy: 0 };   /* render width, dial offset — plate fractions */
+function heroFlightTransform(r0) {
+  const t = DS.heroTgt;
+  if (!t.ok || !r0.width) return null;
+  const w1 = t.w * HERO_LAND.w, h1 = w1 * 1402 / 836;
+  const left1 = t.x + t.w * (0.5 + HERO_LAND.dx) - 0.445 * w1;
+  const top1 = t.y + t.h * (0.5 + HERO_LAND.dy) - 0.467 * h1;
+  /* origin 0 0: the scale keeps the box's corner, the translate moves it */
+  return `translate(${left1 - r0.left}px, ${top1 - r0.top}px) translate(-44.5%, -46.7%) scale(${w1 / r0.width})`;
+}
+function heroCanFly() {
+  return !REDUCED && heroMedia && S.mode === 'descent' && !S.morph && DS.heroTgt.ok && DS.s < 0.5;
+}
+function heroDive(opts) {
   if (!heroEl || !heroVisible) return;
   heroVisible = false;
+  clearTimeout(heroGoneTimer);
+  const fly = !(opts && opts.toSky) && heroCanFly();
+  if (fly) {
+    heroMedia.style.transform = heroFlightTransform(heroMedia.getBoundingClientRect()) || '';
+    DS.heroArr = { t0: performance.now(), dur: HERO_DIVE_MS, from: 0, to: 1 };
+  } else {
+    heroEl.classList.add('fade');          /* to the sky, or reduced motion: a plain dissolve */
+    DS.heroArr = null;
+  }
   heroEl.classList.add('diving');
-  setTimeout(() => { if (!heroVisible) heroEl.classList.add('gone'); try { invalidate(); } catch (e) {} },
-            REDUCED ? 300 : 900);
+  heroGoneTimer = setTimeout(() => {
+    if (heroVisible) return;
+    heroEl.classList.add('gone');
+    document.body.classList.remove('hero-up');
+    try { invalidate(); } catch (e) {}
+  }, fly ? HERO_DIVE_MS : REDUCED ? 300 : 500);
+  try { invalidate(); } catch (e) {}
 }
 function heroShow() {
   if (!heroEl || heroVisible) return;
   heroVisible = true; heroPullUp = 0;
-  heroEl.classList.remove('gone');
+  clearTimeout(heroGoneTimer);
+  document.body.classList.add('hero-up');
+  heroEl.classList.remove('gone', 'fade');
+  const fly = heroCanFly();
+  if (fly) {
+    /* start the watch on its plate, then let it rise back to the surface */
+    heroMedia.style.transition = 'none';
+    heroMedia.style.transform = '';
+    heroMedia.style.transform = heroFlightTransform(heroMedia.getBoundingClientRect()) || '';
+    void heroMedia.offsetWidth;
+    heroMedia.style.transition = '';
+    DS.heroArr = { t0: performance.now(), dur: HERO_DIVE_MS, from: 1, to: 0 };
+  } else {
+    DS.heroArr = { t0: 0, dur: 1, from: 0, to: 0 };
+  }
   void heroEl.offsetWidth;                 /* reflow so the surfacing transition plays */
   heroEl.classList.remove('diving');
+  heroMedia.style.transform = '';
   heroLumePlace(); heroFxStart();
+  try { invalidate(); } catch (e) {}
+}
+/* the descent's arrival, 0 (hero over it) → 1 (arrived); no hero = arrived */
+function heroArriveK(now) {
+  const a = DS.heroArr;
+  if (!a) return 1;
+  const t = a.dur > 1 ? clamp((now - a.t0) / a.dur, 0, 1) : 1;
+  return a.from + (a.to - a.from) * t;
 }
 
 /* --- the underwater light: sun shafts + caustic dapple + rising bubbles (canvas 2D) --- */
@@ -7839,7 +7920,10 @@ function heroPullCheck(dsIntent) {
 (function heroInit() {
   heroEl = document.getElementById('hero');
   if (!heroEl || document.documentElement.classList.contains('no-hero')) { heroEl = null; return; }
+  heroMedia = document.getElementById('hero-media');
   heroVisible = true;
+  document.body.classList.add('hero-up');
+  DS.heroArr = { t0: 0, dur: 1, from: 0, to: 0 };   /* the descent waits under the hero */
   window.addEventListener('wheel', e => {
     if (!heroVisible) return; e.preventDefault(); if (e.deltaY > 4) heroDive();
   }, { passive: false });
@@ -7855,15 +7939,21 @@ function heroPullCheck(dsIntent) {
     if (ty0 != null && ty0 - e.touches[0].clientY > 24) heroDive();
   }, { passive: false });
   const btn = document.getElementById('hero-descend');
-  if (btn) btn.addEventListener('click', heroDive);
-  /* the hero's projection words: descent is the dive itself; surface dives and
-     then hands over to the live toggle, so there is only ever one mode switch */
-  const hmD = document.getElementById('hm-descent'), hmS = document.getElementById('hm-sky');
-  if (hmD) { hmD.setAttribute('aria-pressed', 'true'); hmD.addEventListener('click', heroDive); }
-  if (hmS) {
-    hmS.setAttribute('aria-pressed', 'false');
-    hmS.addEventListener('click', () => { heroDive(); elMtSky.click(); });
-  }
+  if (btn) btn.addEventListener('click', () => heroDive());
+  /* the projection toggle is the atlas's own, lifted over the hero (body.hero-up)
+     so it never moves through the dive. While the hero is up, descent IS the
+     dive; surface dissolves the hero and hands over to the morph. */
+  const mt = document.getElementById('mode-toggle');
+  if (mt) mt.addEventListener('click', e => {
+    if (!heroVisible) return;
+    const b = e.target.closest('button');
+    if (!b) return;
+    /* surface: dissolve, then let this same click reach the toggle's own
+       handler (a nested .click() would be dropped mid-dispatch) */
+    if (b === elMtSky) { heroDive({ toSky: true }); return; }
+    e.stopPropagation();
+    heroDive();
+  }, true);
   heroFxSetup();
   heroFxStart();
   window.addEventListener('resize', heroFxResize);

@@ -7772,9 +7772,9 @@ function heroLumePlace() {
   if (!media || !lume) return;
   const b = media.getBoundingClientRect();
   if (!b.width) return;
-  /* the dial sits slightly left-of-centre and above the vertical midline in the
-     contained watch; size the glow to the black dial face */
-  const cx = b.width * 0.455, cy = b.height * 0.465, R = b.height * 0.15;
+  /* the media box is the plate's exact aspect, so the dial is a fixed fraction
+     of it (44.5% across, 46.7% down); size the glow to the black dial face */
+  const cx = b.width * 0.445, cy = b.height * 0.467, R = b.width * 0.27;
   lume.style.left = (cx - R) + 'px'; lume.style.top = (cy - R) + 'px';
   lume.style.width = (2 * R) + 'px'; lume.style.height = (2 * R) + 'px';
 }
@@ -7856,6 +7856,14 @@ function heroPullCheck(dsIntent) {
   }, { passive: false });
   const btn = document.getElementById('hero-descend');
   if (btn) btn.addEventListener('click', heroDive);
+  /* the hero's projection words: descent is the dive itself; surface dives and
+     then hands over to the live toggle, so there is only ever one mode switch */
+  const hmD = document.getElementById('hm-descent'), hmS = document.getElementById('hm-sky');
+  if (hmD) { hmD.setAttribute('aria-pressed', 'true'); hmD.addEventListener('click', heroDive); }
+  if (hmS) {
+    hmS.setAttribute('aria-pressed', 'false');
+    hmS.addEventListener('click', () => { heroDive(); elMtSky.click(); });
+  }
   heroFxSetup();
   heroFxStart();
   window.addEventListener('resize', heroFxResize);

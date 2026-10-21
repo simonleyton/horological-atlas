@@ -2403,7 +2403,9 @@ html.no-hero #hero { display: none; }
 /* the label clears with the deep, before the atlas's own 0 M label is uncovered */
 #hero.diving #hero-sea .hs-label { opacity: 0; transition: opacity 280ms var(--ease-out) 40ms; }
 #hero.diving #hero-veil { opacity: 0; transition: opacity 200ms linear; }
-#hero.diving #hero-watch-under { transform: none; transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out) 640ms; }
+/* both halves of the render dissolve into the photograph together, or the
+   under-water half would hold until the hero is removed and vanish in a frame */
+#hero.diving #hero-watch-under { transform: none; opacity: 0; transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out) 640ms; }
 #hero.diving #hero-fx { opacity: 0; transition: opacity 320ms var(--ease-out); }
 #hero.diving #hero-lume { filter: opacity(0); transition: filter 220ms var(--ease-out); }
 /* the mark parts on the camera, not on its own: "sea" rides the surface up

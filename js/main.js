@@ -5256,7 +5256,9 @@ function drawDescent(c, w_, h_, now, isExport) {
   /* the hero dive — the water is already here; the instrument assembles
      around the watch as it lands (see heroDive) */
   const ak = isExport ? 1 : heroArriveK(now);
-  const chromeA = ak >= 1 ? 1 : sstep(clamp((ak - 0.62) / 0.38, 0, 1));
+  const chromeA = ak >= 1 ? 1 : sstep(clamp((ak - 0.45) / 0.4, 0, 1));
+  /* the caption is the last word: it arrives once its neighbours have berthed */
+  const capA = ak >= 1 ? 1 : sstep(clamp((ak - 0.8) / 0.2, 0, 1));
 
   if (!isExport) { DS.rects.length = 0; DS.annRectN = 0; }
 
@@ -5309,8 +5311,8 @@ function drawDescent(c, w_, h_, now, isExport) {
     o.arr = 1;
     if (ak < 1) {
       const rank = Math.abs(i - n);
-      o.arr = rank === 0 ? sstep(clamp((ak - 0.58) / 0.2, 0, 1))
-                         : sstep(clamp((ak - 0.56 - 0.045 * rank) / 0.34, 0, 1));
+      o.arr = rank === 0 ? sstep(clamp((ak - 0.22) / 0.38, 0, 1))
+                         : sstep(clamp((ak - 0.3 - 0.04 * rank) / 0.4, 0, 1));
       if (rank) o.y += (1 - o.arr) * 28;
     }
   }
@@ -5407,7 +5409,7 @@ function drawDescent(c, w_, h_, now, isExport) {
      Never in export — a print has no velocity. */
   if (!isExport) drawBubbles(c, w_, h_, Y0, 1, now);
 
-  drawDescentPill(c, cx, cy + 56 * scFocus + 18, pillA * chromeA);
+  drawDescentPill(c, cx, cy + 56 * scFocus + 18, pillA * capA);
   /* the whisper is a screen affordance — a print cannot scroll */
   if (!isExport) drawDescentHint(c, cx, cy + 56 * scFocus + 18 + 40, descentHintAlpha(now) * chromeA);
 }
@@ -7769,8 +7771,8 @@ let heroEl = null, heroMedia = null, heroSea = null, heroVisible = false, heroPu
    Landing geometry: the plate photographs the watch with its bezel at ~51%
    of the plate width and the dial on the plate's centre; the hero render's
    bezel spans 89% of its own width, dial at (44.5%, 46.7%). */
-const HERO_DIVE_MS = 1100;
-const HERO_LAND = { w: 0.51, dx: 0, dy: 0 };   /* render width, dial offset — plate fractions */
+const HERO_DIVE_MS = 900;
+const HERO_LAND = { w: 0.47, dx: -0.026, dy: 0 };   /* render width, dial offset — plate fractions, measured against the 1953 plate photo */
 function heroFlightTransform(r0) {
   const t = DS.heroTgt;
   if (!t.ok || !r0.width) return null;
@@ -7780,11 +7782,17 @@ function heroFlightTransform(r0) {
   /* origin 0 0: the scale keeps the box's corner, the translate moves it */
   return `translate(${left1 - r0.left}px, ${top1 - r0.top}px) translate(-44.5%, -46.7%) scale(${w1 / r0.width})`;
 }
-/* the sea's rise: the hero's waterline onto the atlas's 0 M line */
-function heroSeaTransform() {
+/* the sea's rise: the hero's waterline onto the atlas's 0 M line. "sea" rides
+   the same rise (--sea-rise), so the word and the surface move as one plane. */
+function heroSeaRise() {
   const ln = heroSea && heroSea.querySelector('.hs-line');
-  if (!ln || DS.surfaceY == null) return '';
-  return `translateY(${Math.round(DS.surfaceY - ln.getBoundingClientRect().top)}px)`;
+  if (!ln || DS.surfaceY == null) return null;
+  return Math.round(DS.surfaceY - ln.getBoundingClientRect().top);
+}
+function heroSeaSet(rise) {
+  if (!heroSea) return;
+  heroSea.style.transform = rise == null ? '' : `translateY(${rise}px)`;
+  if (rise != null) heroEl.style.setProperty('--sea-rise', rise + 'px');
 }
 function heroCanFly() {
   return !REDUCED && heroMedia && S.mode === 'descent' && !S.morph && DS.heroTgt.ok && DS.s < 0.5;
@@ -7796,17 +7804,19 @@ function heroDive(opts) {
   const fly = !(opts && opts.toSky) && heroCanFly();
   if (fly) {
     heroMedia.style.transform = heroFlightTransform(heroMedia.getBoundingClientRect()) || '';
-    if (heroSea) heroSea.style.transform = heroSeaTransform();
+    heroSeaSet(heroSeaRise());
     DS.heroArr = { t0: performance.now(), dur: HERO_DIVE_MS, from: 0, to: 1 };
   } else {
     heroEl.classList.add('fade');          /* to the sky, or reduced motion: a plain dissolve */
     DS.heroArr = null;
   }
   heroEl.classList.add('diving');
+  /* the atlas's chrome rides the same timeline, over the dissolving sea */
+  document.body.classList.add('hero-diving');
   heroGoneTimer = setTimeout(() => {
     if (heroVisible) return;
     heroEl.classList.add('gone');
-    document.body.classList.remove('hero-up');
+    document.body.classList.remove('hero-up', 'hero-diving');
     try { invalidate(); } catch (e) {}
   }, fly ? HERO_DIVE_MS : REDUCED ? 300 : 500);
   try { invalidate(); } catch (e) {}
@@ -7816,6 +7826,7 @@ function heroShow() {
   heroVisible = true; heroPullUp = 0;
   clearTimeout(heroGoneTimer);
   document.body.classList.add('hero-up');
+  document.body.classList.remove('hero-diving');
   heroEl.classList.remove('gone', 'fade');
   const fly = heroCanFly();
   if (fly) {
@@ -7825,8 +7836,8 @@ function heroShow() {
     heroMedia.style.transform = heroFlightTransform(heroMedia.getBoundingClientRect()) || '';
     if (heroSea) {
       heroSea.style.transition = 'none';
-      heroSea.style.transform = '';
-      heroSea.style.transform = heroSeaTransform();
+      heroSeaSet(null);
+      heroSeaSet(heroSeaRise());
     }
     void heroMedia.offsetWidth;
     heroMedia.style.transition = '';

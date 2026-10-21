@@ -2329,7 +2329,7 @@ html.no-hero #hero { display: none; }
   position: absolute; left: 0; right: 0; top: 0; height: var(--wl);
   /* light from above, but the top edge deepens where the chrome sits, so the
      toggle keeps AA contrast (the atlas band does the same) */
-  background: linear-gradient(180deg, #1B4558 0%, #3F7F99 24%, #1D4D63 100%);
+  background: linear-gradient(180deg, #14384A 0%, #173F52 14%, #3F7F99 32%, #1D4D63 100%);
 }
 /* the light dims as you go under: on the dive the band darkens from the top
    down toward the atlas's own band (dark where the chrome sits, lit at the
@@ -2342,6 +2342,7 @@ html.no-hero #hero { display: none; }
 #hero.diving #hero-sea .hs-above::after { opacity: 1; transition: opacity 640ms var(--ease-out) 100ms; }
 #hero-sea .hs-deep {
   position: absolute; left: 0; right: 0; top: var(--wl); bottom: 0;
+  transition: opacity 300ms var(--ease-out);
   background: linear-gradient(180deg, #11303F 0, #08161F calc((100cqh - var(--wl)) / 2),
                               #030A0F calc(100cqh - var(--wl)), #030A0F 100%);
 }
@@ -2359,6 +2360,7 @@ html.no-hero #hero { display: none; }
   letter-spacing: 0.18em; text-transform: uppercase; white-space: pre;
   line-height: 1; color: #9AA4B2;
   transform: translateY(-50%);
+  transition: opacity 300ms var(--ease-out) 200ms;
 }
 /* the water over everything below the line — "time" and the lower half of the
    watch sit a shade deeper than what is above */
@@ -2386,46 +2388,77 @@ html.no-hero #hero { display: none; }
 @keyframes hero-lume-breath { 0%,100% { opacity: 0.28; } 50% { opacity: 0.9; } }
 
 /* THE DIVE — the watch flies into its plate (transform set by heroDive), the
-   mark parts, and the hero's water thins into the atlas's own. 0–1100ms. */
+   mark parts, and the hero's water thins into the atlas's own. 0–900ms.
+   Below the line the hero's deep clears first, so the plates assemble in
+   view around the watch; above it the light rides up until the two lines
+   meet, then dissolves. There is never a frame of empty water. */
 #hero.diving { pointer-events: none; }
 /* the sea rises to the atlas's surface (transform set by heroDive) and hands
    over once the two lines coincide */
 #hero.diving #hero-sea {
   opacity: 0;
-  transition: transform 820ms cubic-bezier(0.2, 0, 0, 1) 60ms, opacity 340ms linear 600ms;
+  transition: transform 780ms cubic-bezier(0.2, 0, 0, 1), opacity 240ms var(--ease-out) 600ms;
 }
+#hero.diving #hero-sea .hs-deep { opacity: 0; transition: opacity 360ms var(--ease-out) 60ms; }
+/* the label clears with the deep, before the atlas's own 0 M label is uncovered */
+#hero.diving #hero-sea .hs-label { opacity: 0; transition: opacity 280ms var(--ease-out) 40ms; }
 #hero.diving #hero-veil { opacity: 0; transition: opacity 200ms linear; }
-#hero.diving #hero-watch-under { transform: none; transition: transform 200ms var(--ease-out), opacity 130ms linear 860ms; }
+#hero.diving #hero-watch-under { transform: none; transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out) 640ms; }
 #hero.diving #hero-fx { opacity: 0; transition: opacity 320ms var(--ease-out); }
 #hero.diving #hero-lume { filter: opacity(0); transition: filter 220ms var(--ease-out); }
+/* the mark parts on the camera, not on its own: "sea" rides the surface up
+   (same rise, same curve) and is gone before it reaches the chrome; "time" is
+   below the water and drifts up at half the rate as it fades into the deep */
 #hero.diving .hw-sea {
-  transform: translateY(calc(-100% - 120px)); opacity: 0;
-  transition: transform 420ms cubic-bezier(0.45, 0, 0.8, 0.3), opacity 180ms linear 240ms;
+  transform: translateY(var(--sea-rise, -120px)); opacity: 0;
+  transition: transform 780ms cubic-bezier(0.2, 0, 0, 1), opacity 240ms var(--ease-out);
 }
 #hero.diving .hw-time {
-  transform: translateY(calc(100% + 200px)); opacity: 0;
-  transition: transform 420ms cubic-bezier(0.45, 0, 0.8, 0.3), opacity 180ms linear 240ms;
+  transform: translateY(calc(var(--sea-rise, -120px) * 0.5)); opacity: 0;
+  transition: transform 780ms cubic-bezier(0.2, 0, 0, 1), opacity 240ms var(--ease-out);
 }
 #hero.diving #hero-body,
 #hero.diving #hero-descend { opacity: 0; transition: opacity 160ms linear; }
-#hero.diving #hero-media { transition-delay: 60ms; }
+#hero.diving #hero-media { transition: transform 780ms cubic-bezier(0.2, 0, 0, 1) 20ms; }
 /* the hand-off: the plate is already solid beneath it (drawDescent), so the
    render dissolves straight into the photograph, never two ghosts at once */
-#hero.diving #hero-watch { opacity: 0; transition: opacity 130ms linear 860ms; }
+#hero.diving #hero-watch { opacity: 0; transition: opacity 200ms var(--ease-out) 640ms; }
 /* to the sky (or reduced motion) there is no plate to land in — a plain dissolve */
 #hero.fade { opacity: 0; }
 #hero.gone { display: none; }
 
 /* the atlas's projection toggle rides over the hero, so it never moves */
 body.hero-up #mode-toggle { z-index: 41; opacity: 1; }
-/* on the lit water the resting word needs more ink than text-3 to stay legible */
-body.hero-up #mode-toggle button[aria-pressed="false"] { color: rgba(236, 234, 227, 0.82); }
+/* on the lit water the resting word needs more ink than text-3 to stay legible,
+   but it still reads as the resting word: descent is the projection you are in.
+   It settles to the atlas's own text-3 as the dive starts, not after it lands. */
+body.hero-up #mode-toggle button[aria-pressed="false"] { color: rgba(236, 234, 227, 0.62); }
+body.hero-up.hero-diving #mode-toggle button[aria-pressed="false"] { color: var(--text-3); transition: color 320ms var(--ease-out) 120ms; }
+/* the atlas's chrome waits out of sight under the hero, then enters on the
+   dive's own timeline: over the dissolving sea, as the plates berth */
+body.hero-up #wordmark, body.hero-up #search, body.hero-up footer, body.hero-up:not(.morphing) #sounding {
+  opacity: 0; pointer-events: none; transition: opacity 200ms var(--ease-exit);
+}
+body.hero-up.hero-diving #wordmark, body.hero-up.hero-diving #search,
+body.hero-up.hero-diving footer, body.hero-up.hero-diving:not(.morphing) #sounding {
+  z-index: 41; opacity: 1; transition: opacity 320ms var(--ease-out) 440ms;
+}
+body.hero-up.hero-diving:not(.morphing) #sounding { transition-delay: 480ms; }
+body.hero-up.hero-diving footer { transition-delay: 520ms; }
 
 /* THE STAGGERED MARK — "sea" above, "time" below, the watch between them.
    The wordmark is split by the thing it names. The h1 stays static so both
    words place against the hero itself: "sea" hangs from the top-left corner,
    "time" stands on the bottom-right, the watch holds the middle. */
-#hero-wordmark { margin: 0; font: inherit; }
+/* the mark's box is the hero, and it thins out under the chrome band: a word
+   rising on the dive dissolves there instead of crossing the toggle. At rest
+   no ink sits above 92px, so the mask is invisible until something rises. */
+#hero-wordmark {
+  margin: 0; font: inherit;
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 48px, #000 92px);
+          mask-image: linear-gradient(180deg, transparent 48px, #000 92px);
+}
 #hero .hw {
   position: absolute; z-index: 1;
   font-family: var(--font-ui); font-weight: 600;
@@ -2496,7 +2529,7 @@ body.hero-up #mode-toggle button[aria-pressed="false"] { color: rgba(236, 234, 2
 }
 #hero-descend:hover { opacity: 0.72; transition-duration: 160ms; transition-delay: 0ms; }
 #hero-descend:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--text-1); border-radius: 3px; }
-#hero-descend .hd-caret { animation: hd-bob 1.8s var(--ease-out) infinite; }
+#hero-descend .hd-caret { display: block; flex: none; animation: hd-bob 1.8s var(--ease-out) infinite; }
 @keyframes hd-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
 
 /* phone: the same three-beat stack, set for a portrait column. The words come
@@ -2506,7 +2539,8 @@ body.hero-up #mode-toggle button[aria-pressed="false"] { color: rgba(236, 234, 2
   #hero { --p: calc(100cqw / 390); --wl: 40cqh; }
   #hero-sea .hs-label { display: none; }       /* it would collide with the bezel */
   #hero-veil { z-index: 1; }                   /* over the watch, under the words */
-  #hero .hw { z-index: 2; font-size: calc(138 * var(--p)); }
+  #hero-wordmark { z-index: 2; }
+  #hero .hw { font-size: calc(138 * var(--p)); }
   #hero .hw-sea  { left: calc(20 * var(--p)); top: calc(64px + env(safe-area-inset-top)); }
   #hero .hw-time { right: calc(20 * var(--p)); bottom: calc(172px + env(safe-area-inset-bottom)); }
   #hero-media {
@@ -2524,6 +2558,8 @@ body.hero-up #mode-toggle button[aria-pressed="false"] { color: rgba(236, 234, 2
   #hero { transition: opacity 300ms linear; }
   #hero *, #hero-sea { transition: none !important; }
   #hero.diving .hw-sea, #hero.diving .hw-time { transform: none; opacity: 1; }
+  body.hero-up.hero-diving #wordmark, body.hero-up.hero-diving #search,
+  body.hero-up.hero-diving footer, body.hero-up.hero-diving #sounding { transition: none; }
   #hero-descend .hd-caret { animation: none; }
   #hero-lume { animation: none; opacity: 0.5; }
 }

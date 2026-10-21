@@ -7797,28 +7797,141 @@ function heroSeaSet(rise) {
 function heroCanFly() {
   return !REDUCED && heroMedia && S.mode === 'descent' && !S.morph && DS.heroTgt.ok && DS.s < 0.5;
 }
+/* THE SCRUB — the dive under the hand. The choreography is the CSS on
+   #hero.diving (one timeline, 0 → HERO_DIVE_MS); heroBegin starts it and
+   pauses every transition it created, heroSeek holds them all at one time T,
+   and the canvas arrival reads the same T. So a finger drives the very move a
+   tap plays, curves and staggers included, and can take it back. On release
+   it settles: commits hand the gesture's speed into the timeline's own pace
+   (the curves are already the deceleration); a retreat springs home to the
+   surface, critically damped, so nothing overshoots the resting hero. */
+let heroRun = null, heroTail = 0;   /* heroTail: until when a dive's wheel momentum is still the dive's */
+const HERO_SCRUB_PX = () => Math.min(innerHeight * 0.42, 360);   /* finger travel for the whole dive */
+const HERO_WHEEL_PX = 520;                                       /* trackpad travel for the whole dive */
+/* the hand moves the watch, not the clock: finger progress p is where the
+   watch is along its flight, so it is read back through the flight's own curve
+   (cubic-bezier(0.2, 0, 0, 1), 780ms) to the timeline time that puts it there.
+   The fades and staggers ride along at their authored offsets. */
+function heroTimeAt(p) {
+  if (p <= 0) return 0;
+  if (p >= 1) return heroRun ? heroRun.end : HERO_DIVE_MS;
+  const bx = u => 3 * 0.2 * u * (1 - u) * (1 - u) + u * u * u,
+        by = u => 3 * u * u * (1 - u) + u * u * u;
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (by(m) < p) lo = m; else hi = m; }
+  return 10 + 780 * bx((lo + hi) / 2);
+}
+/* and back: the flight progress a timeline time shows */
+function heroProgAt(T) {
+  const x = clamp((T - 10) / 780, 0, 1);
+  const bx = u => 3 * 0.2 * u * (1 - u) * (1 - u) + u * u * u;
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (bx(m) < x) lo = m; else hi = m; }
+  const u = (lo + hi) / 2;
+  return 3 * u * u * (1 - u) + u * u * u;
+}
+/* timeline ms per real ms, from finger progress per ms at p */
+const heroRateAt = (p, vp) => (heroTimeAt(Math.min(1, p + 0.01)) - heroTimeAt(p)) / 0.01 * vp;
+function heroBegin() {
+  if (heroRun) return true;
+  if (!heroCanFly()) return false;
+  const before = new Set(document.getAnimations());
+  heroMedia.style.transform = heroFlightTransform(heroMedia.getBoundingClientRect()) || '';
+  heroSeaSet(heroSeaRise());
+  heroEl.classList.add('diving');
+  document.body.classList.add('hero-diving');
+  const anims = document.getAnimations().filter(a => !before.has(a) && !(window.CSSAnimation && a instanceof CSSAnimation));
+  let end = HERO_DIVE_MS;
+  for (const a of anims) {
+    a.pause();
+    const t = a.effect.getComputedTiming();
+    end = Math.max(end, t.endTime);
+  }
+  heroRun = { anims, end, T: 0, mode: 'hold', v: 0, rate: 0, raf: 0, last: 0 };
+  heroSeek(0);
+  return true;
+}
+function heroSeek(T) {
+  const r = heroRun;
+  r.T = clamp(T, 0, r.end);
+  for (const a of r.anims) { try { a.currentTime = r.T; } catch (e) {} }
+  const k = clamp(r.T / HERO_DIVE_MS, 0, 1);
+  DS.heroArr = { t0: 0, dur: 1, from: k, to: k };
+  try { invalidate(); } catch (e) {}
+}
+/* settle from wherever the hand left it; v = timeline ms per real ms */
+function heroSettle(commit, v) {
+  const r = heroRun;
+  if (!r) return;
+  r.mode = commit ? 'commit' : 'revert';
+  r.v = v || 0;
+  r.rate = commit ? Math.max(0.6, r.v) : 0;
+  if (commit) { heroVisible = false; heroTail = performance.now() + 1400; document.body.classList.add('hero-diving'); }
+  r.last = performance.now();
+  if (!r.raf) r.raf = requestAnimationFrame(heroStep);
+}
+function heroStep(now) {
+  const r = heroRun;
+  if (!r) return;
+  r.raf = 0;
+  const dt = Math.min(48, Math.max(0, now - r.last)); r.last = now;
+  if (r.mode === 'commit') {
+    /* the gesture's speed relaxes into the timeline's own (1×) in ~120ms */
+    r.rate = 1 + (r.rate - 1) * Math.exp(-dt / 120);
+    heroSeek(r.T + r.rate * dt);
+    if (r.T >= r.end) { heroLand(); return; }
+  } else if (r.mode === 'revert') {
+    /* critically damped spring on T toward 0 (ω ≈ 2π / 0.42s) */
+    const w = 15, u = r.v * 1000, acc = -w * w * r.T - 2 * w * u;   /* T in ms, u in ms/s */
+    const u1 = u + acc * dt / 1000;
+    r.v = u1 / 1000;
+    heroSeek(r.T + u1 * dt / 1000);
+    if (r.T <= 0.5 && Math.abs(r.v) < 0.05) { heroRest(); return; }
+  } else return;
+  r.raf = requestAnimationFrame(heroStep);
+}
+/* landed: the hero leaves; the atlas's chrome is already where it lives */
+function heroLand() {
+  const r = heroRun; heroRun = null;
+  heroVisible = false;
+  heroEl.classList.add('gone');
+  document.body.classList.remove('hero-up', 'hero-diving');
+  if (r) for (const a of r.anims) { try { a.cancel(); } catch (e) {} }
+  DS.heroArr = null;
+  try { invalidate(); } catch (e) {}
+}
+/* back at the surface: the paused timeline is at 0, which is exactly the
+   resting hero, so it is put away without a frame of change */
+function heroRest() {
+  const r = heroRun; heroRun = null;
+  const root = document.documentElement;
+  root.classList.add('hero-still');
+  heroEl.classList.remove('diving');
+  document.body.classList.remove('hero-diving');
+  heroMedia.style.transform = '';
+  heroSeaSet(null);
+  if (r) for (const a of r.anims) { try { a.cancel(); } catch (e) {} }
+  void heroEl.offsetWidth;
+  root.classList.remove('hero-still');
+  DS.heroArr = { t0: 0, dur: 1, from: 0, to: 0 };
+  try { invalidate(); } catch (e) {}
+}
 function heroDive(opts) {
   if (!heroEl || !heroVisible) return;
+  const toSky = opts && opts.toSky;
+  if (!toSky && heroBegin()) { heroSettle(true, Math.max(1, heroRun.rate)); return; }
+  if (heroRun) heroRest();
   heroVisible = false;
   clearTimeout(heroGoneTimer);
-  const fly = !(opts && opts.toSky) && heroCanFly();
-  if (fly) {
-    heroMedia.style.transform = heroFlightTransform(heroMedia.getBoundingClientRect()) || '';
-    heroSeaSet(heroSeaRise());
-    DS.heroArr = { t0: performance.now(), dur: HERO_DIVE_MS, from: 0, to: 1 };
-  } else {
-    heroEl.classList.add('fade');          /* to the sky, or reduced motion: a plain dissolve */
-    DS.heroArr = null;
-  }
-  heroEl.classList.add('diving');
-  /* the atlas's chrome rides the same timeline, over the dissolving sea */
+  heroEl.classList.add('fade', 'diving');  /* to the sky, or reduced motion: a plain dissolve */
+  DS.heroArr = null;
   document.body.classList.add('hero-diving');
   heroGoneTimer = setTimeout(() => {
     if (heroVisible) return;
     heroEl.classList.add('gone');
     document.body.classList.remove('hero-up', 'hero-diving');
     try { invalidate(); } catch (e) {}
-  }, fly ? HERO_DIVE_MS : REDUCED ? 300 : 500);
+  }, REDUCED ? 300 : 500);
   try { invalidate(); } catch (e) {}
 }
 function heroShow() {
@@ -7973,20 +8086,84 @@ function heroPullCheck(dsIntent) {
   heroVisible = true;
   document.body.classList.add('hero-up');
   DS.heroArr = { t0: 0, dur: 1, from: 0, to: 0 };   /* the descent waits under the hero */
+  /* the hand: a drag or a trackpad scrubs the dive (heroBegin/heroSeek); a
+     mouse notch, a key or a tap plays it. Scrubbing that finds no plate to fly
+     to (to the sky, reduced motion) falls back to the plain dive. */
+  const hold = d => {
+    if (heroRun) return true;
+    if (d <= 0) return false;
+    if (heroBegin()) return true;
+    heroDive(); return false;
+  };
+  let wSum = 0, wT = 0, wV = 0, wIdle = 0;
+  const wRelease = () => {
+    wIdle = 0;
+    if (!heroRun || heroRun.mode !== 'hold') return;
+    const p = Math.min(1, wSum / HERO_WHEEL_PX), vp = wV;   /* vp: progress per ms */
+    heroSettle(p + vp * 180 > 0.4, Math.max(0, heroRateAt(p, vp)));
+    if (heroRun && heroRun.mode === 'revert') heroRun.v = Math.min(0, heroRateAt(p, vp));
+  };
+  /* capture, on the window: under a diving hero (pointer-events: none) the
+     wheel would otherwise reach the canvas and scroll the descent mid-dive, and
+     a flick's momentum would carry on past the plate it lands on */
   window.addEventListener('wheel', e => {
-    if (!heroVisible) return; e.preventDefault(); if (e.deltaY > 4) heroDive();
-  }, { passive: false });
+    const now = performance.now();
+    if (!heroVisible) {
+      if (heroRun || (now < heroTail && now - wT < 220)) { e.preventDefault(); e.stopPropagation(); wT = now; }
+      return;
+    }
+    e.preventDefault(); e.stopPropagation();
+    const fresh = now - wT > 300;
+    const dy = e.deltaMode ? e.deltaY * 16 : e.deltaY;
+    if (fresh && !heroRun && (e.deltaMode || Math.abs(dy) >= 60)) { wT = now; if (dy > 0) heroDive(); return; }   /* a mouse notch */
+    if (heroRun && heroRun.mode === 'commit') return;
+    if (heroRun && heroRun.mode === 'revert') { heroRun.mode = 'hold'; heroRun.v = 0; wSum = heroProgAt(heroRun.T) * HERO_WHEEL_PX; }   /* caught mid-spring */
+    if (!heroRun) wSum = 0;
+    const p0 = Math.min(1, wSum / HERO_WHEEL_PX);
+    wSum = Math.max(0, wSum + dy);
+    const dt = Math.max(1, now - wT); wT = now;
+    if (!hold(wSum)) return;
+    const p = Math.min(1, wSum / HERO_WHEEL_PX);
+    wV = fresh ? 0 : wV * 0.6 + ((p - p0) / dt) * 0.4;
+    heroSeek(heroTimeAt(p));
+    if (p >= 1) { heroSettle(true, 1); return; }
+    clearTimeout(wIdle); wIdle = setTimeout(wRelease, 160);
+  }, { passive: false, capture: true });
   window.addEventListener('keydown', e => {
     if (!heroVisible) return;
     if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ' ||
         e.key === 'Enter' || e.key === 'Spacebar') { e.preventDefault(); heroDive(); }
   });
-  let ty0 = null;
-  heroEl.addEventListener('touchstart', e => { if (heroVisible) ty0 = e.touches[0].clientY; }, { passive: true });
+  let ty0 = null, tP0 = 0, tP = 0, tY = 0, tT = 0, tV = 0;
+  heroEl.addEventListener('touchstart', e => {
+    if (!heroVisible) return;
+    if (heroRun && heroRun.mode === 'revert') { heroRun.mode = 'hold'; heroRun.v = 0; }   /* caught mid-spring */
+    ty0 = e.touches[0].clientY;
+    tP0 = tP = heroRun ? heroProgAt(heroRun.T) : 0; tY = ty0; tT = performance.now(); tV = 0;
+  }, { passive: true });
   heroEl.addEventListener('touchmove', e => {
-    if (!heroVisible) return; e.preventDefault();
-    if (ty0 != null && ty0 - e.touches[0].clientY > 24) heroDive();
+    if (!heroVisible || ty0 == null) return; e.preventDefault();
+    if (heroRun && heroRun.mode === 'commit') return;
+    const y = e.touches[0].clientY, now = performance.now();
+    const d = ty0 - y;
+    if (!heroRun && d < 8) return;                           /* a tap stays a tap */
+    if (!hold(d)) return;
+    tP = clamp(tP0 + (d - (tP0 ? 0 : 8)) / HERO_SCRUB_PX(), 0, 1);
+    const dt = Math.max(1, now - tT);
+    tV = tV * 0.5 + ((tY - y) / HERO_SCRUB_PX() / dt) * 0.5;   /* progress per ms */
+    tY = y; tT = now;
+    heroSeek(heroTimeAt(tP));
+    if (tP >= 1) heroSettle(true, 1);
   }, { passive: false });
+  const tEnd = () => {
+    if (ty0 == null) return; ty0 = null;
+    if (!heroRun || heroRun.mode !== 'hold') return;
+    if (performance.now() - tT > 90) tV = 0;                 /* held still before lifting */
+    heroSettle(tP + tV * 180 > 0.4, Math.max(0, heroRateAt(tP, tV)));
+    if (heroRun && heroRun.mode === 'revert') heroRun.v = Math.min(0, heroRateAt(tP, tV));
+  };
+  heroEl.addEventListener('touchend', tEnd, { passive: true });
+  heroEl.addEventListener('touchcancel', tEnd, { passive: true });
   const btn = document.getElementById('hero-descend');
   if (btn) btn.addEventListener('click', () => heroDive());
   /* the projection toggle is the atlas's own, lifted over the hero (body.hero-up)

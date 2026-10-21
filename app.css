@@ -2426,6 +2426,8 @@ html.no-hero #hero { display: none; }
    render dissolves straight into the photograph, never two ghosts at once */
 #hero.diving #hero-watch { opacity: 0; transition: opacity 200ms var(--ease-out) 640ms; }
 /* to the sky (or reduced motion) there is no plate to land in — a plain dissolve */
+/* the scrub puts the paused timeline away at rest without replaying it */
+html.hero-still *, html.hero-still *::before, html.hero-still *::after { transition: none !important; }
 #hero.fade { opacity: 0; }
 #hero.gone { display: none; }
 
